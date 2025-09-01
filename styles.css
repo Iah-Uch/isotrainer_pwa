@@ -1,0 +1,92 @@
+:root{
+  --inset-top: env(safe-area-inset-top);
+  --inset-bottom: env(safe-area-inset-bottom);
+}
+body{
+  background:
+    radial-gradient(1200px 800px at 10% 10%, rgba(59,130,246,0.06), transparent 60%),
+    radial-gradient(1200px 800px at 90% 20%, rgba(236,72,153,0.06), transparent 60%),
+    radial-gradient(1000px 700px at 50% 100%, rgba(34,197,94,0.06), transparent 60%),
+    #010308;
+  color: #e5e7eb;
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes beat{
+  0%{ transform: translate(-50%,-50%) scale(.94); filter: drop-shadow(0 0 .18rem rgba(239,68,68,.35)); }
+  25%{ transform: translate(-50%,-50%) scale(1.1); filter: drop-shadow(0 0 .4rem rgba(239,68,68,.55)); }
+  50%{ transform: translate(-50%,-50%) scale(.97); filter: drop-shadow(0 0 .22rem rgba(239,68,68,.42)); }
+  100%{ transform: translate(-50%,-50%) scale(.94); filter: drop-shadow(0 0 .18rem rgba(239,68,68,.35)); }
+}
+.heart-pulse{ animation: beat var(--pulse-period,1s) ease-in-out infinite; will-change: transform, filter; }
+
+
+/* ---------- Plot Heights (compact) ---------- */
+.stage-plot-mobile{ height: 36svh; }
+.session-plot-mobile{ height: 13svh; min-height: 100px; }
+@media (min-width: 768px){
+  .stage-plot-mobile{ height: 34svh; }
+  .session-plot-mobile{ height: 12svh; }
+}
+
+/* ---------- Bigger timers ---------- */
+.timer-lg{
+  font-weight: 800;
+  line-height: 1.1;
+  font-size: clamp(1.25rem, 3.2vw, 2rem);
+  color: #22d3ee;
+}
+/* New: extra large for vertical stack */
+.timer-xl{
+  font-weight: 800;
+  line-height: 1;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  color: #22d3ee;
+}
+
+/* ---------- Floating Action Button ---------- */
+.fab{
+  position: absolute;
+  top: max(0.5rem, calc(var(--inset-top) + 0.25rem));
+  right: -0.5rem;
+  z-index: 40;
+  border-radius: 9999px;
+  padding: .4rem;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(2,6,23,.8);
+  box-shadow: 0 10px 20px rgba(0,0,0,.35);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform .12s ease, background .15s ease, box-shadow .2s ease;
+}
+.fab:hover{ background: rgba(3,7,18,.9); }
+.fab:active{ transform: translateY(1px) scale(.98); }
+
+.fab-menu{
+  position: absolute;
+  top: calc(3rem + var(--inset-top));
+  right: .5rem;
+  z-index: 45;
+  display: grid;
+  gap: .4rem;
+  padding: .5rem;
+  border-radius: .75rem;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(2,6,23,.9);
+  box-shadow: 0 18px 38px rgba(0,0,0,.45);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  min-width: 12rem;
+}
+.fab-item{
+  border-radius: .6rem;
+  padding: .5rem .75rem;
+  text-align: left;
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.fab-item:hover{ background: #0e172a; }
+
+/* Utility */
+.hidden{ display: none !important; }
+
+/* ---------- Fullscreen lock (unchanged) ---------- */
+html.fs-lock, body.fs-lock{ overflow:hidden !important; height:100svh; }
