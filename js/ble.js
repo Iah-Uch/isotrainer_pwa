@@ -5,19 +5,19 @@ import { updateStageUI } from './session.js';
 
 export async function checkBluetoothSupport(){
   if (!navigator.bluetooth){
-    document.getElementById('status').textContent = 'Web Bluetooth API is unavailable. Ensure HTTPS/localhost and permissions.';
+    document.getElementById('status').textContent = 'Web Bluetooth indisponível. Use HTTPS/localhost e conceda permissões.';
     document.getElementById('connectButton').disabled = true;
     return false;
   }
   try{
     const avail = await navigator.bluetooth.getAvailability();
     if (!avail){
-      document.getElementById('status').textContent = 'Bluetooth adapter not available.';
+      document.getElementById('status').textContent = 'Adaptador Bluetooth não disponível.';
       document.getElementById('connectButton').disabled = true;
       return false;
     }
   }catch{
-    document.getElementById('status').textContent = 'Error checking Bluetooth availability.';
+    document.getElementById('status').textContent = 'Erro ao verificar disponibilidade do Bluetooth.';
     document.getElementById('connectButton').disabled = true;
     return false;
   }
@@ -27,12 +27,12 @@ export async function checkBluetoothSupport(){
 export async function connectToDevice(){
   if (!(await checkBluetoothSupport())) return;
   try{
-    document.getElementById('status').textContent = 'Opening device selector...';
+    document.getElementById('status').textContent = 'Abrindo seletor de dispositivo...';
     document.getElementById('connectButton').disabled = true;
     state.device = await navigator.bluetooth.requestDevice({ filters:[{ services:['heart_rate'] }], optionalServices:['heart_rate'] });
-    document.getElementById('status').textContent = 'Connecting to GATT server...';
+    document.getElementById('status').textContent = 'Conectando ao servidor GATT...';
     state.server = await state.device.gatt.connect();
-    document.getElementById('status').textContent = `Connected to ${state.device.name}`;
+    document.getElementById('status').textContent = `Conectado a ${state.device.name}`;
     document.getElementById('disconnectButton').disabled = false;
     document.getElementById('goToPlanButton').disabled = false;
     state.service = await state.server.getPrimaryService('heart_rate');
@@ -41,7 +41,7 @@ export async function connectToDevice(){
     state.characteristic.addEventListener('characteristicvaluechanged', (e)=>handleHeartRateMeasurement(e.target.value));
     addDisconnectListener();
   }catch(err){
-    document.getElementById('status').textContent = `Error: ${err.message}`;
+    document.getElementById('status').textContent = `Erro: ${err.message}`;
     document.getElementById('connectButton').disabled = false;
     document.getElementById('disconnectButton').disabled = true;
     document.getElementById('goToPlanButton').disabled = true;

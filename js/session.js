@@ -3,21 +3,21 @@ import { now, fmtMMSS, parseTimeToSeconds } from './utils.js';
 import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales } from './charts.js';
 
 export function parseTrainingCsv(text){
-  if (!text || !text.trim()) throw new Error('CSV text is empty.');
+  if (!text || !text.trim()) throw new Error('O texto do CSV está vazio.');
   const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) throw new Error('CSV must include header + at least one stage line.');
+  if (lines.length < 2) throw new Error('O CSV deve incluir cabeçalho + ao menos uma linha de estágio.');
   const header = lines[0].split(';').map(s => s.trim());
-  if (header.length < 4) throw new Error('Header must be: ignored;ignored;date;athlete');
+  if (header.length < 4) throw new Error('Cabeçalho deve ser: ignorado;ignorado;data;atleta');
   const date = header[2], athlete = header.slice(3).join(';');
   const stages = [];
   for (let i = 1; i < lines.length; i++){
     const parts = lines[i].split(';').map(s => s.trim());
-    if (parts.length < 4) throw new Error(`Stage line ${i+1} must be: index;HH:MM:SS;lower;upper`);
+    if (parts.length < 4) throw new Error(`Linha de estágio ${i+1} deve ser: índice;HH:MM:SS;inferior;superior`);
     const index = parseInt(parts[0], 10);
     const durationSec = parseTimeToSeconds(parts[1]);
     const lower = Number(parts[2]), upper = Number(parts[3]);
-    if ([index, lower, upper].some(Number.isNaN)) throw new Error(`Invalid numbers on line ${i+1}.`);
-    if (upper <= lower) throw new Error(`Upper must be greater than lower on line ${i+1}.`);
+    if ([index, lower, upper].some(Number.isNaN)) throw new Error(`Números inválidos na linha ${i+1}.`);
+    if (upper <= lower) throw new Error(`Superior deve ser maior que inferior na linha ${i+1}.`);
     stages.push({ index, durationSec, lower, upper });
   }
   const totalDurationSec = stages.reduce((a,s)=>a+s.durationSec, 0);
@@ -33,9 +33,9 @@ export function startTraining(session){
   // UI priming (normal mode)
   document.getElementById('sessionAthlete').textContent = session.athlete || '—';
   document.getElementById('sessionMeta').textContent = `${session.date}`;
-  document.getElementById('stageLabel').textContent = 'Waiting for HR signal...';
+  document.getElementById('stageLabel').textContent = 'Aguardando sinal de FC...';
   document.getElementById('stageRange').textContent = '—';
-  document.getElementById('stageMinMeta').textContent = 'Waiting for HR...';
+  document.getElementById('stageMinMeta').textContent = 'Aguardando FC...';
   document.getElementById('stageElapsed').textContent = '00:00';
   document.getElementById('totalRemaining').textContent = fmtMMSS(session.totalDurationSec);
 
@@ -46,7 +46,7 @@ export function startTraining(session){
   const fsStageElapsed = document.getElementById('fsStageElapsed');
   const fsTotalRemaining = document.getElementById('fsTotalRemaining');
   if (fsHr) fsHr.textContent = '--';
-  if (fsStage) fsStage.textContent = 'Waiting…';
+  if (fsStage) fsStage.textContent = 'Aguardando…';
   if (fsStageElapsed) fsStageElapsed.textContent = '00:00';
   if (fsTotalRemaining) fsTotalRemaining.textContent = fmtMMSS(session.totalDurationSec);
 
@@ -75,14 +75,14 @@ export function startTraining(session){
 
 export function updateStageUI(){
   const st = state.trainingSession.stages[state.stageIdx];
-  const label = `Stage ${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)}`;
+  const label = `Estágio ${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)}`;
   document.getElementById('stageLabel').textContent = label;
-  document.getElementById('stageRange').textContent = `Target: ${st.lower}–${st.upper}`;
-  document.getElementById('stageMinMeta').textContent = `S${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)} • ${st.lower}–${st.upper}`;
+  document.getElementById('stageRange').textContent = `Alvo: ${st.lower}–${st.upper}`;
+  document.getElementById('stageMinMeta').textContent = `E${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)} • ${st.lower}–${st.upper}`;
 
   // FS HUD stage text
   const fsStage = document.getElementById('fsStage');
-  if (fsStage) fsStage.textContent = `S${st.index}/${state.trainingSession.stages.length} • ${st.lower}–${st.upper}`;
+  if (fsStage) fsStage.textContent = `E${st.index}/${state.trainingSession.stages.length} • ${st.lower}–${st.upper}`;
 
   setYAxis(st.lower, st.upper);
   setStageXAxis(st.durationSec);
@@ -129,7 +129,18 @@ export function navigateToStage(newIndex){
   state.stageIdx = newIndex; state.stageStartMs = now(); state.stageAccumulatedPauseOffset = 0; updateStageUI();
 }
 
-export function nextStage(){ if (!state.trainingSession) return; if (state.stageIdx < state.trainingSession.stages.length - 1){ navigateToStage(state.stageIdx + 1); } else { pauseTraining(true); document.getElementById('stageLabel').textContent = `Completed • ${state.trainingSession.stages.length} stages`; } }
+export function nextStage(){
+  if (!state.trainingSession) return;
+  if (state.stageIdx < state.trainingSession.stages.length - 1){
+    navigateToStage(state.stageIdx + 1);
+  } else {
+    // Finalize session
+    pauseTraining(true);
+    document.getElementById('stageLabel').textContent = `Concluída • ${state.trainingSession.stages.length} estágios`;
+    const stats = computeSessionStats();
+    showCompletion(stats);
+  }
+}
 export function prevStage(){ if (!state.trainingSession) return; navigateToStage(state.stageIdx - 1); }
 export function pauseTraining(finalize=false){ if (state.paused) return; state.paused = true; state.pausedAtMs = now(); if (!finalize) setPlayPauseVisual(); }
 export function resumeTraining(){ if (!state.paused) return; const d = now() - state.pausedAtMs; state.accumulatedPauseOffset += d; state.stageAccumulatedPauseOffset += d; state.paused = false; state.pausedAtMs = null; setPlayPauseVisual(); }
@@ -148,15 +159,19 @@ export function setPlayPauseVisual(){
   const playPauseBtn = document.getElementById('playPauseBtn');
   iconPause.classList.toggle('hidden', p);
   iconPlay.classList.toggle('hidden', !p);
-  playPauseBtn.setAttribute('aria-label', p ? 'Resume training' : 'Pause training');
+  playPauseBtn.setAttribute('aria-label', p ? 'Retomar treino' : 'Pausar treino');
 }
 
 export function showScreen(which){
-  const connect = document.getElementById('connectScreen'), plan = document.getElementById('planScreen'), plot = document.getElementById('plotScreen');
-  connect.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden');
+  const connect = document.getElementById('connectScreen');
+  const plan = document.getElementById('planScreen');
+  const plot = document.getElementById('plotScreen');
+  const complete = document.getElementById('completeScreen');
+  connect.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden'); complete.classList.add('hidden');
   if (which==='connect') connect.classList.remove('hidden');
   if (which==='plan') plan.classList.remove('hidden');
   if (which==='plot') plot.classList.remove('hidden');
+  if (which==='complete') complete.classList.remove('hidden');
 }
 
 export function animationLoop(){
@@ -165,4 +180,40 @@ export function animationLoop(){
     state.fsSessionChart?.update('none');
     state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
   }
+}
+
+// Compute simple session stats from sessionSeries
+export function computeSessionStats(){
+  const points = state.sessionSeries || [];
+  if (!points.length || !state.trainingSession){
+    return { avg: 0, min: 0, max: 0, inTargetPct: 0 };
+  }
+  let sum = 0, count = 0, min = Infinity, max = -Infinity;
+  let inTargetCount = 0;
+  // Determine stage targets over time to compute in-target percentage
+  // We map x (sec from start) to stage bounds using cumulative durations
+  const stageOffsets = [];
+  let acc = 0; for (const s of state.trainingSession.stages){ stageOffsets.push({ start: acc, end: acc + s.durationSec, lo: s.lower, hi: s.upper }); acc += s.durationSec; }
+
+  for (const p of points){
+    if (p && typeof p.y === 'number'){
+      const hr = p.y;
+      sum += hr; count += 1; if (hr < min) min = hr; if (hr > max) max = hr;
+      const x = p.x;
+      const st = stageOffsets.find(r => x >= r.start && x <= r.end) || stageOffsets[stageOffsets.length - 1];
+      if (st && hr >= st.lo && hr <= st.hi) inTargetCount += 1;
+    }
+  }
+  const avg = count ? Math.round((sum / count)) : 0;
+  const inTargetPct = count ? Math.round((inTargetCount / count) * 100) : 0;
+  return { avg, min: isFinite(min) ? min : 0, max: isFinite(max) ? max : 0, inTargetPct };
+}
+
+function showCompletion(stats){
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+  set('statAvg', `${stats.avg} bpm`);
+  set('statMax', `${stats.max} bpm`);
+  set('statMin', `${stats.min} bpm`);
+  set('statInTarget', `${stats.inTargetPct}%`);
+  showScreen('complete');
 }
