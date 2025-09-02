@@ -2,6 +2,7 @@
 let deferredPrompt = null;
 
 const installBtn = document.getElementById('installBtn');
+const openAppBtn = document.getElementById('openAppBtn');
 
 function isStandalone(){
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -9,16 +10,26 @@ function isStandalone(){
 
 function hideInstall(){ if (installBtn) installBtn.classList.add('hidden'); }
 function showInstall(){ if (installBtn) installBtn.classList.remove('hidden'); }
+function hideOpen(){ if (openAppBtn) openAppBtn.classList.add('hidden'); }
+function showOpen(){ if (openAppBtn) openAppBtn.classList.remove('hidden'); }
+
+function isLikelyInstalled(){
+  // Heuristic: remember install event; some platforms don’t expose a direct API.
+  const flag = localStorage.getItem('pwaInstalled') === '1';
+  return flag;
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (!isStandalone()) showInstall();
+  if (!isStandalone() && !isLikelyInstalled()) showInstall();
 });
 
 window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
   hideInstall();
+  try { localStorage.setItem('pwaInstalled', '1'); } catch {}
+  showOpen();
 });
 
 installBtn?.addEventListener('click', async () => {
@@ -29,7 +40,9 @@ installBtn?.addEventListener('click', async () => {
   deferredPrompt = null;
 });
 
+// Initial UI state
 if (isStandalone()) hideInstall();
+if (isLikelyInstalled()) { hideInstall(); showOpen(); } else { hideOpen(); }
 
 // Auto-reload once when the new SW takes control
 let reloadedForUpdate = false;
@@ -116,3 +129,10 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('beforeunload', () => clearInterval(int));
   });
 }
+
+// Opening behavior: rely on link capturing to route to installed PWA.
+openAppBtn?.addEventListener('click', (e) => {
+  // Ensure a direct top-level navigation; link capturing will open PWA window
+  // if supported and the app is installed.
+  // No special handling; let the anchor work. This prevents blocking if API unsupported.
+});
