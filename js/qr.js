@@ -1,5 +1,15 @@
 // Minimal QR scanning that feeds the plan textarea (#csvInput)
 // Requires the global QrScanner from https://unpkg.com/qr-scanner
+// Ensure worker path is explicitly set to avoid cross-origin base URL issues
+try{
+  // eslint-disable-next-line no-undef
+  if (typeof QrScanner !== 'undefined' && QrScanner.WORKER_PATH) {
+    // Point to the CDN worker explicitly (served with CORS)
+    // If you later self-host it, change to '/js/qr-scanner-worker.min.js'
+    // eslint-disable-next-line no-undef
+    QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js';
+  }
+}catch{}
 import { startTrainingFromCsvText } from './main.js';
 
 let qrScanner = null;
@@ -22,15 +32,18 @@ function openQr(){
   lastText = '';
   if (use) use.disabled = true; if (retry) retry.disabled = true; if (err) err.classList.add('hidden');
 
+  // Ensure worker path is set before constructing scanner
+  try{ /* eslint-disable no-undef */ QrScanner.WORKER_PATH = QrScanner.WORKER_PATH || 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js'; /* eslint-enable */ }catch{}
   // eslint-disable-next-line no-undef
   qrScanner = new QrScanner(video, (result) => {
     if (!result) return;
     lastText = String(result.data || result).trim();
-  if (hint) hint.textContent = 'QR capturado. Revise e toque em "Usar e iniciar".';
-    if (use) use.disabled = false;
-    if (retry) retry.disabled = false;
-    // pause camera once we have something
+    // Put the scanned text directly into the textarea and close the modal
+    const textarea = el('csvInput');
+    if (textarea) textarea.value = lastText;
+    // Stop and close immediately after successful scan
     qrScanner?.stop();
+    closeQr();
   }, {
     preferredCamera: 'environment',
     highlightScanRegion: true,

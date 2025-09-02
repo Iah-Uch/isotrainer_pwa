@@ -13,7 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- QR Scanner (ESM build also available; using global for simplicity) -->
-  <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+  <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
@@ -230,10 +230,8 @@
       <div id="qrHint" class="text-sm text-slate-400">Aponte a câmera para o QR code</div>
       <div id="qrError" class="hidden text-sm text-rose-400"></div>
       <div class="flex items-center justify-between gap-2">
-        <button id="qrRetry" disabled class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Ler
-          novamente</button>
-        <button id="qrUseResult" disabled class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Usar e
-          iniciar</button>
+        <!-- <button id="qrRetry" disabled class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Ler
+          novamente</button> -->
       </div>
     </div>
   </div>
