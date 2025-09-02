@@ -40,6 +40,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
+  // Only handle same-origin requests. Let the browser fetch cross-origin
+  // resources (e.g., CDN scripts/workers, camera streams) directly to avoid
+  // CORS/opaque caching issues that can break things like qr-scanner workers.
+  const reqUrl = new URL(request.url);
+  if (reqUrl.origin !== self.location.origin) return;
+
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);

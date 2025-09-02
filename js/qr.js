@@ -1,15 +1,7 @@
 // Minimal QR scanning that feeds the plan textarea (#csvInput)
-// Requires the global QrScanner from https://unpkg.com/qr-scanner
-// Ensure worker path is explicitly set to avoid cross-origin base URL issues
-try{
-  // eslint-disable-next-line no-undef
-  if (typeof QrScanner !== 'undefined' && QrScanner.WORKER_PATH) {
-    // Point to the CDN worker explicitly (served with CORS)
-    // If you later self-host it, change to '/js/qr-scanner-worker.min.js'
-    // eslint-disable-next-line no-undef
-    QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js';
-  }
-}catch{}
+// Uses global QrScanner from the UMD bundle. The UMD build auto-resolves the
+// worker path relative to the script URL, so setting WORKER_PATH is unnecessary
+// and triggers warnings in newer versions.
 import { startTrainingFromCsvText } from './main.js';
 
 let qrScanner = null;
@@ -32,8 +24,12 @@ function openQr(){
   lastText = '';
   if (use) use.disabled = true; if (retry) retry.disabled = true; if (err) err.classList.add('hidden');
 
-  // Ensure worker path is set before constructing scanner
-  try{ /* eslint-disable no-undef */ QrScanner.WORKER_PATH = QrScanner.WORKER_PATH || 'https://unpkg.com/qr-scanner@1.4.2/qr-scanner-worker.min.js'; /* eslint-enable */ }catch{}
+  // Build scanner. UMD auto-loads the worker; no manual WORKER_PATH needed.
+  // eslint-disable-next-line no-undef
+  if (typeof QrScanner === 'undefined') {
+    if (err) { err.textContent = 'QR Scanner não carregou.'; err.classList.remove('hidden'); }
+    return;
+  }
   // eslint-disable-next-line no-undef
   qrScanner = new QrScanner(video, (result) => {
     if (!result) return;
