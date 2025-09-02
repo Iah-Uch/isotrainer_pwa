@@ -1,6 +1,7 @@
 {
   "name": "CardioMax Web",
   "short_name": "CardioMax",
+  "id": "/app.html",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "/app.html",
