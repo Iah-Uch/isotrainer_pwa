@@ -74,7 +74,7 @@ const heartFollowerPlugin = {
       // Right-aligned small label
       ctx.shadowBlur = 0;
       ctx.fillStyle = `rgba(255,255,255,${Math.min(1, baseAlpha + 0.05)})`;
-      ctx.font = '600 11px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu';
+      ctx.font = '600 17px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(value), ca.right - 6, Math.round(yPx) + 0.5);

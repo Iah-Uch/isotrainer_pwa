@@ -1,10 +1,13 @@
-/* Simple service worker for PWA caching */
-const CACHE_NAME = 'cardiomax-pwa-v2';
+/* Service worker with stale-while-revalidate for fast loads + auto updates */
+const CACHE_NAME = 'cardiomax-pwa-v3';
 const CORE_ASSETS = [
   '/',
   '/index.html',
+  '/app.html',
   '/styles.css',
   '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
   '/js/main.js',
   '/js/session.js',
   '/js/charts.js',
@@ -28,29 +31,38 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
-    self.clients.claim();
+    await self.clients.claim();
   })());
 });
 
+// Stale-while-revalidate for all GET requests
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  // Network-first for HTML to get latest shell
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try { return await fetch(request); }
-        catch { return await caches.match('/index.html'); }
-      })()
-    );
-    return;
-  }
-  // Cache-first for static assets
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
-  );
+  if (request.method !== 'GET') return;
+
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
+    const networkFetch = fetch(request).then(async (res) => {
+      if (res && res.ok) await cache.put(request, res.clone());
+      return res;
+    }).catch(() => undefined);
+
+    // Return cached immediately if present; else fall back to network
+    if (cached) {
+      // Trigger update in background
+      event.waitUntil(networkFetch);
+      return cached;
+    }
+    // No cache: try network, then offline fallbacks
+    const res = await networkFetch;
+    if (res) return res;
+    if (request.mode === 'navigate') return cache.match('/app.html') || cache.match('/index.html');
+    return new Response('', { status: 504, statusText: 'Offline' });
+  })());
 });
 
-// Optional: listen for skip waiting
+// Allow page to trigger immediate activation
 self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') self.skipWaiting();
 });

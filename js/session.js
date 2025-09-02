@@ -56,6 +56,11 @@ export function startTraining(session){
   const firstStage = session.stages[0];
   setYAxis(firstStage.lower, firstStage.upper);
   setStageXAxis(firstStage.durationSec);
+  // Initialize countdown with full stage duration
+  const stageEl = document.getElementById('stageElapsed');
+  if (stageEl) stageEl.textContent = fmtMMSS(firstStage.durationSec);
+  const fsStageEl = document.getElementById('fsStageElapsed');
+  if (fsStageEl) fsStageEl.textContent = fmtMMSS(firstStage.durationSec);
 
   const allLows = session.stages.map(s => s.lower);
   const allHighs = session.stages.map(s => s.upper);
@@ -79,6 +84,9 @@ export function updateStageUI(){
   document.getElementById('stageLabel').textContent = label;
   document.getElementById('stageRange').textContent = `Alvo: ${st.lower}–${st.upper}`;
   document.getElementById('stageMinMeta').textContent = `E${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)} • ${st.lower}–${st.upper}`;
+  // Reset stage countdown to full duration
+  const el = document.getElementById('stageElapsed');
+  if (el) el.textContent = fmtMMSS(st.durationSec);
 
   // FS HUD stage text
   const fsStage = document.getElementById('fsStage');
@@ -100,7 +108,8 @@ export function tick(){
   const st = state.trainingSession.stages[state.stageIdx];
   const stageElapsedSec = Math.max(0, (nowMs - state.stageStartMs - state.stageAccumulatedPauseOffset)/1000);
 
-  const stageElapsedText = fmtMMSS(Math.min(stageElapsedSec, st.durationSec));
+  const stageRemainingSec = Math.max(0, st.durationSec - Math.min(stageElapsedSec, st.durationSec));
+  const stageElapsedText = fmtMMSS(stageRemainingSec);
   document.getElementById('stageElapsed').textContent = stageElapsedText;
 
   const totalElapsed = computeTotalElapsedSec(nowMs);
