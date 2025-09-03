@@ -110,6 +110,38 @@ export function setupCharts() {
       markArea: { data: [], silent: true }
     }]
   });
+
+  // Attach responsive behavior for mobile: resize on viewport/container changes
+  attachChartResizers();
+}
+
+let resizeAttached = false;
+function attachChartResizers(){
+  if (resizeAttached) return; resizeAttached = true;
+  let raf = 0;
+  const schedule = () => {
+    if (raf) return; raf = requestAnimationFrame(() => { raf = 0; doResize(); });
+  };
+  const doResize = () => {
+    try { state.chart?.resize(); } catch {}
+    try { state.sessionChart?.resize(); } catch {}
+    const last = state.series?.[state.series.length - 1];
+    if (last) updateHeartMarker(last.x, last.y);
+  };
+  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener('orientationchange', schedule, { passive: true });
+  // Observe container size changes
+  try{
+    const ro = new ResizeObserver(schedule);
+    const el1 = document.getElementById('hrChart');
+    const el2 = document.getElementById('sessionHrChart');
+    if (el1) ro.observe(el1.parentElement || el1);
+    if (el2) ro.observe(el2.parentElement || el2);
+  }catch{}
+  // Re-resize when route navigates to plot
+  window.addEventListener('router:navigate', (e) => {
+    const route = e.detail?.route; if (route === 'plot') schedule();
+  });
 }
 
 export function resetStageSeries() {
