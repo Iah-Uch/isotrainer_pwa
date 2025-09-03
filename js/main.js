@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { setupCharts } from './charts.js';
 import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv } from './session.js';
+import { loadPlanForEdit } from './edit-plan.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
 
 // Boot
@@ -19,7 +20,17 @@ document.getElementById('goToPlanButton').addEventListener('click', ()=>{ if (st
 document.getElementById('backToConnect').addEventListener('click', ()=>showScreen('connect'));
 document.getElementById('loadCsvBtn').addEventListener('click', ()=>{
   const text = document.getElementById('csvInput').value;
-  startTrainingFromCsvText(text);
+  const err = document.getElementById('csvError'); err.classList.add('hidden');
+  if (!(state.device && state.device.gatt?.connected)){
+    err.textContent = 'Conecte um dispositivo primeiro.'; err.classList.remove('hidden'); return;
+  }
+  try{
+    const session = parseTrainingCsv(text);
+    loadPlanForEdit(session);
+  }catch(e){
+    err.textContent = e.message || String(e);
+    err.classList.remove('hidden');
+  }
 });
 document.getElementById('nextStageBtn').addEventListener('click', ()=> nextStage());
 document.getElementById('prevStageBtn').addEventListener('click', ()=> prevStage());

@@ -176,11 +176,14 @@ export function showScreen(which){
   const plan = document.getElementById('planScreen');
   const plot = document.getElementById('plotScreen');
   const complete = document.getElementById('completeScreen');
+  const editPlan = document.getElementById('editPlanScreen');
   connect.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden'); complete.classList.add('hidden');
+  if (editPlan) editPlan.classList.add('hidden');
   if (which==='connect') connect.classList.remove('hidden');
   if (which==='plan') plan.classList.remove('hidden');
   if (which==='plot') plot.classList.remove('hidden');
   if (which==='complete') complete.classList.remove('hidden');
+  if (which==='editPlan' && editPlan) editPlan.classList.remove('hidden');
 }
 
 export function animationLoop(){

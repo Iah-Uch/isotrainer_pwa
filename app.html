@@ -70,6 +70,62 @@
         </div>
       </div>
 
+      <!-- TELA DE EDIÇÃO DO PLANO -->
+      <div id="editPlanScreen" class="hidden p-6">
+        <div class="mx-auto w-full max-w-2xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-semibold">Editar Sessão</h2>
+        </div>
+        <div class="mb-3 rounded-xl border border-rose-500/40 bg-rose-900/40 p-3 text-rose-200 shadow shadow-rose-900/30" role="alert" aria-live="polite">
+          <div class="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 text-rose-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M11 7h2v6h-2V7zm0 8h2v2h-2v-2z"/>
+              <path d="M1 21h22L12 2 1 21z"/>
+            </svg>
+            <p class="text-sm">
+              <span class="font-semibold">Aviso:</span>
+              Esta tela de edição é um recurso experimental apenas para hard-users. Não estará disponível em futuras versões.
+            </p>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <label class="flex items-center gap-2 text-sm text-slate-300"><input id="editSelAll" type="checkbox" class="accent-emerald-600"> Selecionar todos</label>
+            <div class="h-4 w-px bg-white/10" aria-hidden="true"></div>
+            <div class="text-sm text-slate-400">Tempo (aplicar aos selecionados):</div>
+            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="-10">−10s</button>
+            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="-5">−5s</button>
+            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="5">+5s</button>
+            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="10">+10s</button>
+          </div>
+          <div class="text-xs text-slate-400 mb-2">Dica: selecione um ou mais estágios para ajustar a <span class="text-slate-300">duração</span> pelos botões acima. Edite os <span class="text-slate-300">limites</span> diretamente nos campos de cada linha.</div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-[13px]">
+              <thead class="text-slate-300">
+                <tr>
+                  <th class="py-1 pr-1 text-center"></th>
+                  <th class="py-1 pr-1 text-center">Estágio</th>
+                  <th class="py-1 pr-1 text-center">Duração</th>
+                  <th class="py-1 pr-1 text-center">Inferior</th>
+                  <th class="py-1 pr-1 text-center">Superior</th>
+                </tr>
+              </thead>
+              <tbody id="editPlanBody" class="align-top"></tbody>
+            </table>
+          </div>
+          <div id="editPlanError" class="hidden mt-2 text-sm text-rose-400"></div>
+        </div>
+        <!-- Sticky footer actions -->
+        <div class="sticky bottom-0 mt-4 bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-slate-900/40 rounded-xl border border-white/10 p-3 flex items-center justify-between">
+          <div class="text-xs text-slate-400">Revise as alterações antes de iniciar.</div>
+          <div class="flex items-center gap-2">
+            <button id="editBackBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar</button>
+            <button id="editStartBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Iniciar sessão</button>
+          </div>
+        </div>
+        </div>
+      </div>
+
       <!-- PLOT SCREEN -->
       <div id="plotScreen" class="hidden p-3 sm:p-2 relative">
 
@@ -249,7 +305,7 @@
       </div>
       <div class="mt-4 grid grid-cols-2 gap-2">
         <button id="prevStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">◀ Anterior</button>
-        <button id="nextStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">Próxima ▶</button>
+        <button id="nextStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">Próximo ▶</button>
       </div>
     </div>
   </div>
@@ -275,6 +331,7 @@
 
   <script type="module" src="./js/main.js"></script>
   <script type="module" src="./js/ui-fab.js"></script>
+  <script type="module" src="./js/edit-plan.js"></script>
   <script type="module" src="./js/qr.js"></script>
   <script type="module" src="./js/pwa.js"></script>
   <script type="module">
