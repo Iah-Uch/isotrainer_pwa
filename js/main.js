@@ -1,7 +1,7 @@
 
 import { state } from './state.js';
 import { setupCharts } from './charts.js';
-import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual } from './session.js';
+import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv } from './session.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
 
 // Boot
@@ -83,4 +83,20 @@ document.getElementById('completeBackBtn')?.addEventListener('click', ()=>{
 });
 document.getElementById('completePlanBtn')?.addEventListener('click', ()=>{
   showScreen('plan');
+});
+document.getElementById('completeExportBtn')?.addEventListener('click', ()=>{
+  exportSessionCsv();
+});
+document.getElementById('completeMinimizeIcon')?.addEventListener('click', () => {
+  const modal = document.getElementById('completeScreen');
+  if (modal) modal.classList.add('hidden');
+  const fab = document.getElementById('completeRestoreFab');
+  if (fab) fab.classList.remove('hidden');
+});
+
+document.getElementById('completeRestoreFab')?.addEventListener('click', () => {
+  const modal = document.getElementById('completeScreen');
+  const fab = document.getElementById('completeRestoreFab');
+  if (modal) modal.classList.remove('hidden');
+  if (fab) fab.classList.add('hidden');
 });

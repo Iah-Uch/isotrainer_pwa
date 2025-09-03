@@ -10,7 +10,7 @@
   <link rel="icon" href="/icons/logo_cardiomax.svg" sizes="192x192" type="image/png" /> -->
   <link rel="apple-touch-icon" href="/icons/logo_cardiomax.svg" />
   <!-- External libs (kept CDN for simplicity). If you have a bundler, self-host. -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- QR Scanner (ESM build also available; using global for simplicity) -->
   <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -52,10 +52,16 @@
           <div id="csvError" class="hidden text-sm text-rose-400"></div>
           <div class="mt-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <button id="backToConnect" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition">◀
-                Voltar</button>
-              <button id="scanQrBtn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition">Ler
-                QR</button>
+              <button id="backToConnect" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+                <span>Voltar</span>
+              </button>
+              <button id="scanQrBtn" title="Ler QR" aria-label="Ler QR" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zM15 3h6v6h-6V3zm2 2v2h2V5h-2zM3 15h6v6H3v-6zm2 2v2h2v-2H5zM13 13h2v2h-2v-2zm4 0h4v2h-4v-2zm-4 4h2v4h-2v-4zm4 4h4v-2h-2v-2h-2v4z"/>
+                </svg>
+                <span>Ler QR</span>
+              </button>
             </div>
             <button id="loadCsvBtn"
               class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/25">Carregar
@@ -79,9 +85,24 @@
           </svg>
         </button>
         <div id="fabMenu" class="fab-menu hidden" role="menu" aria-labelledby="fabToggle">
-          <button class="fab-item" data-act="play-pause" role="menuitem">Parar/Continuar</button>
-          <button class="fab-item" data-act="controls" role="menuitem">Controles de estágio</button>
-          <button class="fab-item" data-act="back" role="menuitem">Voltar à conexão</button>
+          <button class="fab-item flex items-center gap-2" data-act="play-pause" role="menuitem" title="Parar/Continuar" aria-label="Parar/Continuar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M8 5h3v14H8zM13 5l8 7-8 7z"/>
+            </svg>
+            <span>Parar/Continuar</span>
+          </button>
+          <button class="fab-item flex items-center gap-2" data-act="controls" role="menuitem" title="Controles" aria-label="Controles">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M7 4h2v16H7zM11 10h2v10h-2zM15 6h2v14h-2z"/>
+            </svg>
+            <span>Controles de estágio</span>
+          </button>
+          <button class="fab-item flex items-center gap-2" data-act="back" role="menuitem" title="Voltar" aria-label="Voltar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M15 19l-7-7 7-7"/>
+            </svg>
+            <span>Voltar à conexão</span>
+          </button>
         </div>
         <div class="flex items-center justify-center space-x-4 text-xs text-slate-400 mb-1">
           <div class="uppercase tracking-wide text-[.68rem]">Sessão</div>
@@ -116,7 +137,7 @@
                       d="M12.001 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54l-.449.41z" />
                   </svg>
                 </div>
-                <canvas id="hrChart" class="absolute inset-0 w-full h-full"></canvas>
+                <div id="hrChart" class="absolute inset-0 w-full h-full"></div>
               </div>
             </div>
           </main>
@@ -158,7 +179,7 @@
         <div id="sessionCardContainer" class="mt-2 sm:mt-4 rounded-2xl bg-white/5 p-0">
           <div
             class="relative w-full session-plot-mobile sm:h-[20svh] min-h-[100px] rounded-xl bg-slate-950/75 overflow-hidden">
-            <canvas id="sessionHrChart" class="absolute inset-0 w-full h-full"></canvas>
+            <div id="sessionHrChart" class="absolute inset-0 w-full h-full"></div>
           </div>
         </div>
       </div>
@@ -167,8 +188,13 @@
   </div>
 
   <!-- Completion Screen -->
-  <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6">
-    <div class="mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900/90 p-6 shadow-2xl">
+  <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6 flex items-center justify-center bg-black/60">
+    <div class="relative mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+      <button id="completeMinimizeIcon" class="absolute top-3 right-3 text-slate-300 hover:text-white" title="Minimizar" aria-label="Minimizar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M5 19h14v2H5z"/>
+        </svg>
+      </button>
       <div class="flex items-center gap-3">
         <div class="h-10 w-10 rounded-full bg-emerald-600/20 grid place-items-center text-emerald-400">✓</div>
         <h2 class="text-xl font-semibold">Sessão concluída</h2>
@@ -192,14 +218,25 @@
           <div id="statInTarget" class="text-2xl font-semibold">—</div>
         </div>
       </div>
-      <div class="mt-4 flex items-center justify-between">
-        <button id="completeBackBtn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela de
-          conexão</button>
-        <button id="completePlanBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Carregar novo
-          plano</button>
+      <div class="mt-4 grid grid-cols-3 gap-2">
+        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela de conexão</button>
+        <button id="completeExportBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2" title="Exportar CSV" aria-label="Exportar CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>
+          </svg>
+          <span>CSV</span>
+        </button>
+        <button id="completePlanBtn" class="w-full px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Carregar novo plano</button>
       </div>
     </div>
   </div>
+
+  <!-- Completion Restore FAB -->
+  <button id="completeRestoreFab" class="hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg grid place-items-center" title="Ver resumo" aria-label="Ver resumo">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9 12l2 2 4-4 1.5 1.5L11 17 7.5 13.5 9 12z"/>
+    </svg>
+  </button>
 
   <!-- Controls Modal -->
   <div id="controlsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4" role="dialog"

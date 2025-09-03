@@ -185,8 +185,13 @@ export function showScreen(which){
 
 export function animationLoop(){
   if (state.trainingSession){
-    state.sessionChart?.update('none');
-    state.fsSessionChart?.update('none');
+    if (state.sessionChart){
+      // Push latest session series to the ECharts line
+      const data = (state.sessionSeries || []).map(p => [p.x, p.y]);
+      try { state.sessionChart.setOption({ series: [{ data }] }, false, true); } catch {}
+      // Rebuild stage bands to keep current-stage pulse/highlight in sync
+      try { syncChartScales(); } catch {}
+    }
     state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
   }
 }
@@ -224,5 +229,94 @@ function showCompletion(stats){
   set('statMax', `${stats.max} bpm`);
   set('statMin', `${stats.min} bpm`);
   set('statInTarget', `${stats.inTargetPct}%`);
-  showScreen('complete');
+  // Show as modal overlay instead of switching screens
+  const modal = document.getElementById('completeScreen');
+  if (modal) modal.classList.remove('hidden');
+  const fab = document.getElementById('completeRestoreFab');
+  if (fab) fab.classList.add('hidden');
+  // Close controls modal if open and hide FAB options while finished
+  const controls = document.getElementById('controlsModal');
+  if (controls) controls.classList.add('hidden');
+  const fabToggle = document.getElementById('fabToggle');
+  const fabMenu = document.getElementById('fabMenu');
+  if (fabToggle) fabToggle.classList.add('hidden');
+  if (fabMenu) fabMenu.classList.add('hidden');
+}
+
+function formatNumber(n, digits = 0){
+  if (typeof n !== 'number' || !isFinite(n)) return '';
+  return digits ? n.toFixed(digits) : String(n);
+}
+
+function computePerStageStats(){
+  if (!state.trainingSession) return [];
+  const stages = state.trainingSession.stages || [];
+  const offsets = [];
+  let acc = 0;
+  for (const s of stages){ offsets.push({ start: acc, end: acc + s.durationSec, lo: s.lower, hi: s.upper }); acc += s.durationSec; }
+
+  const per = stages.map((s)=>({ durationSec: s.durationSec, lower: s.lower, upper: s.upper, sum: 0, min: Infinity, max: -Infinity, count: 0, inTarget: 0 }));
+  const pts = state.sessionSeries || [];
+  for (const p of pts){
+    if (!p || typeof p.y !== 'number') continue;
+    const x = p.x;
+    let idx = offsets.findIndex(r => x >= r.start && x <= r.end);
+    if (idx === -1) idx = stages.length - 1;
+    const st = per[idx];
+    const hr = p.y;
+    st.sum += hr; st.count += 1; if (hr < st.min) st.min = hr; if (hr > st.max) st.max = hr;
+    const lo = stages[idx].lower, hi = stages[idx].upper;
+    if (hr >= lo && hr <= hi) st.inTarget += 1;
+  }
+  return per.map((s, i)=>({
+    index: i+1,
+    durationSec: stages[i].durationSec,
+    lower: stages[i].lower,
+    upper: stages[i].upper,
+    avg: s.count ? Math.round(s.sum / s.count) : 0,
+    min: isFinite(s.min) ? s.min : 0,
+    max: isFinite(s.max) ? s.max : 0,
+    inTargetPct: s.count ? Math.round((s.inTarget / s.count) * 100) : 0,
+    samples: s.count
+  }));
+}
+
+export function exportSessionCsv(){
+  if (!state.trainingSession) return;
+  const session = state.trainingSession;
+  const stats = computeSessionStats();
+  const perStages = computePerStageStats();
+
+  // Single, normalized table with a 'type' discriminator
+  const header = [
+    'type','date','athlete','stage_index','duration_sec','lower','upper','avg_bpm','min_bpm','max_bpm','in_target_pct','samples','elapsed_sec','stage_elapsed_sec','hr','in_target'
+  ];
+  const rows = [];
+  // Summary row
+  rows.push(['summary', session.date, session.athlete, '', session.totalDurationSec, '', '', stats.avg, stats.min, stats.max, stats.inTargetPct, '', '', '', '', '']);
+  // Per-stage rows
+  for (const s of perStages){
+    rows.push(['stage', session.date, session.athlete, s.index, s.durationSec, s.lower, s.upper, s.avg, s.min, s.max, s.inTargetPct, s.samples, '', '', '', '']);
+  }
+  // Time series rows
+  const offsets = [];
+  let acc = 0; for (const s of session.stages){ offsets.push({ start: acc, end: acc + s.durationSec, lo: s.lower, hi: s.upper }); acc += s.durationSec; }
+  for (const p of (state.sessionSeries || [])){
+    const t = typeof p.x === 'number' ? p.x : 0;
+    const hr = typeof p.y === 'number' ? p.y : '';
+    let idx = offsets.findIndex(r => t >= r.start && t <= r.end);
+    if (idx === -1) idx = session.stages.length - 1;
+    const stage = session.stages[idx];
+    const stageElapsed = Math.max(0, t - offsets[idx].start);
+    const inTarget = typeof hr === 'number' ? (hr >= stage.lower && hr <= stage.upper ? 1 : 0) : '';
+    rows.push(['series', session.date, session.athlete, idx+1, stage.durationSec, stage.lower, stage.upper, '', '', '', '', '', formatNumber(t,2), formatNumber(stageElapsed,2), hr, inTarget]);
+  }
+
+  const csv = [header.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateSlug = String(session.date || '').replace(/\s+/g, '_');
+  a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
