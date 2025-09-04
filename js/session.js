@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { now, fmtMMSS, parseTimeToSeconds } from './utils.js';
-import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales } from './charts.js';
+import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales, plotStageSliceByIndex } from './charts.js';
 
 export function parseTrainingCsv(text){
   if (!text || !text.trim()) throw new Error('O texto do CSV está vazio.');
@@ -27,6 +27,7 @@ export function parseTrainingCsv(text){
 export function startTraining(session){
   stopTraining();
   state.trainingSession = session;
+  state.isImportedSession = false;
   state.stageIdx = 0;
   state.waitingForFirstHR = true;
 
@@ -140,6 +141,7 @@ export function stopTraining(){
   state.timerHandle = null; state.trainingSession = null; state.stageIdx = -1;
   state.sessionStartMs = state.stageStartMs = null; state.paused = false; state.pausedAtMs = null;
   state.accumulatedPauseOffset = state.stageAccumulatedPauseOffset = 0; state.waitingForFirstHR = false;
+  state.isImportedSession = false;
 }
 
 export function setPlayPauseVisual(){
@@ -158,6 +160,8 @@ export function showScreen(which){
   const plot = document.getElementById('plotScreen');
   const complete = document.getElementById('completeScreen');
   const editPlan = document.getElementById('editPlanScreen');
+  const connectFabs = document.getElementById('connectFabs');
+  const planFabs = document.getElementById('planFabs');
   connect.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden'); complete.classList.add('hidden');
   if (editPlan) editPlan.classList.add('hidden');
   if (which==='connect') connect.classList.remove('hidden');
@@ -165,6 +169,14 @@ export function showScreen(which){
   if (which==='plot') plot.classList.remove('hidden');
   if (which==='complete') complete.classList.remove('hidden');
   if (which==='editPlan' && editPlan) editPlan.classList.remove('hidden');
+  if (connectFabs){
+    if (which==='connect') connectFabs.classList.remove('hidden');
+    else connectFabs.classList.add('hidden');
+  }
+  if (planFabs){
+    if (which==='plan') planFabs.classList.remove('hidden');
+    else planFabs.classList.add('hidden');
+  }
 }
 
 export function animationLoop(){
@@ -213,11 +225,22 @@ function showCompletion(stats){
   set('statMax', `${stats.max} bpm`);
   set('statMin', `${stats.min} bpm`);
   set('statInTarget', `${stats.inTargetPct}%`);
-  // Show as modal overlay instead of switching screens
+  // Completion UI behavior (imported sessions keep modal hidden for interaction)
   const modal = document.getElementById('completeScreen');
-  if (modal) modal.classList.remove('hidden');
   const fab = document.getElementById('completeRestoreFab');
-  if (fab) fab.classList.add('hidden');
+  const exportBtn = document.getElementById('completeExportBtn');
+  const actions = document.getElementById('completeActions');
+  if (state.isImportedSession){
+    if (modal) modal.classList.add('hidden');
+    if (fab) fab.classList.remove('hidden');
+    if (exportBtn) exportBtn.classList.add('hidden');
+    if (actions){ actions.classList.remove('grid-cols-3'); actions.classList.add('grid-cols-2', 'justify-center'); }
+  } else {
+    if (modal) modal.classList.remove('hidden');
+    if (fab) fab.classList.add('hidden');
+    if (exportBtn) exportBtn.classList.remove('hidden');
+    if (actions){ actions.classList.remove('grid-cols-2', 'justify-center'); actions.classList.add('grid-cols-3'); }
+  }
   // Close controls modal if open and hide FAB options while finished
   const controls = document.getElementById('controlsModal');
   if (controls) controls.classList.add('hidden');
@@ -304,3 +327,117 @@ export function exportSessionCsv(){
   a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`;
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
+
+// Load a previously exported session CSV and render it as a finished session
+export function loadCompletedSessionFromExportCsv(text){
+  if (!text || !text.trim()) throw new Error('O CSV está vazio.');
+  const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) throw new Error('CSV inválido.');
+  const header = lines[0].split(';').map(s => s.trim());
+  const colIdx = (name) => {
+    const i = header.indexOf(name);
+    if (i === -1) throw new Error(`Coluna ausente no CSV: ${name}`);
+    return i;
+  };
+  // Detect exported format
+  const hasType = header.includes('type');
+  if (!hasType) throw new Error('Formato não suportado. Importe um CSV exportado do CardioMax.');
+
+  const TYPE = colIdx('type');
+  const DATE = colIdx('date');
+  const ATHLETE = colIdx('athlete');
+  const STAGE_INDEX = colIdx('stage_index');
+  const DURATION = colIdx('duration_sec');
+  const LOWER = colIdx('lower');
+  const UPPER = colIdx('upper');
+  const ELAPSED = colIdx('elapsed_sec');
+  const HR = colIdx('hr');
+
+  let date = '';
+  let athlete = '';
+  let totalDurationSec = 0;
+  const stages = [];
+  const series = [];
+
+  for (let i = 1; i < lines.length; i++){
+    const parts = lines[i].split(';');
+    if (!parts.length) continue;
+    const t = (parts[TYPE] || '').trim();
+    if (t === 'summary'){
+      date = (parts[DATE] || '').trim();
+      athlete = (parts[ATHLETE] || '').trim();
+      totalDurationSec = Math.max(0, Number(parts[DURATION] || 0) || 0);
+    } else if (t === 'stage'){
+      const idx = Number(parts[STAGE_INDEX] || 0);
+      const dur = Math.max(0, Number(parts[DURATION] || 0) || 0);
+      const lo = Number(parts[LOWER] || NaN);
+      const hi = Number(parts[UPPER] || NaN);
+      stages.push({ index: idx, durationSec: dur, lower: lo, upper: hi });
+    } else if (t === 'series'){
+      const x = Number(parts[ELAPSED] || 0);
+      const y = Number(parts[HR] || NaN);
+      if (isFinite(x) && isFinite(y)) series.push({ x, y });
+    }
+  }
+
+  if (!stages.length) throw new Error('Nenhum estágio encontrado no CSV.');
+  if (!series.length) throw new Error('Nenhuma série de frequência cardíaca encontrada no CSV.');
+  if (!totalDurationSec){ totalDurationSec = stages.reduce((a,s)=>a+s.durationSec, 0); }
+
+  // Prepare session state without starting timers
+  stopTraining();
+  const session = { date, athlete, stages, totalDurationSec };
+  state.trainingSession = session;
+  state.stageIdx = 0;
+  state.waitingForFirstHR = false;
+  state.isImportedSession = true;
+  state.sessionStartMs = null;
+  state.stageStartMs = null;
+  state.paused = true;
+  state.accumulatedPauseOffset = 0;
+  state.stageAccumulatedPauseOffset = 0;
+
+  // UI priming
+  const firstStage = stages[0];
+  document.getElementById('sessionAthlete').textContent = session.athlete || '—';
+  document.getElementById('sessionMeta').textContent = `${session.date || '—'}`;
+  document.getElementById('stageLabel').textContent = `Concluída • ${stages.length} estágios`;
+  document.getElementById('stageRange').textContent = `${firstStage?.lower ?? '—'}/${firstStage?.upper ?? '—'}`;
+  document.getElementById('stageElapsed').textContent = '00:00';
+  document.getElementById('totalRemaining').textContent = '00:00';
+
+  // Series + chart scales
+  resetStageSeries();
+  resetSessionSeries();
+  state.sessionSeries.push(...series.sort((a,b)=>a.x-b.x));
+
+  const allLows = stages.map(s => s.lower);
+  const allHighs = stages.map(s => s.upper);
+  const minHr = Math.min(...allLows);
+  const maxHr = Math.max(...allHighs);
+  const buffer = 10;
+  state.trainingSession.sessionBounds = { min: minHr - buffer, max: maxHr + buffer };
+  syncChartScales();
+  try {
+    // Push series to chart now
+    const data = (state.sessionSeries || []).map(p => [p.x, p.y]);
+    state.sessionChart?.setOption({ series: [{ data }] }, false, true);
+  } catch {}
+
+  // Navigate to plot and show completion stats
+  showScreen('plot');
+  setTimeout(()=>{ try { state.chart?.resize(); state.sessionChart?.resize(); } catch {} }, 10);
+  try { plotStageSliceByIndex(0); } catch {}
+  const stats = computeSessionStats();
+  showCompletion(stats);
+}
+
+// Handle stage selection from session plot clicks
+window.addEventListener('session:stageSelected', (e)=>{
+  if (!state.trainingSession || !state.isImportedSession) return;
+  const idx = Math.max(0, Math.min((e?.detail?.index ?? 0), state.trainingSession.stages.length - 1));
+  state.stageIdx = idx;
+  updateStageUI();
+  try { plotStageSliceByIndex(idx); } catch {}
+  try { syncChartScales(); } catch {}
+});

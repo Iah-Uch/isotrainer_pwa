@@ -23,19 +23,16 @@
     <div class="rounded-2xl  bg-white/5/50 backdrop-blur-xl shadow-2xl " data-frame>
 
       <!-- TELA DE CONEXÃO -->
-      <div id="connectScreen" class="p-6">
+      <div id="connectScreen" class="relative p-6">
         <div class="flex flex-col items-center gap-6">
           <h1 class="text-2xl font-semibold tracking-tight">Conecte seu monitor de <span
               class="text-rose-400">frequência cardíaca</span></h1>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button id="connectButton"
               class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 transition shadow-lg shadow-blue-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">Conectar
-              ao dispositivo</button>
+             ao dispositivo</button>
             <button id="disconnectButton" disabled
               class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 transition shadow-lg shadow-rose-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">Desconectar</button>
-            <button id="goToPlanButton" disabled
-              class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">Próximo:
-              Carregar plano</button>
           </div>
           <div id="status" class="text-sm text-slate-400 text-center">Não conectado</div>
         </div>
@@ -53,14 +50,6 @@
           <div id="csvError" class="hidden text-sm text-rose-400"></div>
           <div class="mt-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <button id="backToConnect"
-                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
-                  aria-hidden="true">
-                  <path d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>Voltar</span>
-              </button>
               <button id="scanQrBtn" title="Ler QR" aria-label="Ler QR"
                 class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
@@ -286,6 +275,36 @@
 
     </div>
   </div>
+  
+  <!-- Connect screen floating FABs (outside container) -->
+  <div id="connectFabs">
+    <input id="importSessionInput" type="file" accept=".csv,text/csv" class="hidden" />
+    <button id="importSessionBtn"
+      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-purple-600 hover:bg-purple-500 text-white grid place-items-center shadow-lg"
+      title="Importar sessão (CSV)" aria-label="Importar sessão (CSV)">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M5 20h14v-2H5v2zM11 16h2V8h3l-4-5-4 5h3v8z" />
+      </svg>
+    </button>
+    <button id="goToPlanButton" disabled
+      class="fixed bottom-6 right-4 z-30 h-16 w-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white grid place-items-center shadow-lg disabled:bg-slate-600 disabled:cursor-not-allowed"
+      title="Próximo: Carregar plano" aria-label="Próximo: Carregar plano">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M10 6l6 6-6 6-1.5-1.5L12 12 8.5 7.5 10 6z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Plan screen floating FABs (outside container) -->
+  <div id="planFabs" class="hidden">
+    <button id="backToConnect"
+      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white grid place-items-center shadow-lg"
+      title="Voltar" aria-label="Voltar">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+  </div>
 
   <!-- Completion Screen -->
   <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6 flex items-center justify-center bg-black/60">
@@ -320,7 +339,7 @@
           <div id="statInTarget" class="text-2xl font-semibold">—</div>
         </div>
       </div>
-      <div class="mt-4 grid grid-cols-3 gap-2">
+      <div id="completeActions" class="mt-4 grid grid-cols-3 gap-2">
         <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela
           de conexão</button>
         <button id="completeExportBtn"

@@ -1,7 +1,7 @@
 
 import { state } from './state.js';
 import { setupCharts } from './charts.js';
-import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv } from './session.js';
+import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv, loadCompletedSessionFromExportCsv } from './session.js';
 import { loadPlanForEdit } from './edit-plan.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
 
@@ -35,6 +35,25 @@ document.getElementById('loadCsvBtn').addEventListener('click', ()=>{
 document.getElementById('nextStageBtn').addEventListener('click', ()=> nextStage());
 document.getElementById('prevStageBtn').addEventListener('click', ()=> prevStage());
 document.getElementById('backButton').addEventListener('click', ()=>switchToConnect());
+
+// Import finished session (CSV) on connect screen
+const importBtn = document.getElementById('importSessionBtn');
+const importInput = document.getElementById('importSessionInput');
+importBtn?.addEventListener('click', ()=> importInput?.click());
+importInput?.addEventListener('change', (e)=>{
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      loadCompletedSessionFromExportCsv(String(reader.result || ''));
+    }catch(err){
+      alert('Falha ao importar sessão: ' + (err?.message || String(err)));
+    }
+  };
+  reader.onerror = () => alert('Não foi possível ler o arquivo CSV.');
+  reader.readAsText(f);
+});
 
 function switchToConnect(){
   document.getElementById('status').textContent = 'Desconectado';

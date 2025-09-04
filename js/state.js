@@ -13,4 +13,6 @@ export const state = {
   accumulatedPauseOffset: 0, stageAccumulatedPauseOffset: 0,
   waitingForFirstHR: false,
   pulseAnimation: { handle: null, startTime: 0 },
+  // Import flag
+  isImportedSession: false,
 };

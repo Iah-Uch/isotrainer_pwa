@@ -113,6 +113,34 @@ export function setupCharts() {
 
   // Attach responsive behavior for mobile: resize on viewport/container changes
   attachChartResizers();
+
+  // Click anywhere on the session chart to select a stage by time
+  try{
+    const handleClick = (offsetX, offsetY) => {
+      if (!state.trainingSession || !state.sessionSeries?.length) return;
+      let x = null;
+      try{
+        const xy = state.sessionChart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [offsetX, offsetY]);
+        x = Array.isArray(xy) ? xy[0] : null;
+      }catch{}
+      if (typeof x !== 'number' || !isFinite(x)) return;
+      const stages = state.trainingSession.stages || [];
+      let acc = 0; let idx = -1;
+      for (let i=0; i<stages.length; i++){
+        const start = acc; const end = acc + stages[i].durationSec; acc = end;
+        if (x >= start && x <= end){ idx = i; break; }
+      }
+      if (idx === -1) idx = stages.length - 1;
+      if (idx < 0) return;
+      window.dispatchEvent(new CustomEvent('session:stageSelected', { detail: { index: idx } }));
+    };
+    // Prefer ZRender click for reliability
+    state.sessionChart.getZr().on('click', (e)=> handleClick(e.offsetX, e.offsetY));
+    // Fallback: ECharts click
+    state.sessionChart.on('click', (params) => {
+      const ev = params?.event; if (!ev) return; handleClick(ev.offsetX, ev.offsetY);
+    });
+  }catch{}
 }
 
 let resizeAttached = false;
@@ -213,4 +241,23 @@ export function updateSessionChart(hr, tMs) {
   if (!state.sessionStartMs || state.paused) return;
   const totalElapsedSec = Math.max(0, (tMs - state.sessionStartMs - state.accumulatedPauseOffset) / 1000);
   state.sessionSeries.push({ x: Math.max(0, totalElapsedSec), y: hr });
+}
+
+// Plot only the points for a given stage index into the stage chart (hrChart)
+export function plotStageSliceByIndex(index){
+  if (!state.trainingSession || !Array.isArray(state.trainingSession.stages)) return;
+  const stages = state.trainingSession.stages;
+  if (index < 0 || index >= stages.length) return;
+  let start = 0; for (let i=0;i<index;i++) start += stages[i].durationSec;
+  const duration = stages[index].durationSec;
+  const end = start + duration;
+  const lo = stages[index].lower, hi = stages[index].upper;
+  // Set axes and bounds for this stage
+  setYAxis(lo, hi);
+  setStageXAxis(duration);
+  // Fill series with slice from sessionSeries
+  const slice = (state.sessionSeries || []).filter(p => typeof p?.x === 'number' && p.x >= start && p.x <= end);
+  state.series.length = 0;
+  for (const p of slice){ state.series.push({ x: Math.max(0, p.x - start), y: p.y }); }
+  if (state.chart) state.chart.setOption({ series: [{ data: toXY(state.series) }] }, false, true);
 }
