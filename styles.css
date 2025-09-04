@@ -1,6 +1,8 @@
 :root{
   --inset-top: env(safe-area-inset-top);
   --inset-bottom: env(safe-area-inset-bottom);
+  --inset-left: env(safe-area-inset-left);
+  --inset-right: env(safe-area-inset-right);
 }
 body{
   background:
@@ -87,3 +89,17 @@ body{
 
 /* Utility */
 .hidden{ display: none !important; }
+
+/* --- Horizontal button row helper (mobile) --- */
+.btn-row-scroll{
+  /* smoother iOS horizontal scroll */
+  -webkit-overflow-scrolling: touch;
+  /* give breathing room so last/first buttons are fully visible */
+  padding-inline: .5rem;
+  scroll-padding-inline: .5rem;
+}
+.btn-row-scroll::after{
+  /* ensure some trailing space at the end of the flex row */
+  content: '';
+  flex: 0 0 .5rem;
+}
