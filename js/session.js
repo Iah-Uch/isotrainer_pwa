@@ -33,22 +33,11 @@ export function startTraining(session){
   // UI priming (normal mode)
   document.getElementById('sessionAthlete').textContent = session.athlete || '—';
   document.getElementById('sessionMeta').textContent = `${session.date}`;
-  document.getElementById('stageLabel').textContent = 'Aguardando sinal de FC...';
+  document.getElementById('stageLabel').textContent = 'Aguardando FC...';
   document.getElementById('stageRange').textContent = '—';
-  document.getElementById('stageMinMeta').textContent = 'Aguardando FC...';
   document.getElementById('stageElapsed').textContent = '00:00';
   document.getElementById('totalRemaining').textContent = fmtMMSS(session.totalDurationSec);
 
-
-  // FS HUD priming
-  const fsHr = document.getElementById('fsHr');
-  const fsStage = document.getElementById('fsStage');
-  const fsStageElapsed = document.getElementById('fsStageElapsed');
-  const fsTotalRemaining = document.getElementById('fsTotalRemaining');
-  if (fsHr) fsHr.textContent = '--';
-  if (fsStage) fsStage.textContent = 'Aguardando…';
-  if (fsStageElapsed) fsStageElapsed.textContent = '00:00';
-  if (fsTotalRemaining) fsTotalRemaining.textContent = fmtMMSS(session.totalDurationSec);
 
 
   resetStageSeries();
@@ -59,8 +48,7 @@ export function startTraining(session){
   // Initialize countdown with full stage duration
   const stageEl = document.getElementById('stageElapsed');
   if (stageEl) stageEl.textContent = fmtMMSS(firstStage.durationSec);
-  const fsStageEl = document.getElementById('fsStageElapsed');
-  if (fsStageEl) fsStageEl.textContent = fmtMMSS(firstStage.durationSec);
+  // No fullscreen HUD elements to prime
 
   const allLows = session.stages.map(s => s.lower);
   const allHighs = session.stages.map(s => s.upper);
@@ -80,17 +68,14 @@ export function startTraining(session){
 
 export function updateStageUI(){
   const st = state.trainingSession.stages[state.stageIdx];
-  const label = `Estágio ${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)}`;
+  const label = `E${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)}`;
   document.getElementById('stageLabel').textContent = label;
-  document.getElementById('stageRange').textContent = `Alvo: ${st.lower}–${st.upper}`;
-  document.getElementById('stageMinMeta').textContent = `E${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)} • ${st.lower}–${st.upper}`;
+  document.getElementById('stageRange').textContent = `${st.lower}/${st.upper}`;
   // Reset stage countdown to full duration
   const el = document.getElementById('stageElapsed');
   if (el) el.textContent = fmtMMSS(st.durationSec);
 
-  // FS HUD stage text
-  const fsStage = document.getElementById('fsStage');
-  if (fsStage) fsStage.textContent = `E${st.index}/${state.trainingSession.stages.length} • ${st.lower}–${st.upper}`;
+  // No fullscreen HUD stage text
 
   setYAxis(st.lower, st.upper);
   setStageXAxis(st.durationSec);
@@ -117,11 +102,7 @@ export function tick(){
   const totalRemainingText = fmtMMSS(totalRemainingSec);
   document.getElementById('totalRemaining').textContent = totalRemainingText;
 
-  // FS HUD timers
-  const fsStageElapsed = document.getElementById('fsStageElapsed');
-  const fsTotalRemaining = document.getElementById('fsTotalRemaining');
-  if (fsStageElapsed) fsStageElapsed.textContent = stageElapsedText;
-  if (fsTotalRemaining) fsTotalRemaining.textContent = totalRemainingText;
+  // No fullscreen HUD timers
 
   if (stageElapsedSec >= st.durationSec){ nextStage(); }
 }

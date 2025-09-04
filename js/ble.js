@@ -9,18 +9,20 @@ export async function checkBluetoothSupport(){
     document.getElementById('connectButton').disabled = true;
     return false;
   }
+  // Best-effort availability check. Some iOS WebBLE browsers do not implement it.
   try{
-    const avail = await navigator.bluetooth.getAvailability();
-    if (!avail){
-      document.getElementById('status').textContent = 'Adaptador Bluetooth não disponível.';
-      document.getElementById('connectButton').disabled = true;
-      return false;
+    if (typeof navigator.bluetooth.getAvailability === 'function'){
+      const avail = await navigator.bluetooth.getAvailability();
+      if (!avail){
+        // Inform the user but do not hard-block attempts; some runtimes misreport.
+        document.getElementById('status').textContent = 'Adaptador Bluetooth possivelmente indisponível. Você ainda pode tentar conectar.';
+      }
     }
   }catch{
-    document.getElementById('status').textContent = 'Erro ao verificar disponibilidade do Bluetooth.';
-    document.getElementById('connectButton').disabled = true;
-    return false;
+    // Do not gate on errors; allow user to attempt connection in WebBLE browsers.
+    document.getElementById('status').textContent = 'Não foi possível verificar disponibilidade do Bluetooth. Tente conectar.';
   }
+  document.getElementById('connectButton').disabled = false;
   return true;
 }
 
@@ -29,7 +31,22 @@ export async function connectToDevice(){
   try{
     document.getElementById('status').textContent = 'Abrindo seletor de dispositivo...';
     document.getElementById('connectButton').disabled = true;
-    state.device = await navigator.bluetooth.requestDevice({ filters:[{ services:['heart_rate'] }], optionalServices:['heart_rate'] });
+    // Primary path: filter by heart_rate service.
+    try{
+      state.device = await navigator.bluetooth.requestDevice({ filters:[{ services:['heart_rate'] }], optionalServices:['heart_rate'] });
+    }catch(err){
+      // If filtering is unsupported or fails, fall back to acceptAllDevices and filter after connect.
+      if (err?.name === 'NotFoundError'){
+        // User canceled or no device selected; restore UI and exit gracefully.
+        document.getElementById('status').textContent = 'Nenhum dispositivo selecionado.';
+        document.getElementById('connectButton').disabled = false;
+        document.getElementById('disconnectButton').disabled = true;
+        document.getElementById('goToPlanButton').disabled = true;
+        return;
+      }
+      document.getElementById('status').textContent = 'Tentando modo compatível (lista completa)...';
+      state.device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['heart_rate'] });
+    }
     document.getElementById('status').textContent = 'Conectando ao servidor GATT...';
     state.server = await state.device.gatt.connect();
     document.getElementById('status').textContent = `Conectado a ${state.device.name}`;
@@ -41,7 +58,9 @@ export async function connectToDevice(){
     state.characteristic.addEventListener('characteristicvaluechanged', (e)=>handleHeartRateMeasurement(e.target.value));
     addDisconnectListener();
   }catch(err){
-    document.getElementById('status').textContent = `Erro: ${err.message}`;
+    // Provide clearer guidance for common compatibility issues
+    const msg = err?.message || String(err);
+    document.getElementById('status').textContent = `Erro: ${msg}`;
     document.getElementById('connectButton').disabled = false;
     document.getElementById('disconnectButton').disabled = true;
     document.getElementById('goToPlanButton').disabled = true;
@@ -87,13 +106,14 @@ function handleHeartRateMeasurement(value){
   if (state.paused) return;
 
   // NORMAL HUD
-  const hrText = `${hr} bpm`;
-  const currentHr = document.getElementById('currentHr');
-  if (currentHr) currentHr.textContent = hrText;
-
-  // FULLSCREEN HUD (bigger)
-  const fsHr = document.getElementById('fsHr');
-  if (fsHr) fsHr.textContent = String(hr);
+  const currentHrValue = document.getElementById('currentHrValue');
+  if (currentHrValue) {
+    currentHrValue.textContent = String(hr);
+  } else {
+    // Backward compatibility if layout not updated
+    const currentHr = document.getElementById('currentHr');
+    if (currentHr) currentHr.textContent = `${hr} bpm`;
+  }
 
   const marker = document.getElementById('heartMarker');
   if (marker){

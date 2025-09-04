@@ -5,6 +5,25 @@ import { state } from './state.js';
 let originalSession = null;
 let working = null; // mutable copy
 let selected = new Set();
+const HR_MIN = 0, HR_MAX = 300;
+
+function pct25(n){ return Math.floor(n * 0.25); }
+
+function stageCaps(i){
+  const o = originalSession?.stages?.[i];
+  const w = working?.stages?.[i];
+  if (!o || !w) return null;
+  const timeDelta = pct25(o.durationSec);
+  const timeMin = Math.max(0, o.durationSec - timeDelta);
+  const timeMax = o.durationSec + timeDelta;
+  const lowerDelta = pct25(o.lower);
+  const upperDelta = pct25(o.upper);
+  const lowerMin = Math.max(HR_MIN, o.lower - lowerDelta);
+  const lowerMax = Math.min(HR_MAX, o.lower + lowerDelta);
+  const upperMin = Math.max(HR_MIN, o.upper - upperDelta);
+  const upperMax = Math.min(HR_MAX, o.upper + upperDelta);
+  return { o, w, timeMin, timeMax, lowerMin, lowerMax, upperMin, upperMax };
+}
 
 function deepCopySession(session){
   return {
@@ -25,22 +44,27 @@ function render(){
     const tr = document.createElement('tr');
     const isSel = selected.has(i);
     tr.className = isSel ? 'bg-white/5' : '';
+    const caps = stageCaps(i);
+    const canLowerMinus = caps ? (stg.lower - 5) >= caps.lowerMin : true;
+    const canLowerPlus  = caps ? (stg.lower + 5) <= caps.lowerMax : true;
+    const canUpperMinus = caps ? (stg.upper - 5) >= caps.upperMin : true;
+    const canUpperPlus  = caps ? (stg.upper + 5) <= caps.upperMax : true;
     tr.innerHTML = `
       <td class="py-1 pr-1 text-center"><input type="checkbox" data-act="selRow" data-i="${i}" ${isSel ? 'checked' : ''} class="accent-emerald-600"></td>
       <td class="py-1 pr-1 text-slate-300 text-center">E${stg.index}</td>
       <td class="py-1 pr-1 text-center"><div class="min-w-[4rem] text-center">${fmtMMSS(stg.durationSec)}</div></td>
       <td class="py-1 pr-1">
         <div class="flex items-center justify-center gap-1">
-          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="addLower" data-delta="-5" data-i="${i}">−5</button>
+          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30" ${canLowerMinus?'' : 'disabled'} data-act="addLower" data-delta="-5" data-i="${i}">−5</button>
           <input type="number" class="w-14 rounded-lg bg-slate-900/60 border border-white/10 p-1" value="${stg.lower}" data-act="inputLower" data-i="${i}"/>
-          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="addLower" data-delta="5" data-i="${i}">+5</button>
+          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30" ${canLowerPlus?'' : 'disabled'} data-act="addLower" data-delta="5" data-i="${i}">+5</button>
         </div>
       </td>
       <td class="py-1 pr-1">
         <div class="flex items-center justify-center gap-1">
-          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="addUpper" data-delta="-5" data-i="${i}">−5</button>
+          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30" ${canUpperMinus?'' : 'disabled'} data-act="addUpper" data-delta="-5" data-i="${i}">−5</button>
           <input type="number" class="w-14 rounded-lg bg-slate-900/60 border border-white/10 p-1" value="${stg.upper}" data-act="inputUpper" data-i="${i}"/>
-          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="addUpper" data-delta="5" data-i="${i}">+5</button>
+          <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30" ${canUpperPlus?'' : 'disabled'} data-act="addUpper" data-delta="5" data-i="${i}">+5</button>
         </div>
       </td>
     `;
@@ -49,6 +73,7 @@ function render(){
   // header checkbox state
   const selAll = document.getElementById('editSelAll');
   if (selAll) selAll.checked = (selected.size === (working?.stages?.length || 0) && selected.size > 0);
+  updateAdjTimeButtons();
 }
 
 function recalcTotal(){
@@ -88,19 +113,31 @@ function onClick(e){
   // Row time controls removed; time adjustments are global via top bar selection
   if (act === 'addLower'){
     const d = Number(t.dataset.delta) || 0;
-    working.stages[i].lower = clamp(Math.round(working.stages[i].lower + d), 0, 300);
+    const caps = stageCaps(i);
+    const minV = caps ? caps.lowerMin : HR_MIN;
+    const maxV = caps ? caps.lowerMax : HR_MAX;
+    working.stages[i].lower = clamp(Math.round(working.stages[i].lower + d), minV, maxV);
     render();
   }
   if (act === 'addUpper'){
     const d = Number(t.dataset.delta) || 0;
-    working.stages[i].upper = clamp(Math.round(working.stages[i].upper + d), 0, 300);
+    const caps = stageCaps(i);
+    const minV = caps ? caps.upperMin : HR_MIN;
+    const maxV = caps ? caps.upperMax : HR_MAX;
+    working.stages[i].upper = clamp(Math.round(working.stages[i].upper + d), minV, maxV);
     render();
   }
   // Per-row reset removed
   if (act === 'adjTime'){
     const d = Number(t.dataset.delta) || 0;
     if (selected.size === 0) return;
-    [...selected].forEach(idx => { working.stages[idx].durationSec = clamp(Math.round(working.stages[idx].durationSec + d), 0, 86400); });
+    [...selected].forEach(idx => {
+      const caps = stageCaps(idx);
+      const minT = caps ? caps.timeMin : 0;
+      const maxT = caps ? caps.timeMax : 86400;
+      const cur = working.stages[idx].durationSec;
+      working.stages[idx].durationSec = clamp(Math.round(cur + d), minT, maxT);
+    });
     recalcTotal(); render();
   }
   // Global controls are time-only
@@ -118,9 +155,40 @@ function onInput(e){
     render();
     return;
   }
-  if (act === 'inputLower'){ working.stages[i].lower = clamp(val, 0, 300); }
-  if (act === 'inputUpper'){ working.stages[i].upper = clamp(val, 0, 300); }
+  if (act === 'inputLower'){
+    const caps = stageCaps(i);
+    const minV = caps ? caps.lowerMin : HR_MIN;
+    const maxV = caps ? caps.lowerMax : HR_MAX;
+    working.stages[i].lower = clamp(val, minV, maxV);
+  }
+  if (act === 'inputUpper'){
+    const caps = stageCaps(i);
+    const minV = caps ? caps.upperMin : HR_MIN;
+    const maxV = caps ? caps.upperMax : HR_MAX;
+    working.stages[i].upper = clamp(val, minV, maxV);
+  }
   validate();
+}
+
+function updateAdjTimeButtons(){
+  const btns = Array.from(document.querySelectorAll('button[data-act="adjTime"]'));
+  if (!btns.length) return;
+  const sel = [...selected];
+  for (const b of btns){
+    const d = Number(b.dataset.delta) || 0;
+    let can = true;
+    if (!sel.length) can = false;
+    for (const idx of sel){
+      const caps = stageCaps(idx);
+      if (!caps) { can = false; break; }
+      const cur = working.stages[idx].durationSec;
+      const next = cur + d;
+      if (!(next >= caps.timeMin && next <= caps.timeMax)) { can = false; break; }
+    }
+    b.disabled = !can;
+    if (b.disabled) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+    if (b.disabled) b.title = 'Alguns estágios selecionados atingiram o limite de 25%'; else b.removeAttribute('title');
+  }
 }
 
 export function loadPlanForEdit(session){
@@ -153,6 +221,7 @@ document.addEventListener('click', (e)=>{
 document.addEventListener('input', (e)=>{
   if (document.getElementById('editPlanScreen')?.classList.contains('hidden')) return;
   onInput(e);
+  updateAdjTimeButtons();
 });
 
 // Select all handler

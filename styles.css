@@ -87,6 +87,3 @@ body{
 
 /* Utility */
 .hidden{ display: none !important; }
-
-/* ---------- Fullscreen lock (unchanged) ---------- */
-html.fs-lock, body.fs-lock{ overflow:hidden !important; height:100svh; }

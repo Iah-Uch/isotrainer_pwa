@@ -13,7 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- QR Scanner (ESM build also available; using global for simplicity) -->
-  <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
@@ -52,13 +53,20 @@
           <div id="csvError" class="hidden text-sm text-rose-400"></div>
           <div class="mt-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <button id="backToConnect" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+              <button id="backToConnect"
+                class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                  aria-hidden="true">
+                  <path d="M15 19l-7-7 7-7" />
+                </svg>
                 <span>Voltar</span>
               </button>
-              <button id="scanQrBtn" title="Ler QR" aria-label="Ler QR" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zM15 3h6v6h-6V3zm2 2v2h2V5h-2zM3 15h6v6H3v-6zm2 2v2h2v-2H5zM13 13h2v2h-2v-2zm4 0h4v2h-4v-2zm-4 4h2v4h-2v-4zm4 4h4v-2h-2v-2h-2v4z"/>
+              <button id="scanQrBtn" title="Ler QR" aria-label="Ler QR"
+                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                  aria-hidden="true">
+                  <path
+                    d="M3 3h6v6H3V3zm2 2v2h2V5H5zM15 3h6v6h-6V3zm2 2v2h2V5h-2zM3 15h6v6H3v-6zm2 2v2h2v-2H5zM13 13h2v2h-2v-2zm4 0h4v2h-4v-2zm-4 4h2v4h-2v-4zm4 4h4v-2h-2v-2h-2v4z" />
                 </svg>
                 <span>Ler QR</span>
               </button>
@@ -73,56 +81,85 @@
       <!-- TELA DE EDIÇÃO DO PLANO -->
       <div id="editPlanScreen" class="hidden p-6">
         <div class="mx-auto w-full max-w-2xl">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xl font-semibold">Editar Sessão</h2>
-        </div>
-        <div class="mb-3 rounded-xl border border-rose-500/40 bg-rose-900/40 p-3 text-rose-200 shadow shadow-rose-900/30" role="alert" aria-live="polite">
-          <div class="flex items-start gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 text-rose-300" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M11 7h2v6h-2V7zm0 8h2v2h-2v-2z"/>
-              <path d="M1 21h22L12 2 1 21z"/>
-            </svg>
-            <p class="text-sm">
-              <span class="font-semibold">Aviso:</span>
-              Esta tela de edição é um recurso experimental apenas para hard-users. Não estará disponível em futuras versões.
-            </p>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xl font-semibold">Editar Sessão</h2>
           </div>
-        </div>
-        <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <label class="flex items-center gap-2 text-sm text-slate-300"><input id="editSelAll" type="checkbox" class="accent-emerald-600"> Selecionar todos</label>
-            <div class="h-4 w-px bg-white/10" aria-hidden="true"></div>
-            <div class="text-sm text-slate-400">Tempo (aplicar aos selecionados):</div>
-            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="-10">−10s</button>
-            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="-5">−5s</button>
-            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="5">+5s</button>
-            <button class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700" data-act="adjTime" data-delta="10">+10s</button>
+          <div
+            class="mb-3 rounded-xl border border-rose-500/40 bg-rose-900/40 p-3 text-rose-200 shadow shadow-rose-900/30"
+            role="alert" aria-live="polite">
+            <div class="flex items-start gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 text-rose-300" viewBox="0 0 24 24"
+                fill="currentColor" aria-hidden="true">
+                <path d="M11 7h2v6h-2V7zm0 8h2v2h-2v-2z" />
+                <path d="M1 21h22L12 2 1 21z" />
+              </svg>
+              <p class="text-sm">
+                <span class="font-semibold">Aviso:</span>
+                Esta tela de edição é um recurso experimental apenas para hard-users. Não estará disponível em futuras
+                versões.
+              </p>
+            </div>
           </div>
-          <div class="text-xs text-slate-400 mb-2">Dica: selecione um ou mais estágios para ajustar a <span class="text-slate-300">duração</span> pelos botões acima. Edite os <span class="text-slate-300">limites</span> diretamente nos campos de cada linha.</div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-[13px]">
-              <thead class="text-slate-300">
-                <tr>
-                  <th class="py-1 pr-1 text-center"></th>
-                  <th class="py-1 pr-1 text-center">Estágio</th>
-                  <th class="py-1 pr-1 text-center">Duração</th>
-                  <th class="py-1 pr-1 text-center">Inferior</th>
-                  <th class="py-1 pr-1 text-center">Superior</th>
-                </tr>
-              </thead>
-              <tbody id="editPlanBody" class="align-top"></tbody>
-            </table>
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div class="flex flex-nowrap items-center gap-2 mb-2 overflow-x-auto whitespace-nowrap justify-center">
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="-60">−1m</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="-30">−30s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="-10">−10s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="-5">−5s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="5">+5s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="10">+10s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="30">+30s</button>
+              <button
+                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                data-act="adjTime" data-delta="60">+1m</button>
+            </div>
+            <div class="flex items-center gap-2 mb-1">
+              <label class="flex items-center gap-2 text-sm text-slate-300"><input id="editSelAll" type="checkbox"
+                  class="accent-emerald-600"> Selecionar todos</label>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-[13px]">
+                <thead class="text-slate-300">
+                  <tr>
+                    <th class="py-1 pr-1 text-center"></th>
+                    <th class="py-1 pr-1 text-center">Estágio</th>
+                    <th class="py-1 pr-1 text-center">Duração</th>
+                    <th class="py-1 pr-1 text-center">Inferior</th>
+                    <th class="py-1 pr-1 text-center">Superior</th>
+                  </tr>
+                </thead>
+                <tbody id="editPlanBody" class="align-top"></tbody>
+              </table>
+                          <div class="text-xs text-slate-400 mb-2">Dica: selecione um ou mais estágios para ajustar a <span
+                class="text-slate-300">duração</span> pelos botões acima. Edite os <span
+                class="text-slate-300">limites</span> diretamente nos campos de cada linha.</div>
+            </div>
+            <div id="editPlanError" class="hidden mt-2 text-sm text-rose-400"></div>
           </div>
-          <div id="editPlanError" class="hidden mt-2 text-sm text-rose-400"></div>
-        </div>
-        <!-- Sticky footer actions -->
-        <div class="sticky bottom-0 mt-4 bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-slate-900/40 rounded-xl border border-white/10 p-3 flex items-center justify-between">
-          <div class="text-xs text-slate-400">Revise as alterações antes de iniciar.</div>
-          <div class="flex items-center gap-2">
-            <button id="editBackBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar</button>
-            <button id="editStartBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Iniciar sessão</button>
+          <!-- Sticky footer actions -->
+          <div
+            class="sticky bottom-0 mt-4 bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-slate-900/90 rounded-xl border border-white/10 p-3 flex items-center justify-between">
+            <div class="text-xs text-slate-400">Revise as alterações antes de iniciar.</div>
+            <div class="flex items-center gap-2">
+              <button id="editBackBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar</button>
+              <button id="editStartBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Iniciar
+                sessão</button>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -141,44 +178,51 @@
           </svg>
         </button>
         <div id="fabMenu" class="fab-menu hidden" role="menu" aria-labelledby="fabToggle">
-          <button class="fab-item flex items-center gap-2" data-act="play-pause" role="menuitem" title="Parar/Continuar" aria-label="Parar/Continuar">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M8 5h3v14H8zM13 5l8 7-8 7z"/>
+          <button class="fab-item flex items-center gap-2" data-act="play-pause" role="menuitem" title="Parar/Continuar"
+            aria-label="Parar/Continuar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true">
+              <path d="M8 5h3v14H8zM13 5l8 7-8 7z" />
             </svg>
             <span>Parar/Continuar</span>
           </button>
-          <button class="fab-item flex items-center gap-2" data-act="controls" role="menuitem" title="Controles" aria-label="Controles">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M7 4h2v16H7zM11 10h2v10h-2zM15 6h2v14h-2z"/>
+          <button class="fab-item flex items-center gap-2" data-act="controls" role="menuitem" title="Controles"
+            aria-label="Controles">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true">
+              <path d="M7 4h2v16H7zM11 10h2v10h-2zM15 6h2v14h-2z" />
             </svg>
             <span>Controles de estágio</span>
           </button>
-          <button class="fab-item flex items-center gap-2" data-act="back" role="menuitem" title="Voltar" aria-label="Voltar">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M15 19l-7-7 7-7"/>
+          <button class="fab-item flex items-center gap-2" data-act="back" role="menuitem" title="Voltar"
+            aria-label="Voltar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true">
+              <path d="M15 19l-7-7 7-7" />
             </svg>
             <span>Voltar à conexão</span>
           </button>
         </div>
-        <div class="flex items-center justify-center space-x-4 text-xs text-slate-400 mb-1">
-          <div class="uppercase tracking-wide text-[.68rem]">Sessão</div>
-          <div id="sessionMeta">—</div>
-          <div>
-            <span id="stageLabel">Estágio —</span>
-            <span class="mx-2">•</span>
-            <span id="stageRange">—</span>
-          </div>
+        <!-- Top header: single line (session • date • athlete • stage) -->
+        <div class="flex items-center justify-center gap-2 text-xs text-slate-400">
+          <span class="uppercase tracking-wide text-[.68rem]">Sessão</span>
+          <span id="sessionMeta">—</span>
+          <span class="mx-1">•</span>
+          <span id="sessionAthlete">—</span>
+          <span class="mx-1">•</span>
+          <span id="stageLabel">Estágio —</span>
         </div>
 
         <div id="frameGrid"
           class="grid gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[minmax(6rem,9rem)_1fr_minmax(6rem,9rem)]">
           <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 landscape:h-[50svh]">
             <div class="space-y-2">
-              <div id="currentHr" class="text-[clamp(2rem,3.5vw,3.75rem)] font-bold text-amber-300">-- bpm</div>
-              <!-- <div class="text-[.68rem] uppercase tracking-wide text-slate-400">Athlete</div> -->
-              <div id="sessionAthlete" class="text-[clamp(.8rem,2.2vw,1rem)] font-semibold">—</div>
-
-              <div class="hidden landscape:block text-[.68rem] text-slate-400" id="stageMinMeta">—</div>
+              <div id="currentHr" class="text-center">
+                <div id="currentHrValue" class="text-[clamp(4.5rem,3.5vw,5rem)] font-bold text-amber-300 leading-none">
+                  --</div>
+                <div class="text-[clamp(1.2rem,2.6vw,1.6rem)] uppercase tracking-wide text-slate-400">bpm</div>
+                <div id="stageRange" class="text-[clamp(1.5rem,2.6vw,1.6rem)] font-semibold text-emerald-300">—</div>
+              </div>
             </div>
           </aside>
 
@@ -210,7 +254,7 @@
                 <div id="totalRemaining" class="timer-xl">00:00</div>
               </div>
             </div>
-
+            <!-- Stage info moved to top header -->
             <!-- Keep original buttons for compatibility, but hide them (the FAB triggers them) -->
             <div class="hidden">
               <div class="flex items-center gap-2">
@@ -246,9 +290,11 @@
   <!-- Completion Screen -->
   <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6 flex items-center justify-center bg-black/60">
     <div class="relative mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
-      <button id="completeMinimizeIcon" class="absolute top-3 right-3 text-slate-300 hover:text-white" title="Minimizar" aria-label="Minimizar">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M5 19h14v2H5z"/>
+      <button id="completeMinimizeIcon" class="absolute top-3 right-3 text-slate-300 hover:text-white" title="Minimizar"
+        aria-label="Minimizar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+          aria-hidden="true">
+          <path d="M5 19h14v2H5z" />
         </svg>
       </button>
       <div class="flex items-center gap-3">
@@ -275,22 +321,29 @@
         </div>
       </div>
       <div class="mt-4 grid grid-cols-3 gap-2">
-        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela de conexão</button>
-        <button id="completeExportBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2" title="Exportar CSV" aria-label="Exportar CSV">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/>
+        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela
+          de conexão</button>
+        <button id="completeExportBtn"
+          class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2"
+          title="Exportar CSV" aria-label="Exportar CSV">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+            aria-hidden="true">
+            <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
           </svg>
           <span>CSV</span>
         </button>
-        <button id="completePlanBtn" class="w-full px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Carregar novo plano</button>
+        <button id="completePlanBtn" class="w-full px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">Carregar
+          novo plano</button>
       </div>
     </div>
   </div>
 
   <!-- Completion Restore FAB -->
-  <button id="completeRestoreFab" class="hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg grid place-items-center" title="Ver resumo" aria-label="Ver resumo">
+  <button id="completeRestoreFab"
+    class="hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg grid place-items-center"
+    title="Ver resumo" aria-label="Ver resumo">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M9 12l2 2 4-4 1.5 1.5L11 17 7.5 13.5 9 12z"/>
+      <path d="M9 12l2 2 4-4 1.5 1.5L11 17 7.5 13.5 9 12z" />
     </svg>
   </button>
 
