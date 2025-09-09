@@ -89,6 +89,8 @@ body{
 
 /* Utility */
 .hidden{ display: none !important; }
+/* Ensure visual dimming for aria-disabled controls */
+button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 
 /* --- Horizontal button row helper (mobile) --- */
 .btn-row-scroll{
@@ -102,4 +104,35 @@ body{
   /* ensure some trailing space at the end of the flex row */
   content: '';
   flex: 0 0 .5rem;
+}
+
+/* ---------- Responsive Visibility (mobile includes landscape) ---------- */
+.only-mobile{ display: inline-flex !important; }
+.only-desktop{ display: none !important; }
+@media (min-width: 1024px) and (min-height: 550px){
+  .only-mobile{ display: none !important; }
+  .only-desktop{ display: block !important; }
+}
+
+/* ---------- Subtle reveal for next-stage hint ---------- */
+.next-hint{
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: max-height .25s ease, opacity .25s ease, transform .25s ease;
+}
+.next-hint.show{
+  max-height: 28px; /* big enough for the line */
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Blink + glow in final 10% of stage */
+@keyframes nextHintGlow {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(56,189,248,0)); }
+  50% { filter: drop-shadow(0 0 10px rgba(56,189,248,0.65)); }
+}
+.next-hint.urgent{
+  animation: nextHintGlow 1s ease-in-out infinite;
 }

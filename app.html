@@ -30,7 +30,7 @@
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button id="connectButton"
               class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 transition shadow-lg shadow-blue-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">Conectar
-             ao dispositivo</button>
+              ao dispositivo</button>
             <button id="disconnectButton" disabled
               class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 transition shadow-lg shadow-rose-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">Desconectar</button>
           </div>
@@ -90,7 +90,8 @@
             </div>
           </div>
           <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
-            <div class="flex flex-nowrap items-center gap-2 mb-2 overflow-x-auto whitespace-nowrap justify-start sm:justify-center btn-row-scroll">
+            <div
+              class="flex flex-nowrap items-center gap-2 mb-2 overflow-x-auto whitespace-nowrap justify-start sm:justify-center btn-row-scroll">
               <button
                 class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
                 data-act="adjTime" data-delta="-60">−1m</button>
@@ -133,9 +134,9 @@
                 </thead>
                 <tbody id="editPlanBody" class="align-top"></tbody>
               </table>
-                          <div class="text-xs text-slate-400 mb-2">Dica: selecione um ou mais estágios para ajustar a <span
-                class="text-slate-300">duração</span> pelos botões acima. Edite os <span
-                class="text-slate-300">limites</span> diretamente nos campos de cada linha.</div>
+              <div class="text-xs text-slate-400 mb-2">Dica: selecione um ou mais estágios para ajustar a <span
+                  class="text-slate-300">duração</span> pelos botões acima. Edite os <span
+                  class="text-slate-300">limites</span> diretamente nos campos de cada linha.</div>
             </div>
             <div id="editPlanError" class="hidden mt-2 text-sm text-rose-400"></div>
           </div>
@@ -189,7 +190,7 @@
               aria-hidden="true">
               <path d="M15 19l-7-7 7-7" />
             </svg>
-            <span>Voltar à conexão</span>
+            <span>Voltar à Tela Inicial</span>
           </button>
         </div>
         <!-- Top header: single line (session • date • athlete • stage) -->
@@ -200,17 +201,38 @@
           <span id="sessionAthlete">—</span>
           <span class="mx-1">•</span>
           <span id="stageLabel">Estágio —</span>
+          <!-- Mobile-only live in-target % -->
+          <span class="mx-1 only-mobile">•</span>
+          <div class="only-mobile inline-flex items-center gap-1 text-emerald-300" title="No alvo (%)">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
+              aria-hidden="true">
+              <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
+              <path d="M12 6a6 6 0 1 0 6 6A6.006 6.006 0 0 0 12 6Zm0 10a4 4 0 1 1 4-4 4.005 4.005 0 0 1-4 4Z" />
+              <circle cx="12" cy="12" r="1.75" />
+            </svg>
+            <span id="stageInTargetPctMobile" class="font-semibold">—</span>
+          </div>
         </div>
 
         <div id="frameGrid"
           class="grid gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[minmax(6rem,9rem)_1fr_minmax(6rem,9rem)]">
-          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 landscape:h-[50svh]">
+          <aside data-sidebar
+            class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 landscape:h-[50svh] grid place-items-center">
             <div class="space-y-2">
               <div id="currentHr" class="text-center">
                 <div id="currentHrValue" class="text-[clamp(4.5rem,3.5vw,5rem)] font-bold text-amber-300 leading-none">
                   --</div>
-                <div class="text-[clamp(1.2rem,2.6vw,1.6rem)] uppercase tracking-wide text-slate-400">bpm</div>
+                <div class="text-[clamp(0.5rem,1.6vw,1.6rem)] tracking-wide text-slate-400">bpm</div>
                 <div id="stageRange" class="text-[clamp(1.5rem,2.6vw,1.6rem)] font-semibold text-emerald-300">—</div>
+                <!-- Next-stage hint appears after halfway point of current stage -->
+                <div id="nextStageHint"
+                  class="next-hint inline-flex items-center justify-center gap-1 text-sky-300/80 text-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
+                    aria-hidden="true">
+                    <path d="M8 5l8 7-8 7V5z" />
+                  </svg>
+                  <span id="nextStageRange" class="font-semibold">—</span>
+                </div>
               </div>
             </div>
           </aside>
@@ -231,7 +253,7 @@
             </div>
           </main>
 
-          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2">
+          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center">
             <!-- Temporizadores maiores -->
             <div class="mt-1 grid grid-cols-1 gap-3">
               <div>
@@ -241,6 +263,20 @@
               <div>
                 <div class="text-[.68rem] uppercase tracking-wide text-slate-400">Total</div>
                 <div id="totalRemaining" class="timer-xl">00:00</div>
+              </div>
+              <div class="only-desktop">
+                <div
+                  class="text-[.68rem] uppercase tracking-wide text-slate-400 flex items-center justify-start sm:justify-start gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor"
+                    aria-hidden="true" title="No alvo (%)">
+                    <path
+                      d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
+                    <path d="M12 6a6 6 0 1 0 6 6A6.006 6.006 0 0 0 12 6Zm0 10a4 4 0 1 1 4-4 4.005 4.005 0 0 1-4 4Z" />
+                    <circle cx="12" cy="12" r="1.75" />
+                  </svg>
+                  <span class="sr-only">No alvo (%)</span>
+                  <div id="stageInTargetPct" class="text-lg text-emerald-300">—</div>
+                </div>
               </div>
             </div>
             <!-- Stage info moved to top header -->
@@ -260,7 +296,7 @@
                 </button>
                 <button id="openControls" aria-haspopup="dialog" aria-controls="controlsModal">Controles</button>
               </div>
-              <button id="backButton">Voltar à conexão</button>
+              <button id="backButton">Voltar à Tela Inicial</button>
             </div>
           </aside>
         </div>
@@ -275,21 +311,23 @@
 
     </div>
   </div>
-  
+
   <!-- Connect screen floating FABs (outside container) -->
   <div id="connectFabs">
     <input id="importSessionInput" type="file" accept=".csv,text/csv" class="hidden" />
     <button id="importSessionBtn"
       class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-purple-600 hover:bg-purple-500 text-white grid place-items-center shadow-lg"
       title="Importar sessão (CSV)" aria-label="Importar sessão (CSV)">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+        aria-hidden="true">
         <path d="M5 20h14v-2H5v2zM11 16h2V8h3l-4-5-4 5h3v8z" />
       </svg>
     </button>
     <button id="goToPlanButton" disabled
       class="fixed bottom-6 right-4 z-30 h-16 w-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white grid place-items-center shadow-lg disabled:bg-slate-600 disabled:cursor-not-allowed"
       title="Próximo: Carregar plano" aria-label="Próximo: Carregar plano">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"
+        aria-hidden="true">
         <path d="M10 6l6 6-6 6-1.5-1.5L12 12 8.5 7.5 10 6z" />
       </svg>
     </button>
@@ -300,7 +338,8 @@
     <button id="backToConnect"
       class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white grid place-items-center shadow-lg"
       title="Voltar" aria-label="Voltar">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+        aria-hidden="true">
         <path d="M15 19l-7-7 7-7" />
       </svg>
     </button>
@@ -340,8 +379,8 @@
         </div>
       </div>
       <div id="completeActions" class="mt-4 grid grid-cols-3 gap-2">
-        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à tela
-          de conexão</button>
+        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Voltar à Tela
+          Inicial</button>
         <button id="completeExportBtn"
           class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2"
           title="Exportar CSV" aria-label="Exportar CSV">
@@ -378,6 +417,20 @@
       <div class="mt-4 grid grid-cols-2 gap-2">
         <button id="prevStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">◀ Anterior</button>
         <button id="nextStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">Próximo ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pre-Start Modal -->
+  <div id="preStartModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    role="dialog" aria-modal="true" aria-labelledby="preStartTitle">
+    <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10">
+      <h3 id="preStartTitle" class="text-lg font-semibold">Pronto para iniciar?</h3>
+      <p class="mt-2 text-sm text-slate-300">Quando você tocar em Iniciar, o cronômetro começa ao detectar a primeira FC
+        recebida.</p>
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <button id="preStartBackBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2">Voltar</button>
+        <button id="preStartGoBtn" class="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2">Iniciar ▶</button>
       </div>
     </div>
   </div>

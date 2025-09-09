@@ -12,6 +12,8 @@ export const state = {
   timerHandle: null, paused: false, pausedAtMs: null,
   accumulatedPauseOffset: 0, stageAccumulatedPauseOffset: 0,
   waitingForFirstHR: false,
+  // Pre-start gate: true means show modal and do not begin timing
+  startPending: false,
   pulseAnimation: { handle: null, startTime: 0 },
   // Import flag
   isImportedSession: false,

@@ -9,7 +9,7 @@ let lastText = '';
 
 const el = (id) => document.getElementById(id);
 
-function openQr(){
+function openQr() {
   const modal = el('qrModal');
   if (!modal) return;
   modal.classList.remove('hidden');
@@ -17,9 +17,9 @@ function openQr(){
 
   const video = el('qrVideo');
   const hint = el('qrHint');
-  const err  = el('qrError');
-  const use  = el('qrUseResult');
-  const retry= el('qrRetry');
+  const err = el('qrError');
+  const use = el('qrUseResult');
+  const retry = el('qrRetry');
 
   lastText = '';
   if (use) use.disabled = true; if (retry) retry.disabled = true; if (err) err.classList.add('hidden');
@@ -47,33 +47,33 @@ function openQr(){
     maxScansPerSecond: 10
   });
 
-  qrScanner.start().catch(e=>{
-    if (err){ err.textContent = 'Erro da câmera: ' + (e?.message || e); err.classList.remove('hidden'); }
+  qrScanner.start().catch(e => {
+    if (err) { err.textContent = 'Erro da câmera: ' + (e?.message || e); err.classList.remove('hidden'); }
   });
 }
 
-function closeQr(){
+function closeQr() {
   const modal = el('qrModal');
-  if (modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   qrScanner?.stop();
   qrScanner?.destroy();
   qrScanner = null;
 }
 
-function retryQr(){
+function retryQr() {
   lastText = '';
   const use = el('qrUseResult');
   const retry = el('qrRetry');
   const hint = el('qrHint');
-  const err  = el('qrError');
+  const err = el('qrError');
   if (use) use.disabled = true;
   if (retry) retry.disabled = true;
   if (hint) hint.textContent = 'Aponte a câmera para o QR code';
   if (err) err.classList.add('hidden');
-  qrScanner?.start().catch(()=>{});
+  qrScanner?.start().catch(() => { });
 }
 
-function useResult(){
+function useResult() {
   if (!lastText) return;
   const textarea = el('csvInput');
   if (textarea) textarea.value = lastText;

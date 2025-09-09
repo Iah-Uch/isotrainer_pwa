@@ -5,7 +5,7 @@
 let wakeLock = null;
 let triedOnce = false;
 
-async function requestWakeLock(){
+async function requestWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
     wakeLock = await navigator.wakeLock.request('screen');
@@ -14,14 +14,14 @@ async function requestWakeLock(){
   } catch { /* ignore */ }
 }
 
-function handleVisibility(){
+function handleVisibility() {
   if (document.visibilityState === 'visible' && wakeLock) {
     // Re-request if it was lost
     requestWakeLock();
   }
 }
 
-export function enableWakeLock(){
+export function enableWakeLock() {
   if (triedOnce) return;
   // Try immediately; if UA requires a gesture, also hook first interaction
   requestWakeLock();

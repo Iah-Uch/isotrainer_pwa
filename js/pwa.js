@@ -4,16 +4,16 @@ let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
 const openAppBtn = document.getElementById('openAppBtn');
 
-function isStandalone(){
+function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
-function hideInstall(){ if (installBtn) installBtn.classList.add('hidden'); }
-function showInstall(){ if (installBtn) installBtn.classList.remove('hidden'); }
-function hideOpen(){ if (openAppBtn) openAppBtn.classList.add('hidden'); }
-function showOpen(){ if (openAppBtn) openAppBtn.classList.remove('hidden'); }
+function hideInstall() { if (installBtn) installBtn.classList.add('hidden'); }
+function showInstall() { if (installBtn) installBtn.classList.remove('hidden'); }
+function hideOpen() { if (openAppBtn) openAppBtn.classList.add('hidden'); }
+function showOpen() { if (openAppBtn) openAppBtn.classList.remove('hidden'); }
 
-function isLikelyInstalled(){
+function isLikelyInstalled() {
   // Heuristic: remember install event; some platforms don’t expose a direct API.
   const flag = localStorage.getItem('pwaInstalled') === '1';
   return flag;
@@ -28,7 +28,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 window.addEventListener('appinstalled', () => {
   deferredPrompt = null;
   hideInstall();
-  try { localStorage.setItem('pwaInstalled', '1'); } catch {}
+  try { localStorage.setItem('pwaInstalled', '1'); } catch { }
   showOpen();
 });
 
@@ -36,7 +36,7 @@ installBtn?.addEventListener('click', async () => {
   if (!deferredPrompt) return;
   hideInstall();
   deferredPrompt.prompt();
-  try { await deferredPrompt.userChoice; } catch {}
+  try { await deferredPrompt.userChoice; } catch { }
   deferredPrompt = null;
 });
 
@@ -84,7 +84,7 @@ function showUpdatePrompt(reg) {
   });
 
   updateBtn.addEventListener('click', () => {
-    try { waiting.postMessage('skipWaiting'); } catch {}
+    try { waiting.postMessage('skipWaiting'); } catch { }
     // Banner will be removed after controllerchange reload
   });
   dismissBtn.addEventListener('click', cleanup);
@@ -93,18 +93,18 @@ function showUpdatePrompt(reg) {
 // Proactively check for updates and activate them
 if ('serviceWorker' in navigator) {
   // Ensure there is a registration and force an update on open
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  navigator.serviceWorker.register('/sw.js').catch(() => { });
   const withReg = async (cb) => {
     try {
       let reg = await navigator.serviceWorker.getRegistration();
       if (!reg) reg = await navigator.serviceWorker.ready;
       if (reg) cb(reg);
-    } catch {}
+    } catch { }
   };
 
   withReg((reg) => {
     // Try to fetch the latest SW
-    reg.update().catch(()=>{});
+    reg.update().catch(() => { });
 
     // If an update is already waiting, prompt the user
     if (reg.waiting && navigator.serviceWorker.controller) {
@@ -123,7 +123,7 @@ if ('serviceWorker' in navigator) {
     });
 
     // Periodically check for updates when visible
-    const tryUpdate = () => { if (document.visibilityState === 'visible') reg.update().catch(()=>{}); };
+    const tryUpdate = () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); };
     const int = setInterval(tryUpdate, 60 * 1000 * 10); // every 10 min
     document.addEventListener('visibilitychange', tryUpdate);
     window.addEventListener('beforeunload', () => clearInterval(int));
