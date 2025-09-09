@@ -30,18 +30,18 @@ function buildStageBands() {
   const s = state;
   if (!s.trainingSession) return [];
   const cols = [
-    'rgba(59,130,246,0.15)',
-    'rgba(34,197,94,0.15)',
-    'rgba(234,179,8,0.15)',
-    'rgba(249,115,22,0.15)',
-    'rgba(239,68,68,0.15)'
+    'rgba(59,130,246,0.28)',
+    'rgba(34,197,94,0.28)',
+    'rgba(234,179,8,0.28)',
+    'rgba(249,115,22,0.28)',
+    'rgba(239,68,68,0.28)'
   ];
   const hiCols = [
-    'rgba(59,130,246,0.5)',
-    'rgba(34,197,94,0.5)',
-    'rgba(234,179,8,0.5)',
-    'rgba(249,115,22,0.5)',
-    'rgba(239,68,68,0.5)'
+    'rgba(59,130,246,0.7)',
+    'rgba(34,197,94,0.7)',
+    'rgba(234,179,8,0.7)',
+    'rgba(249,115,22,0.7)',
+    'rgba(239,68,68,0.7)'
   ];
   let acc = 0;
   const t = performance.now() - (s.pulseAnimation?.startTime || 0);
