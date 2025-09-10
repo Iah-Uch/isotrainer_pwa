@@ -148,7 +148,7 @@ The included `docker-compose.yml` is configured for Traefik with TLS and a produ
 
 ## Browser Support & Known Limitations
 - Chrome/Edge desktop and Android: Supported for Web Bluetooth.
-- iOS/Safari: Web Bluetooth support is limited/experimental; functionality may not work.
+- iOS/Safari: Web Bluetooth support is not supported, use BlueFy;
 - Some devices may require OS‑level pairing before appearing in the chooser.
 
 

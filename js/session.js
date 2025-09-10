@@ -484,6 +484,24 @@ export function loadCompletedSessionFromExportCsv(text) {
   const ELAPSED = colIdx('elapsed_sec');
   const HR = colIdx('hr');
 
+  // Detect if this is a full export (multiple sessions concatenated under a single header)
+  let summaryCount = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(';');
+    if ((parts[TYPE] || '').trim() === 'summary') summaryCount += 1;
+  }
+  if (summaryCount > 1) {
+    try {
+      const imported = importAllCompletedSessionsFromCsv(text);
+      try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch { }
+      alert(`Exportação completa detectada. ${imported} sessão(ões) importadas.`);
+      // Stay on Home screen; do not navigate to Plot
+      return;
+    } catch (err) {
+      throw err;
+    }
+  }
+
   let date = '';
   let athlete = '';
   let totalDurationSec = 0;
@@ -588,6 +606,119 @@ export function loadCompletedSessionFromExportCsv(text) {
     saveCompletedSession(record);
     try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch {}
   } catch {}
+}
+
+// Import multiple completed sessions from a combined export CSV (single header, many sessions)
+function importAllCompletedSessionsFromCsv(text) {
+  const raw = String(text || '').trim();
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) throw new Error('CSV inválido.');
+  const header = lines[0].split(';').map(s => s.trim());
+  const colIdx = (name) => {
+    const i = header.indexOf(name);
+    if (i === -1) throw new Error(`Coluna ausente no CSV: ${name}`);
+    return i;
+  };
+  const TYPE = colIdx('type');
+  const DATE = colIdx('date');
+  const ATHLETE = colIdx('athlete');
+  const STAGE_INDEX = colIdx('stage_index');
+  const DURATION = colIdx('duration_sec');
+  const LOWER = colIdx('lower');
+  const UPPER = colIdx('upper');
+  const ELAPSED = colIdx('elapsed_sec');
+  const HR = colIdx('hr');
+
+  // Group lines by session, delimited by 'summary'
+  const sessions = [];
+  let current = null;
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(';');
+    const t = (parts[TYPE] || '').trim();
+    if (t === 'summary') {
+      // start a new session
+      if (current) sessions.push(current);
+      current = {
+        date: (parts[DATE] || '').trim(),
+        athlete: (parts[ATHLETE] || '').trim(),
+        totalDurationSec: Math.max(0, Number(parts[DURATION] || 0) || 0),
+        stages: [],
+        series: [],
+        csvLines: [lines[0], lines[i]] // include header and this summary line
+      };
+      continue;
+    }
+    if (!current) continue; // ignore preface lines, if any
+    if (t === 'stage') {
+      const idx = Number(parts[STAGE_INDEX] || 0);
+      const dur = Math.max(0, Number(parts[DURATION] || 0) || 0);
+      const lo = Number(parts[LOWER] || NaN);
+      const hi = Number(parts[UPPER] || NaN);
+      current.stages.push({ index: idx, durationSec: dur, lower: lo, upper: hi });
+      current.csvLines.push(lines[i]);
+    } else if (t === 'series') {
+      const x = Number(parts[ELAPSED] || 0);
+      const y = Number(parts[HR] || NaN);
+      if (isFinite(x) && isFinite(y)) current.series.push({ x, y });
+      current.csvLines.push(lines[i]);
+    } else {
+      // Unknown type; include raw line for fidelity
+      current.csvLines.push(lines[i]);
+    }
+  }
+  if (current) sessions.push(current);
+
+  // Compute stats for each and persist
+  let imported = 0;
+  for (const s of sessions) {
+    if (!s || !s.stages?.length) continue;
+    if (!s.totalDurationSec) {
+      s.totalDurationSec = s.stages.reduce((a, st) => a + Math.max(0, Number(st.durationSec) || 0), 0);
+    }
+    // Stats
+    const stats = computeStatsForSeries(s.series, s.stages);
+    const record = {
+      date: s.date,
+      athlete: s.athlete,
+      totalDurationSec: s.totalDurationSec,
+      stagesCount: s.stages.length,
+      stats,
+      isImported: true,
+      csv: s.csvLines.join('\n'),
+      completedAt: new Date().toISOString(),
+      planId: null,
+      planIdx: null,
+      title: `Importado • ${s.date || 'Sessão'} • ${s.stages.length} estágios`
+    };
+    try { saveCompletedSession(record); imported += 1; } catch { }
+  }
+  return imported;
+}
+
+function computeStatsForSeries(series, stages) {
+  const points = Array.isArray(series) ? series : [];
+  if (!points.length || !stages?.length) {
+    return { avg: 0, min: 0, max: 0, inTargetPct: 0 };
+  }
+  let sum = 0, count = 0, min = Infinity, max = -Infinity, inTarget = 0;
+  const offsets = [];
+  let acc = 0;
+  for (const st of stages) { offsets.push({ start: acc, end: acc + st.durationSec, lo: st.lower, hi: st.upper }); acc += st.durationSec; }
+  for (const p of points) {
+    if (!p || typeof p.y !== 'number') continue;
+    const hr = p.y;
+    sum += hr; count += 1; if (hr < min) min = hr; if (hr > max) max = hr;
+    const x = typeof p.x === 'number' ? p.x : 0;
+    const idx = Math.max(0, offsets.findIndex(r => x >= r.start && x <= r.end));
+    const st = offsets[idx] || offsets[offsets.length - 1];
+    if (st && hr >= st.lo && hr <= st.hi) inTarget += 1;
+  }
+  return {
+    avg: count ? Math.round(sum / count) : 0,
+    min: isFinite(min) ? min : 0,
+    max: isFinite(max) ? max : 0,
+    inTargetPct: count ? Math.round((inTarget / count) * 100) : 0
+  };
 }
 
 // Handle stage selection from session plot clicks
