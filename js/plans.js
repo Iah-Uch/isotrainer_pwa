@@ -1,4 +1,4 @@
-import { parseTimeToSeconds, fmtMMSS } from './utils.js';
+import { parseTimeToSeconds, fmtMMSS, pad2 } from './utils.js';
 import { state } from './state.js';
 import { loadPlanForEdit } from './edit-plan.js';
 import { showScreen, loadCompletedSessionFromExportCsv } from './session.js';
@@ -11,12 +11,41 @@ export function loadStoredPlans() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const plans = JSON.parse(raw);
-    return Array.isArray(plans) ? plans.filter(isValidSession) : [];
+    if (!Array.isArray(plans)) return [];
+    // Migration: ensure each session has a stable id
+    let mutated = false;
+    for (let i = 0; i < plans.length; i++) {
+      const s = plans[i];
+      if (isValidSession(s) && !s.id) {
+        s.id = 'plan_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36) + '_' + i;
+        mutated = true;
+      }
+      // Migration: ensure a stable numeric index (based on current order)
+      if (isValidSession(s) && (typeof s.idx !== 'number' || !Number.isFinite(s.idx))) {
+        s.idx = i + 1;
+        mutated = true;
+      }
+    }
+    if (mutated) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(plans)); } catch { }
+    }
+    return plans.filter(isValidSession);
   } catch { return []; }
 }
 
 export function savePlans(plans) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(plans || [])); } catch { }
+  try {
+    const arr = Array.isArray(plans) ? plans.slice() : [];
+    for (let i = 0; i < arr.length; i++) {
+      if (isValidSession(arr[i]) && !arr[i].id) {
+        arr[i].id = 'plan_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36) + '_' + i;
+      }
+      if (isValidSession(arr[i]) && (typeof arr[i].idx !== 'number' || !Number.isFinite(arr[i].idx))) {
+        arr[i].idx = i + 1;
+      }
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch { }
 }
 
 export function loadDoneSessions() {
@@ -35,6 +64,16 @@ export function saveCompletedSession(record) {
   // Prepend newest
   try {
     if (!record || typeof record !== 'object') return;
+    // De-duplicate by exact CSV content when available
+    try {
+      if (record.csv) {
+        const idx = cur.findIndex(r => r && r.csv && r.csv === record.csv);
+        if (idx !== -1) {
+          // Already present; do not add duplicate
+          return saveDoneSessions(cur);
+        }
+      }
+    } catch { }
     if (!record.id) record.id = Math.random().toString(36).slice(2) + Date.now().toString(36);
     if (!record.title) record.title = `${record.date || 'Sessão'} • ${Number(record.stagesCount || 0)} estágios`;
     cur.unshift(record);
@@ -319,22 +358,34 @@ export function renderHome(plans) {
   const homeMenuWrap = document.getElementById('homeMenuWrap');
   if (!hasPlans) {
     if (emptyState) emptyState.classList.remove('hidden');
-    if (homeActions) homeActions.classList.add('hidden');
-    if (homeMenuWrap) homeMenuWrap.classList.add('hidden');
+    // Show quick actions (manual/import) when there are no plans yet
+    if (homeActions) homeActions.classList.remove('hidden');
   } else {
     if (emptyState) emptyState.classList.add('hidden');
+    // Hide quick actions when plans exist (users can use the FAB menu)
+    if (homeActions) homeActions.classList.add('hidden');
   }
+  // Do not force Home FAB visibility here; showScreen controls visibility per screen.
   const hasAnyForContent = hasPlans || (dones.length > 0);
   if (contentWrap) contentWrap.classList.toggle('hidden', !hasAnyForContent);
   if (!hasAnyForContent) {
     if (empty) empty.classList.add('hidden');
     return;
   }
-  // Remove done sessions from pending by matching date + stagesCount + totalDurationSec
+  // Remove done sessions from pending preferring stable plan id; fall back to
+  // index match only when id linkage is unavailable (older records).
   function isDone(s) {
-    return dones.some(r => String(r.date) === String(s.date)
-      && Number(r.stagesCount) === Number(s.stages?.length || 0)
-      && Number(r.totalDurationSec) === Number(s.totalDurationSec));
+    if (!s) return false;
+    const sid = s.id;
+    const sidx = Number(s.idx);
+    return dones.some(r => {
+      if (!r) return false;
+      // Prefer exact id match when available on both sides
+      if (sid && r.planId && r.planId === sid) return true;
+      // Fallback: allow index match only if either side lacks a stable id
+      if ((!sid || !r.planId) && Number.isFinite(sidx) && Number(r.planIdx) === sidx) return true;
+      return false;
+    });
   }
   const filtered = src.filter(s => !isDone(s));
   if (!filtered.length) { if (empty) empty.classList.remove('hidden'); } else { if (empty) empty.classList.add('hidden'); }
@@ -342,8 +393,16 @@ export function renderHome(plans) {
   if (todayEl) {
     todayEl.innerHTML = '';
     const today = getTodayPlan(filtered);
-    if (today) todayEl.appendChild(makePlanCard(today, true));
-    else { const div = document.createElement('div'); div.className = 'text-slate-400 text-sm'; div.textContent = 'Nenhum plano para hoje.'; todayEl.appendChild(div); }
+    if (today) {
+      // Resolve original index so clicking the Today card opens the correct session
+      const todayIdx = src.findIndex(s => (s?.id && today?.id) ? (s.id === today.id) : (s === today));
+      todayEl.appendChild(makePlanCard(today, true, todayIdx >= 0 ? todayIdx : 0));
+    } else {
+      const div = document.createElement('div');
+      div.className = 'text-slate-400 text-sm';
+      div.textContent = 'Nenhum plano para hoje.';
+      todayEl.appendChild(div);
+    }
   }
 
   if (listEl) {
@@ -352,7 +411,11 @@ export function renderHome(plans) {
     currentPage = Math.min(Math.max(1, currentPage), totalPages);
     const start = (currentPage - 1) * PAGE_SIZE;
     const pageItems = filtered.slice(start, start + PAGE_SIZE);
-    pageItems.forEach((p, idx) => listEl.appendChild(makePlanCard(p, false, start + idx)));
+    pageItems.forEach((p) => {
+      // Resolve index relative to the original plans array (not the filtered list)
+      const origIdx = src.findIndex(s => (s?.id && p?.id) ? (s.id === p.id) : (s === p));
+      listEl.appendChild(makePlanCard(p, false, origIdx >= 0 ? origIdx : 0));
+    });
   }
 
   // Done list
@@ -448,7 +511,24 @@ function makeDoneCard(rec, index = 0) {
   card.className = 'rounded-xl border border-white/10 bg-gradient-to-br from-white/5 to-white/10 p-4 flex items-center justify-between gap-3 hover:from-white/10 hover:to-white/20 transition cursor-pointer';
   const info = document.createElement('div');
   const title = document.createElement('div'); title.className = 'font-semibold'; title.textContent = rec.title || rec.date || '—';
-  const sub = document.createElement('div'); sub.className = 'text-slate-400 text-sm'; sub.textContent = `${rec.stagesCount} estágios • ${fmtMMSS(rec.totalDurationSec)} • Média ${rec?.stats?.avg ?? 0} bpm`;
+  const sub = document.createElement('div');
+  sub.className = 'text-slate-400 text-sm';
+  const parts = [];
+  parts.push(`${rec.stagesCount} estágios`);
+  parts.push(`${fmtMMSS(rec.totalDurationSec)}`);
+  if (rec?.stats?.avg != null) parts.push(`Média ${rec.stats.avg} bpm`);
+  // Append completion time if available
+  try {
+    if (rec?.completedAt) {
+      const d = new Date(rec.completedAt);
+      if (!isNaN(d.getTime())) {
+        const hh = pad2(d.getHours());
+        const mm = pad2(d.getMinutes());
+        parts.push(`Finalizada ${hh}:${mm}`);
+      }
+    }
+  } catch {}
+  sub.textContent = parts.join(' • ');
   info.appendChild(title); info.appendChild(sub);
   card.appendChild(info);
   // Open modal with actions when clicking the card
@@ -552,9 +632,9 @@ function openDonePreview(index) {
   const rightCtrls = document.getElementById('sessionPreviewFooterRight');
   if (startBtn) startBtn.classList.add('hidden');
   const canView = !!rec.csv;
-  const wireView = (btn) => { if (!btn) return; btn.classList.toggle('hidden', !canView); btn.onclick = () => { try { if (rec.csv) { closePreview(); loadCompletedSessionFromExportCsv(rec.csv); } } catch {} }; };
+  const wireView = (btn) => { if (!btn) return; btn.classList.toggle('hidden', !canView); btn.onclick = () => { try { if (rec.csv) { closePreview(); loadCompletedSessionFromExportCsv(rec.csv); } } catch { } }; };
   wireView(viewBtnTop); wireView(viewBtnBottom);
-  const wireDownload = (btn) => { if (!btn) return; btn.classList.toggle('hidden', !rec.csv || rec.isImported); btn.onclick = () => { try { const blob = new Blob([rec.csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const dateSlug = String(rec.date || '').replace(/\s+/g, '_'); a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);} catch{} }; };
+  const wireDownload = (btn) => { if (!btn) return; btn.classList.toggle('hidden', !rec.csv || rec.isImported); btn.onclick = () => { try { const blob = new Blob([rec.csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); const dateSlug = String(rec.date || '').replace(/\s+/g, '_'); a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); } catch { } }; };
   wireDownload(dlBtnTop); wireDownload(dlBtnBottom);
   const startRename = () => {
     const form = document.createElement('form');
@@ -571,7 +651,7 @@ function openDonePreview(index) {
     form.appendChild(input);
     form.appendChild(okBtn);
     titleText.replaceWith(form);
-    setTimeout(() => { try { input.focus(); input.select(); } catch {} }, 0);
+    setTimeout(() => { try { input.focus(); input.select(); } catch { } }, 0);
     function saveRename() {
       const arr = loadDoneSessions();
       const rec2 = arr[index];
@@ -580,11 +660,11 @@ function openDonePreview(index) {
       if (!val) { cancelRename(); return; }
       rec2.title = val; saveDoneSessions(arr);
       titleText.textContent = val;
-      try { renderHome(loadStoredPlans()); } catch {}
+      try { renderHome(loadStoredPlans()); } catch { }
       form.replaceWith(titleText);
-      try { closePreview(); } catch {}
+      try { closePreview(); } catch { }
       // Return to Done tab after renaming
-      setTimeout(() => { try { document.getElementById('tabDone')?.click(); } catch {} }, 0);
+      setTimeout(() => { try { document.getElementById('tabDone')?.click(); } catch { } }, 0);
     }
     function cancelRename() { form.replaceWith(titleText); }
   };
@@ -614,13 +694,13 @@ function deleteDone(index) {
   if (!ok) return;
   arr.splice(index, 1);
   saveDoneSessions(arr);
-  try { renderHome(loadStoredPlans()); } catch {}
-  try { closePreview(); } catch {}
+  try { renderHome(loadStoredPlans()); } catch { }
+  try { closePreview(); } catch { }
   // Ensure Done tab remains active
-  setTimeout(() => { try { document.getElementById('tabDone')?.click(); } catch {} }, 0);
+  setTimeout(() => { try { document.getElementById('tabDone')?.click(); } catch { } }, 0);
 }
 
-  function onLoadPlan(idx) {
+function onLoadPlan(idx) {
   const plans = loadStoredPlans();
   const s = plans[idx];
   if (!s) return;
@@ -641,7 +721,7 @@ export function bindHomeNav() {
     renderHome(sessions);
     alert('Planos importados com sucesso.');
     // Switch to hamburger after first import
-    try { document.getElementById('homeActions')?.classList.add('hidden'); document.getElementById('homeMenuWrap')?.classList.remove('hidden'); } catch {}
+    try { document.getElementById('homeActions')?.classList.add('hidden'); document.getElementById('homeMenuWrap')?.classList.remove('hidden'); } catch { }
   };
   importPlansInput?.addEventListener('change', (e) => {
     const f = e.target.files && e.target.files[0];
@@ -696,7 +776,7 @@ export function bindHomeNav() {
     });
   }
   // Update Home when sessions complete
-  window.addEventListener('sessions:updated', () => { try { renderHome(loadStoredPlans()); } catch {} });
+  window.addEventListener('sessions:updated', () => { try { renderHome(loadStoredPlans()); } catch { } });
   // Hamburger menu visibility & actions
   const actions = document.getElementById('homeActions');
   const menuWrap = document.getElementById('homeMenuWrap');
@@ -732,7 +812,7 @@ function exportAllDoneCsv() {
   const blob = new Blob([out], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const dateSlug = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  const dateSlug = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   a.href = url; a.download = `cardiomax_sessoes_${dateSlug}.csv`;
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
@@ -743,6 +823,6 @@ function resetApplication() {
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_DONE_KEY);
-  } catch {}
-  try { location.reload(); } catch {}
+  } catch { }
+  try { location.reload(); } catch { }
 }

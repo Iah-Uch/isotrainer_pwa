@@ -27,6 +27,8 @@ function stageCaps(i) {
 
 function deepCopySession(session) {
   return {
+    id: session.id,
+    idx: session.idx,
     date: session.date,
     athlete: session.athlete,
     totalDurationSec: session.totalDurationSec,
@@ -208,6 +210,9 @@ export function startWithEditedPlan() {
   recalcTotal();
   // Always show Connect next (even if already connected), then proceed via Next
   const sessionCopy = deepCopySession(working);
+  // Propagate stable plan id for done-session linking
+  if (sessionCopy.id && !sessionCopy.planId) sessionCopy.planId = sessionCopy.id;
+  if (Number.isFinite(sessionCopy.idx) && !Number.isFinite(sessionCopy.planIdx)) sessionCopy.planIdx = sessionCopy.idx;
   state.pendingIntent = { type: 'startEdited', session: sessionCopy };
   state.startReturnScreen = 'editPlan';
   showScreen('connect');

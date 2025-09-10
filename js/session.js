@@ -66,6 +66,14 @@ export function startTraining(session) {
   showScreen('plot');
   setTimeout(() => { state.chart?.resize(); state.sessionChart?.resize(); }, 10);
 
+  // Ensure FAB is visible in live mode (may have been hidden by view mode previously)
+  try {
+    const fabToggle = document.getElementById('fabToggle');
+    const fabMenu = document.getElementById('fabMenu');
+    if (fabToggle) fabToggle.classList.remove('hidden');
+    if (fabMenu) fabMenu.classList.add('hidden');
+  } catch {}
+
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
 
@@ -245,6 +253,7 @@ export function showScreen(which) {
   // constrained by Home logic (e.g., hidden until plans are imported)
   if (homeMenuWrap) {
     if (which !== 'home') homeMenuWrap.classList.add('hidden');
+    else homeMenuWrap.classList.remove('hidden');
   }
 }
 
@@ -316,21 +325,27 @@ function showCompletion(stats) {
     if (fab) fab.classList.add('hidden');
     if (exportBtn) exportBtn.classList.remove('hidden');
     if (actions) {
-      actions.classList.remove('flex', 'justify-center');
-      actions.classList.add('grid', 'grid-cols-3', 'gap-2');
+      actions.classList.remove('flex', 'justify-center', 'grid-cols-3');
+      actions.classList.add('grid', 'grid-cols-2', 'gap-2');
     }
   }
   // Show 'Carregar novo plano' only for Manual (origin = 'plan')
   try {
     if (planBtn) planBtn.classList.toggle('hidden', state.editOrigin !== 'plan');
   } catch {}
-  // Close controls modal if open and hide FAB options while finished
+  // Close controls modal; control FAB visibility based on view/live mode
   const controls = document.getElementById('controlsModal');
   if (controls) controls.classList.add('hidden');
   const fabToggle = document.getElementById('fabToggle');
   const fabMenu = document.getElementById('fabMenu');
-  if (fabToggle) fabToggle.classList.add('hidden');
-  if (fabMenu) fabMenu.classList.add('hidden');
+  // Hide FAB only in view mode (imported). Keep visible otherwise.
+  if (state.isImportedSession) {
+    if (fabToggle) fabToggle.classList.add('hidden');
+    if (fabMenu) fabMenu.classList.add('hidden');
+  } else {
+    if (fabToggle) fabToggle.classList.remove('hidden');
+    if (fabMenu) fabMenu.classList.add('hidden');
+  }
 
   // Persist completed session locally for Home tabs (only for real trainings)
   try {
@@ -346,6 +361,9 @@ function showCompletion(stats) {
         isImported: false,
         csv,
         completedAt: new Date().toISOString(),
+        planId: state.trainingSession?.planId || state.trainingSession?.id || null,
+        planIdx: (Number.isFinite(Number(state.trainingSession?.planIdx)) ? Number(state.trainingSession?.planIdx)
+                 : (Number.isFinite(Number(state.trainingSession?.idx)) ? Number(state.trainingSession?.idx) : null)),
       };
       // Tag manual flow sessions with a clear prefix in the title
       try {
@@ -543,6 +561,33 @@ export function loadCompletedSessionFromExportCsv(text) {
   try { plotStageSliceByIndex(0); } catch { }
   const stats = computeSessionStats();
   showCompletion(stats);
+
+  // Explicitly hide FAB in view mode
+  try {
+    const fabToggle = document.getElementById('fabToggle');
+    const fabMenu = document.getElementById('fabMenu');
+    if (fabToggle) fabToggle.classList.add('hidden');
+    if (fabMenu) fabMenu.classList.add('hidden');
+  } catch {}
+
+  // Also persist imported sessions into Done list for Home
+  try {
+    const record = {
+      date,
+      athlete,
+      totalDurationSec,
+      stagesCount: stages.length,
+      stats,
+      isImported: true,
+      csv: String(text || ''),
+      completedAt: new Date().toISOString(),
+      planId: null,
+      planIdx: null,
+      title: `Importado • ${date || 'Sessão'} • ${stages.length} estágios`
+    };
+    saveCompletedSession(record);
+    try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch {}
+  } catch {}
 }
 
 // Handle stage selection from session plot clicks
