@@ -4,11 +4,14 @@ import { setupCharts } from './charts.js';
 import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv, loadCompletedSessionFromExportCsv, stopTraining } from './session.js';
 import { loadPlanForEdit } from './edit-plan.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
+import { bindHomeNav, loadStoredPlans } from './plans.js';
 
 // Boot
 window.addEventListener('load', async () => {
   setupCharts();
   await checkBluetoothSupport();
+  try { bindHomeNav(); } catch { }
+  try { showScreen('home'); } catch { }
 });
 
 
@@ -16,17 +19,33 @@ window.addEventListener('load', async () => {
 // UI wiring
 document.getElementById('connectButton').addEventListener('click', async () => { if (await checkBluetoothSupport()) await connectToDevice(); });
 document.getElementById('disconnectButton').addEventListener('click', () => { disconnectFromDevice(); switchToConnect(); });
-document.getElementById('goToPlanButton').addEventListener('click', () => { if (state.device && state.device.gatt?.connected) showScreen('plan'); });
-document.getElementById('backToConnect').addEventListener('click', () => showScreen('connect'));
+document.getElementById('connectBackBtn')?.addEventListener('click', () => {
+  try {
+    // Cancel any pending start and return to origin (editor if available)
+    state.pendingIntent = null;
+    const dest = state.startReturnScreen;
+    state.startReturnScreen = null;
+    if (dest === 'editPlan') { showScreen('editPlan'); return; }
+    if (dest === 'plan') { showScreen('plan'); return; }
+  } catch {}
+  showScreen('home');
+});
+document.getElementById('goToPlanButton').addEventListener('click', () => {
+  const intent = state.pendingIntent;
+  if (intent && intent.type === 'startEdited' && intent.session) {
+    state.pendingIntent = null;
+    startTraining(intent.session);
+    return;
+  }
+  showScreen('home');
+});
+document.getElementById('backToConnect').addEventListener('click', () => showScreen('home'));
 document.getElementById('loadCsvBtn').addEventListener('click', () => {
   const text = document.getElementById('csvInput').value;
   const err = document.getElementById('csvError'); err.classList.add('hidden');
-  if (!(state.device && state.device.gatt?.connected)) {
-    err.textContent = 'Conecte um dispositivo primeiro.'; err.classList.remove('hidden'); return;
-  }
   try {
     const session = parseTrainingCsv(text);
-    loadPlanForEdit(session);
+    loadPlanForEdit(session, 'plan');
   } catch (e) {
     err.textContent = e.message || String(e);
     err.classList.remove('hidden');
@@ -34,11 +53,11 @@ document.getElementById('loadCsvBtn').addEventListener('click', () => {
 });
 document.getElementById('nextStageBtn').addEventListener('click', () => nextStage());
 document.getElementById('prevStageBtn').addEventListener('click', () => prevStage());
-document.getElementById('backButton').addEventListener('click', () => switchToConnect());
+document.getElementById('backButton').addEventListener('click', () => showScreen('home'));
 
-// Import finished session (CSV) on connect screen
-const importBtn = document.getElementById('importSessionBtn');
-const importInput = document.getElementById('importSessionInput');
+// Import finished session (CSV) on Home
+const importBtn = document.getElementById('homeImportSessionBtn');
+const importInput = document.getElementById('homeImportSessionInput');
 importBtn?.addEventListener('click', () => importInput?.click());
 importInput?.addEventListener('change', (e) => {
   const f = e.target.files && e.target.files[0];
@@ -120,15 +139,21 @@ preStartBackBtn?.addEventListener('click', () => {
   // Cancel prepared session and return to Plan screen
   preStartModal?.classList.add('hidden');
   stopTraining();
-  showScreen('plan');
+  try {
+    const dest = state.startReturnScreen;
+    state.startReturnScreen = null;
+    if (dest === 'editPlan') { showScreen('editPlan'); return; }
+    if (dest === 'plan') { showScreen('plan'); return; }
+    showScreen('home');
+  } catch {
+    showScreen('home');
+  }
 });
 // Dismiss on backdrop click
 preStartModal?.addEventListener('click', (e) => { if (e.target === preStartModal) preStartModal.classList.add('hidden'); });
 
 // Completion navigation buttons
-document.getElementById('completeBackBtn')?.addEventListener('click', () => {
-  showScreen('connect');
-});
+document.getElementById('completeBackBtn')?.addEventListener('click', () => { showScreen('home'); });
 document.getElementById('completePlanBtn')?.addEventListener('click', () => {
   showScreen('plan');
 });
@@ -148,3 +173,5 @@ document.getElementById('completeRestoreFab')?.addEventListener('click', () => {
   if (modal) modal.classList.remove('hidden');
   if (fab) fab.classList.add('hidden');
 });
+
+// Do not auto-navigate on connect; user advances with Next on Connect

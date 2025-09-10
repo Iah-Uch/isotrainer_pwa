@@ -38,6 +38,105 @@
         </div>
       </div>
 
+      <!-- TELA HOME (PLANOS) -->
+      <div id="homeScreen" class="hidden p-0">
+        <div
+          class="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950">
+          <div class="p-6 sm:p-8">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-2xl font-bold tracking-tight">Sessões</h2>
+                <p class="text-slate-400">Selecione uma sessão importada ou use o fluxo manual.</p>
+              </div>
+              <div id="homeActions" class="flex items-center gap-2">
+                <button id="homeManualBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  title="Fluxo manual">Fluxo manual</button>
+                <input id="importPlansInput" type="file" accept=".csv,text/csv" class="hidden" />
+                <input id="homeImportSessionInput" type="file" accept=".csv,text/csv" class="hidden" />
+              </div>
+            </div>
+            <!-- Home FAB moved outside container below -->
+
+            <div id="homeEmptyState" class="mt-12 grid place-items-center">
+              <div class="text-center max-w-lg w-full px-4">
+                <h3 class="text-xl font-semibold">Importe sua periodização para começar</h3>
+                <p class="mt-2 text-slate-400">Solte o arquivo CSV aqui ou clique na área abaixo.</p>
+                <div id="homeEmptyDropzone"
+                  class="mt-6 rounded-2xl border-2 border-dashed border-white/15 bg-white/5 hover:bg-white/10 transition p-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-600/60">
+                  <div class="flex flex-col items-center gap-3">
+                    <div class="h-12 w-12 rounded-full bg-purple-600/20 text-purple-300 grid place-items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M5 20h14v-2H5v2zM12 4l6 6h-4v6H10v-6H6l6-6z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div class="text-lg font-semibold">Arraste e solte o arquivo CSV</div>
+                      <div class="text-sm text-slate-400">ou clique para selecionar do seu dispositivo</div>
+                    </div>
+                    <div class="text-xs text-slate-500">Formatos aceitos: .csv</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="plansEmpty" class="hidden mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
+              Nenhuma periodização importada ainda. Importe seu arquivo para usar todas as funções do app.
+            </div>
+
+            <div id="homeContentWrap" class="mt-6">
+              <div class="flex w-fit mx-auto rounded-xl overflow-hidden border border-white/10">
+                <button id="tabPending" class="px-4 py-2 bg-slate-700">Pendentes</button>
+                <button id="tabDone" class="px-4 py-2 bg-slate-800">Concluídas</button>
+              </div>
+              <div id="panelPending" class="mt-4">
+                <h3 class="text-lg font-semibold mb-2">Sessão de hoje</h3>
+                <div id="todayPlan" class="space-y-2"></div>
+                <h3 class="text-lg font-semibold mt-6 mb-2">Todas as sessões</h3>
+                <div id="plansList" class="space-y-2"></div>
+                <div id="plansPager" class="mt-3 flex items-center justify-center gap-2">
+                  <button id="pagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Página anterior" title="Anterior">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div id="pagerInfo" class="text-sm text-slate-400">—</div>
+                  <button id="pagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Próxima página" title="Próxima">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div id="panelDone" class="mt-4 hidden">
+                <div id="plansDoneList" class="space-y-2"></div>
+                <div id="donePager" class="mt-3 flex items-center justify-center gap-2">
+                  <button id="donePagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Página anterior" title="Anterior">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div id="donePagerInfo" class="text-sm text-slate-400">—</div>
+                  <button id="donePagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Próxima página" title="Próxima">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREVIEW MODAL (Sessão) moved outside container below -->
+
       <!-- TELA DE PLANO -->
       <div id="planScreen" class="hidden p-6">
         <div class="flex flex-col gap-3">
@@ -314,13 +413,12 @@
 
   <!-- Connect screen floating FABs (outside container) -->
   <div id="connectFabs">
-    <input id="importSessionInput" type="file" accept=".csv,text/csv" class="hidden" />
-    <button id="importSessionBtn"
-      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-purple-600 hover:bg-purple-500 text-white grid place-items-center shadow-lg"
-      title="Importar sessão (CSV)" aria-label="Importar sessão (CSV)">
+    <button id="connectBackBtn"
+      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white grid place-items-center shadow-lg"
+      title="Voltar" aria-label="Voltar">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
         aria-hidden="true">
-        <path d="M5 20h14v-2H5v2zM11 16h2V8h3l-4-5-4 5h3v8z" />
+        <path d="M15 19l-7-7 7-7" />
       </svg>
     </button>
     <button id="goToPlanButton" disabled
@@ -333,6 +431,75 @@
     </button>
   </div>
 
+  <!-- Inline Preview Modal (Sessão) -->
+  <div id="sessionPreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/70 p-4" role="dialog"
+    aria-modal="true">
+    <div
+      class="relative mx-auto mt-6 w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 ring-1 ring-white/10 shadow-2xl">
+      <div class="sticky top-0 z-10 bg-slate-900/95 backdrop-blur rounded-t-2xl border-white/10 px-4 py-3 pb-0">
+        <div class="flex items-center justify-end gap-2">
+          <!-- <h3 class="text-lg font-semibold">Pré-visualização da sessão</h3> -->
+          <div class="flex items-center gap-2">
+            <button id="sessionPreviewClose" title="Fechar" aria-label="Fechar"
+              class="h-9 w-9 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path
+                  d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.6l6.3-6.31z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="sessionPreviewBody" class="p-5 pt-3 min-h-[6rem]"></div>
+      <div class="sticky bottom-0 z-10 bg-slate-900/95 backdrop-blur rounded-b-2xl border-white/10 px-4 py-3 pt-0">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button id="sessionPreviewRenameBottom" title="Renomear" aria-label="Renomear"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path
+                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
+              </svg>
+            </button>
+            <button id="sessionPreviewDeleteBottom" title="Excluir" aria-label="Excluir"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-rose-700 hover:bg-rose-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path d="M6 7h12l-1 12a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm9-3l-1-1h-4l-1 1H5v2h14V4z" />
+              </svg>
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="sessionPreviewStart" title="Iniciar" aria-label="Iniciar"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-emerald-600 hover:bg-emerald-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <button id="sessionPreviewViewBottom" title="Ver" aria-label="Ver"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-blue-600 hover:bg-blue-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path
+                  d="M12 5c-7.633 0-10 7-10 7s2.367 7 10 7 10-7 10-7-2.367-7-10-7zm0 12a5 5 0 115-5 5.006 5.006 0 01-5 5z" />
+              </svg>
+            </button>
+            <button id="sessionPreviewDownloadBottom" title="Baixar CSV" aria-label="Baixar CSV"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Plan screen floating FABs (outside container) -->
   <div id="planFabs" class="hidden">
     <button id="backToConnect"
@@ -343,6 +510,26 @@
         <path d="M15 19l-7-7 7-7" />
       </svg>
     </button>
+  </div>
+
+  <!-- Home screen floating FABs (outside container) -->
+  <div id="homeMenuWrap" class="hidden">
+    <button id="homeMenuBtn"
+      class="fixed bottom-6 right-4 z-40 h-14 w-14 rounded-full bg-purple-800 hover:bg-purple-700 text-white grid place-items-center shadow-lg"
+      aria-haspopup="true" aria-expanded="false" aria-controls="homeMenu" title="Menu">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/>
+      </svg>
+    </button>
+    <div id="homeMenu"
+      class="hidden fixed bottom-24 right-4 z-50 w-56 rounded-xl border border-white/10 bg-slate-900 shadow-xl p-2">
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuManual">Fluxo manual</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportPlan">Importar periodização</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportSession">Importar sessão</button>
+      <div class="my-1 h-px bg-white/10"></div>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuExportAll">Exportar sessões concluídas (CSV)</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/50 text-rose-300" id="menuResetApp">Resetar Aplicação</button>
+    </div>
   </div>
 
   <!-- Completion Screen -->

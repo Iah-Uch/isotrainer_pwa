@@ -1,5 +1,5 @@
 import { fmtMMSS, parseTimeToSeconds } from './utils.js';
-import { startTraining } from './session.js';
+import { startTraining, showScreen } from './session.js';
 import { state } from './state.js';
 
 let originalSession = null;
@@ -191,9 +191,10 @@ function updateAdjTimeButtons() {
   }
 }
 
-export function loadPlanForEdit(session) {
+export function loadPlanForEdit(session, origin = null) {
   originalSession = deepCopySession(session);
   working = deepCopySession(session);
+  state.editOrigin = origin || state.editOrigin || 'plan';
   selected = new Set();
   document.getElementById('editPlanScreen')?.classList.remove('hidden');
   document.getElementById('planScreen')?.classList.add('hidden');
@@ -205,12 +206,30 @@ export function startWithEditedPlan() {
   // Ensure indices are sequential
   working.stages.forEach((s, idx) => { s.index = idx + 1; });
   recalcTotal();
-  startTraining(working);
+  // Always show Connect next (even if already connected), then proceed via Next
+  const sessionCopy = deepCopySession(working);
+  state.pendingIntent = { type: 'startEdited', session: sessionCopy };
+  state.startReturnScreen = 'editPlan';
+  showScreen('connect');
+  try {
+    const nextBtn = document.getElementById('goToPlanButton');
+    if (nextBtn) nextBtn.disabled = !(state.device && state.device.gatt?.connected);
+  } catch { }
 }
 
 export function backToPlan() {
   document.getElementById('editPlanScreen')?.classList.add('hidden');
-  document.getElementById('planScreen')?.classList.remove('hidden');
+  const origin = state.editOrigin || 'plan';
+  if (origin === 'home') {
+    document.getElementById('planScreen')?.classList.add('hidden');
+    document.getElementById('connectScreen')?.classList.add('hidden');
+    document.getElementById('plotScreen')?.classList.add('hidden');
+    document.getElementById('completeScreen')?.classList.add('hidden');
+    document.getElementById('homeScreen')?.classList.remove('hidden');
+  } else {
+    document.getElementById('homeScreen')?.classList.add('hidden');
+    document.getElementById('planScreen')?.classList.remove('hidden');
+  }
 }
 
 // Events

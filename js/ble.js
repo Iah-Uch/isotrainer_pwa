@@ -57,6 +57,7 @@ export async function connectToDevice() {
     await state.characteristic.startNotifications();
     state.characteristic.addEventListener('characteristicvaluechanged', (e) => handleHeartRateMeasurement(e.target.value));
     addDisconnectListener();
+    try { window.dispatchEvent(new CustomEvent('ble:connected')); } catch { }
   } catch (err) {
     // Provide clearer guidance for common compatibility issues
     const msg = err?.message || String(err);

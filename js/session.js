@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { now, fmtMMSS, parseTimeToSeconds } from './utils.js';
 import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales, plotStageSliceByIndex } from './charts.js';
+import { saveCompletedSession } from './plans.js';
 
 export function parseTrainingCsv(text) {
   if (!text || !text.trim()) throw new Error('O texto do CSV está vazio.');
@@ -216,15 +217,18 @@ export function setPlayPauseVisual() {
 
 export function showScreen(which) {
   const connect = document.getElementById('connectScreen');
+  const home = document.getElementById('homeScreen');
   const plan = document.getElementById('planScreen');
   const plot = document.getElementById('plotScreen');
   const complete = document.getElementById('completeScreen');
   const editPlan = document.getElementById('editPlanScreen');
   const connectFabs = document.getElementById('connectFabs');
   const planFabs = document.getElementById('planFabs');
-  connect.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden'); complete.classList.add('hidden');
+  const homeMenuWrap = document.getElementById('homeMenuWrap');
+  connect.classList.add('hidden'); if (home) home.classList.add('hidden'); plan.classList.add('hidden'); plot.classList.add('hidden'); complete.classList.add('hidden');
   if (editPlan) editPlan.classList.add('hidden');
   if (which === 'connect') connect.classList.remove('hidden');
+  if (which === 'home' && home) home.classList.remove('hidden');
   if (which === 'plan') plan.classList.remove('hidden');
   if (which === 'plot') plot.classList.remove('hidden');
   if (which === 'complete') complete.classList.remove('hidden');
@@ -237,7 +241,15 @@ export function showScreen(which) {
     if (which === 'plan') planFabs.classList.remove('hidden');
     else planFabs.classList.add('hidden');
   }
+  // Ensure Home FAB only appears on Home; actual visibility may be further
+  // constrained by Home logic (e.g., hidden until plans are imported)
+  if (homeMenuWrap) {
+    if (which !== 'home') homeMenuWrap.classList.add('hidden');
+  }
 }
+
+// Forcefully snap UI to Home, bypassing transient callers
+// removed
 
 export function animationLoop() {
   if (state.trainingSession) {
@@ -290,17 +302,28 @@ function showCompletion(stats) {
   const fab = document.getElementById('completeRestoreFab');
   const exportBtn = document.getElementById('completeExportBtn');
   const actions = document.getElementById('completeActions');
+  const planBtn = document.getElementById('completePlanBtn');
   if (state.isImportedSession) {
     if (modal) modal.classList.add('hidden');
     if (fab) fab.classList.remove('hidden');
     if (exportBtn) exportBtn.classList.add('hidden');
-    if (actions) { actions.classList.remove('grid-cols-3'); actions.classList.add('grid-cols-2', 'justify-center'); }
+    if (actions) {
+      actions.classList.remove('grid', 'grid-cols-3', 'gap-2');
+      actions.classList.add('flex', 'justify-center');
+    }
   } else {
     if (modal) modal.classList.remove('hidden');
     if (fab) fab.classList.add('hidden');
     if (exportBtn) exportBtn.classList.remove('hidden');
-    if (actions) { actions.classList.remove('grid-cols-2', 'justify-center'); actions.classList.add('grid-cols-3'); }
+    if (actions) {
+      actions.classList.remove('flex', 'justify-center');
+      actions.classList.add('grid', 'grid-cols-3', 'gap-2');
+    }
   }
+  // Show 'Carregar novo plano' only for Manual (origin = 'plan')
+  try {
+    if (planBtn) planBtn.classList.toggle('hidden', state.editOrigin !== 'plan');
+  } catch {}
   // Close controls modal if open and hide FAB options while finished
   const controls = document.getElementById('controlsModal');
   if (controls) controls.classList.add('hidden');
@@ -308,6 +331,31 @@ function showCompletion(stats) {
   const fabMenu = document.getElementById('fabMenu');
   if (fabToggle) fabToggle.classList.add('hidden');
   if (fabMenu) fabMenu.classList.add('hidden');
+
+  // Persist completed session locally for Home tabs (only for real trainings)
+  try {
+    if (!state.isImportedSession) {
+      const csv = buildExportCsvFromState();
+      const baseTitle = `${state.trainingSession?.date || 'Sessão'} • ${Number(state.trainingSession?.stages?.length || 0)} estágios`;
+      const record = {
+        date: state.trainingSession?.date || '',
+        athlete: state.trainingSession?.athlete || '',
+        totalDurationSec: state.trainingSession?.totalDurationSec || 0,
+        stagesCount: state.trainingSession?.stages?.length || 0,
+        stats,
+        isImported: false,
+        csv,
+        completedAt: new Date().toISOString(),
+      };
+      // Tag manual flow sessions with a clear prefix in the title
+      try {
+        if (state.editOrigin === 'plan') record.title = `Manual • ${baseTitle}`;
+      } catch { }
+      saveCompletedSession(record);
+      // Notify Home to refresh Done tab immediately
+      try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch {}
+    }
+  } catch { }
 }
 
 function formatNumber(n, digits = 0) {
@@ -349,6 +397,17 @@ function computePerStageStats() {
 }
 
 export function exportSessionCsv() {
+  const csv = buildExportCsvFromState();
+  if (!csv) return;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateSlug = String(state.trainingSession?.date || '').replace(/\s+/g, '_');
+  a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function buildExportCsvFromState() {
   if (!state.trainingSession) return;
   const session = state.trainingSession;
   const stats = computeSessionStats();
@@ -379,13 +438,7 @@ export function exportSessionCsv() {
     rows.push(['series', session.date, session.athlete, idx + 1, stage.durationSec, stage.lower, stage.upper, '', '', '', '', '', formatNumber(t, 2), formatNumber(stageElapsed, 2), hr, inTarget]);
   }
 
-  const csv = [header.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const dateSlug = String(session.date || '').replace(/\s+/g, '_');
-  a.href = url; a.download = `cardiomax_${dateSlug || 'session'}.csv`;
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  return [header.join(';'), ...rows.map(r => r.join(';'))].join('\n');
 }
 
 // Load a previously exported session CSV and render it as a finished session
