@@ -932,8 +932,9 @@ function resetApplication() {
   try { location.reload(); } catch { }
 }
 
-// ============= Settings (Contrast Mode) ============= //
+// ============= Settings (Contrast Mode & Colors) ============= //
 const CONTRAST_KEY = 'cardiomax:ui:contrast';
+const LEGACY_COLORS_KEY = 'cardiomax:ui:legacy-galileu-colors';
 export function isContrastOn() {
   try { return localStorage.getItem(CONTRAST_KEY) === '1'; } catch { return false; }
 }
@@ -950,8 +951,15 @@ export function openSettings() {
   const modal = document.getElementById('settingsModal');
   const closeBtn = document.getElementById('settingsClose');
   const toggle = document.getElementById('contrastToggle');
+  const legacyToggle = document.getElementById('legacyColorsToggle');
   if (!modal || !toggle) return;
   try { toggle.checked = isContrastOn(); } catch { }
+  try {
+    if (legacyToggle) {
+      const v = localStorage.getItem(LEGACY_COLORS_KEY);
+      legacyToggle.checked = (v === '1');
+    }
+  } catch {}
   modal.classList.add('flex');
   modal.classList.remove('hidden');
   const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
@@ -961,5 +969,11 @@ export function openSettings() {
     const on = !!toggle.checked;
     try { localStorage.setItem(CONTRAST_KEY, on ? '1' : '0'); } catch {}
     applyContrastToDocument(on);
+  };
+  if (legacyToggle) legacyToggle.onchange = () => {
+    const on = !!legacyToggle.checked;
+    try { localStorage.setItem(LEGACY_COLORS_KEY, on ? '1' : '0'); } catch {}
+    // Notify charts to rebuild stage bands
+    try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on } })); } catch {}
   };
 }

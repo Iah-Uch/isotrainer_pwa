@@ -20,6 +20,14 @@ function isContrast() {
   catch { return false; }
 }
 
+// Persisted UI flag for legacy color rules
+function isLegacyGalileuColorsOn() {
+  try {
+    const v = localStorage.getItem('cardiomax:ui:legacy-galileu-colors');
+    return v === '1';
+  } catch { return false; }
+}
+
 function getColors() {
   const hc = isContrast();
   return hc
@@ -55,6 +63,33 @@ function buildStageBands() {
   const s = state;
   if (!s.trainingSession) return [];
   const contrast = isContrast();
+  // Map color using ONLY the lower bound (lo)
+  // Thresholds (choose the highest threshold <= lower):
+  // - >= 159: Red
+  // - >= 152: Orange
+  // - >= 142: Yellow
+  // - >= 111: Green
+  // - else: Blue
+  const pickColorByLower = (lo) => {
+    const lower = Number(lo) || 0;
+    if (lower >= 159) return 'red';
+    if (lower >= 152) return 'orange';
+    if (lower >= 142) return 'yellow';
+    if (lower >= 111) return 'green';
+    return 'blue';
+  };
+  const colorVal = (name, strong) => {
+    // Tailwind-ish palette with adjusted opacity for themes
+    const op = strong ? (contrast ? 1.0 : 0.84) : (contrast ? 0.65 : 0.34);
+    switch (name) {
+      case 'blue': return `rgba(59,130,246,${op})`;
+      case 'green': return `rgba(34,197,94,${op})`;
+      case 'yellow': return `rgba(234,179,8,${op})`;
+      case 'orange': return `rgba(249,115,22,${op})`;
+      case 'red': default: return `rgba(239,68,68,${op})`;
+    }
+  };
+  // Fallback palette for non-legacy (index-cycled)
   const cols = contrast ? [
     'rgba(59,130,246,0.65)',
     'rgba(34,197,94,0.65)',
@@ -62,7 +97,6 @@ function buildStageBands() {
     'rgba(249,115,22,0.65)',
     'rgba(239,68,68,0.65)'
   ] : [
-    // default +20% opacity vs original 0.28 -> ~0.34
     'rgba(59,130,246,0.34)',
     'rgba(34,197,94,0.34)',
     'rgba(234,179,8,0.34)',
@@ -76,13 +110,13 @@ function buildStageBands() {
     'rgba(249,115,22,1.0)',
     'rgba(239,68,68,1.0)'
   ] : [
-    // default +20% opacity vs original 0.7 -> ~0.84
     'rgba(59,130,246,0.84)',
     'rgba(34,197,94,0.84)',
     'rgba(234,179,8,0.84)',
     'rgba(249,115,22,0.84)',
     'rgba(239,68,68,0.84)'
   ];
+
   let acc = 0;
   const t = performance.now() - (s.pulseAnimation?.startTime || 0);
   const pulse = (Math.sin(t / 400) + 1) / 2;
@@ -92,11 +126,16 @@ function buildStageBands() {
   const data = [];
   s.trainingSession.stages.forEach((stg, i) => {
     const isCur = i === s.stageIdx;
+    const legacy = isLegacyGalileuColorsOn();
+    const base = legacy ? pickColorByLower(stg.lower) : null;
+    const fillColor = legacy
+      ? (isCur ? colorVal(base, true) : colorVal(base, false))
+      : (isCur ? hiCols[i % hiCols.length] : cols[i % cols.length]);
     data.push([
       {
         name: `E${stg.index}`,
         itemStyle: {
-          color: isCur ? hiCols[i % hiCols.length] : cols[i % cols.length],
+          color: fillColor,
           shadowBlur: isCur ? strongGlow : weakGlow,
           shadowColor: contrast ? 'rgba(255,255,255,0.55)' : (isCur ? 'rgba(255,255,255,0.25)' : 'transparent')
         },
@@ -229,6 +268,10 @@ function attachChartResizers() {
   // Re-resize when route navigates to plot
   window.addEventListener('router:navigate', (e) => {
     const route = e.detail?.route; if (route === 'plot') schedule();
+  });
+  // Update when legacy color rule toggles
+  window.addEventListener('ui:legacyColors', () => {
+    try { syncChartScales(); } catch {}
   });
 }
 
