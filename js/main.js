@@ -14,7 +14,7 @@ window.addEventListener('load', async () => {
   await checkBluetoothSupport();
   try { bindHomeNav(); } catch { }
   try { showScreen('home'); } catch { }
-  try { applyPlotSettingsToDom(); } catch {}
+  try { applyPlotSettingsToDom(); } catch { }
 });
 
 
@@ -30,7 +30,7 @@ document.getElementById('connectBackBtn')?.addEventListener('click', () => {
     state.startReturnScreen = null;
     if (dest === 'editPlan') { showScreen('editPlan'); return; }
     if (dest === 'plan') { showScreen('plan'); return; }
-  } catch {}
+  } catch { }
   showScreen('home');
 });
 document.getElementById('goToPlanButton').addEventListener('click', () => {

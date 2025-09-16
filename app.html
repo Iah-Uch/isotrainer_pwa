@@ -65,7 +65,8 @@
                   class="mt-6 rounded-2xl border-2 border-dashed border-white/15 bg-white/5 hover:bg-white/10 transition p-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-600/60">
                   <div class="flex flex-col items-center gap-3">
                     <div class="h-12 w-12 rounded-full bg-purple-600/20 text-purple-300 grid place-items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+                        aria-hidden="true">
                         <path d="M5 20h14v-2H5v2zM12 4l6 6h-4v6H10v-6H6l6-6z" />
                       </svg>
                     </div>
@@ -78,7 +79,8 @@
                 </div>
               </div>
             </div>
-            <div id="plansEmpty" class="hidden mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
+            <div id="plansEmpty"
+              class="hidden mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
               Nenhuma periodização importada ainda. Importe seu arquivo para usar todas as funções do app.
             </div>
 
@@ -329,7 +331,8 @@
           <span id="stageLabel">Estágio —</span>
           <!-- Mobile-only live in-target % -->
           <span class="mx-1 only-mobile">•</span>
-          <div id="stageInTargetPctMobileWrap" class="only-mobile inline-flex items-center gap-1 text-emerald-300" title="No alvo (%)">
+          <div id="stageInTargetPctMobileWrap" class="only-mobile inline-flex items-center gap-1 text-emerald-300"
+            title="No alvo (%)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
               aria-hidden="true">
               <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
@@ -346,7 +349,8 @@
             class="aside-left rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 h-full grid place-items-center shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <div class="space-y-2">
               <div id="currentHr" class="text-center">
-                <div id="currentHrValue" class="hr-value font-bold text-amber-300 leading-none whitespace-nowrap">--</div>
+                <div id="currentHrValue" class="hr-value font-bold text-amber-300 leading-none whitespace-nowrap">--
+                </div>
                 <div class="hr-unit tracking-wide text-slate-400 whitespace-nowrap">bpm</div>
                 <div id="stageRange" class="hr-range font-semibold text-emerald-300 whitespace-nowrap">—</div>
                 <!-- Next-stage hint appears after halfway point of current stage -->
@@ -378,7 +382,8 @@
             </div>
           </main>
 
-          <aside data-sidebar class="aside-right rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full shrink-0 lg:w-48 xl:w-64 2xl:w-80">
+          <aside data-sidebar
+            class="aside-right rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <!-- Temporizadores maiores -->
             <div class="mt-1 grid grid-cols-1 gap-3">
               <div>
@@ -427,8 +432,7 @@
         </div>
 
         <div id="sessionCardContainer" class="mt-2 sm:mt-4 rounded-2xl bg-white/5 p-0">
-          <div
-            class="relative w-full h-[22svh] md:h-[24svh] min-h-[120px] rounded-xl bg-slate-950/75 overflow-hidden">
+          <div class="relative w-full h-[22svh] md:h-[24svh] min-h-[120px] rounded-xl bg-slate-950/75 overflow-hidden">
             <div id="sessionHrChart" class="absolute inset-0 w-full h-full"></div>
           </div>
         </div>
@@ -509,7 +513,8 @@
               class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
-                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
+                <path
+                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
               </svg>
             </button>
             <button id="sessionPreviewViewBottom" title="Ver" aria-label="Ver"
@@ -550,20 +555,25 @@
     <button id="homeMenuBtn"
       class="fixed bottom-6 right-4 z-40 h-14 w-14 rounded-full bg-purple-800 hover:bg-purple-700 text-white grid place-items-center shadow-lg"
       aria-haspopup="true" aria-expanded="false" aria-controls="homeMenu" title="Menu">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
+        aria-hidden="true">
+        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
       </svg>
     </button>
     <div id="homeMenu"
       class="hidden fixed bottom-24 right-4 z-50 w-56 rounded-xl border border-white/10 bg-slate-900 shadow-xl p-2">
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuManual">Fluxo Manual</button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportPlan">Importar Periodização</button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportSession">Importar Sessões Conclúidas</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportPlan">Importar
+        Periodização</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportSession">Importar Sessões
+        Conclúidas</button>
       <div class="my-1 h-px bg-white/10"></div>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuSettings">Configurações</button>
       <div class="my-1 h-px bg-white/10"></div>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuExportAll">Exportar Sessões Concluídas (CSV)</button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/50 text-rose-300" id="menuResetApp">Resetar Aplicação</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuExportAll">Exportar Sessões
+        Concluídas (CSV)</button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/50 text-rose-300" id="menuResetApp">Resetar
+        Aplicação</button>
     </div>
   </div>
 
@@ -644,11 +654,14 @@
   </div>
 
   <!-- Settings Modal -->
-  <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4 overflow-auto" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-    <div class="w-full max-w-md max-h-[88svh] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10">
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4 overflow-auto"
+    role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div
+      class="w-full max-w-md max-h-[88svh] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10">
       <div class="flex items-center justify-between">
         <h3 id="settingsTitle" class="text-lg font-semibold">Configurações</h3>
-        <button id="settingsClose" class="text-slate-300 hover:text-white text-2xl leading-none" aria-label="Fechar">×</button>
+        <button id="settingsClose" class="text-slate-300 hover:text-white text-2xl leading-none"
+          aria-label="Fechar">×</button>
       </div>
       <div class="mt-4 space-y-3">
         <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
@@ -673,36 +686,44 @@
           <div class="space-y-2">
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Topo: Sessão</span>
-              <label class="switch"><input id="togglePlotHeaderSession" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="togglePlotHeaderSession" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Topo: Atleta</span>
-              <label class="switch"><input id="togglePlotHeaderAthlete" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="togglePlotHeaderAthlete" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Topo: Estágio</span>
-              <label class="switch"><input id="togglePlotHeaderStageLabel" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="togglePlotHeaderStageLabel" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Topo: No alvo (mobile)</span>
-              <label class="switch"><input id="togglePlotHeaderInTargetMobile" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="togglePlotHeaderInTargetMobile" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
 
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Esq.: FC atual</span>
-              <label class="switch"><input id="toggleAsideLeftHrValue" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideLeftHrValue" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Esq.: Unidade bpm</span>
-              <label class="switch"><input id="toggleAsideLeftHrUnit" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideLeftHrUnit" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Esq.: Intervalo do estágio</span>
-              <label class="switch"><input id="toggleAsideLeftStageRange" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideLeftStageRange" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Esq.: Dica próximo estágio</span>
-              <label class="switch"><input id="toggleAsideLeftNextHint" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideLeftNextHint" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
 
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
@@ -716,15 +737,18 @@
 
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Dir.: Cronômetro do estágio</span>
-              <label class="switch"><input id="toggleAsideRightStageElapsed" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideRightStageElapsed" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Dir.: Tempo total</span>
-              <label class="switch"><input id="toggleAsideRightTotalRemaining" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideRightTotalRemaining" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Dir.: No alvo (%)</span>
-              <label class="switch"><input id="toggleAsideRightInTarget" type="checkbox"><span class="slider"></span></label>
+              <label class="switch"><input id="toggleAsideRightInTarget" type="checkbox"><span
+                  class="slider"></span></label>
             </label>
 
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
@@ -742,14 +766,16 @@
                 <div class="font-medium">Multiplicador Lateral Esquerda</div>
                 <div class="text-xs text-slate-400">Ajusta o tamanho dos elementos (0 = sem ajuste)</div>
               </div>
-              <input id="asideLeftMul" type="number" step="0.1" min="-0.9" max="3" value="0" class="w-24 text-black rounded-md px-2 py-1">
+              <input id="asideLeftMul" type="number" step="0.1" min="-0.9" max="3" value="0"
+                class="w-24 text-black rounded-md px-2 py-1">
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <div>
                 <div class="font-medium">Multiplicador Lateral Direita</div>
                 <div class="text-xs text-slate-400">Ajusta o tamanho dos elementos (0 = sem ajuste)</div>
               </div>
-              <input id="asideRightMul" type="number" step="0.1" min="-0.9" max="3" value="0" class="w-24 text-black rounded-md px-2 py-1">
+              <input id="asideRightMul" type="number" step="0.1" min="-0.9" max="3" value="0"
+                class="w-24 text-black rounded-md px-2 py-1">
             </label>
           </div>
         </div>
@@ -768,7 +794,8 @@
     role="dialog" aria-modal="true" aria-labelledby="preStartTitle">
     <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10">
       <h3 id="preStartTitle" class="text-xl font-semibold">Bem-vindo! Prepare-se para começar</h3>
-      <p class="mt-2 text-sm text-slate-300">Antes de iniciar, ajuste a intensidade para entrar no intervalo do 1º estágio. Você pode começar mesmo fora do alvo, se preferir.</p>
+      <p class="mt-2 text-sm text-slate-300">Antes de iniciar, ajuste a intensidade para entrar no intervalo do 1º
+        estágio. Você pode começar mesmo fora do alvo, se preferir.</p>
       <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
         <div class="rounded-xl bg-white/5 p-3">
           <div class="text-slate-400">Alvo (E1)</div>
@@ -782,7 +809,9 @@
       <div class="mt-3">
         <div class="relative h-3 rounded-full bg-slate-800" id="preStartBar" aria-hidden="true">
           <div id="preStartTarget" class="absolute h-3 rounded-full bg-emerald-600/40" style="left:0;width:0"></div>
-          <div id="preStartThumb" class="absolute -top-1 h-5 w-5 rounded-full border-2 border-white bg-current text-slate-400" style="left:0"></div>
+          <div id="preStartThumb"
+            class="absolute -top-1 h-5 w-5 rounded-full border-2 border-white bg-current text-slate-400" style="left:0">
+          </div>
         </div>
         <div class="flex items-center justify-between text-xs text-slate-400 mt-1">
           <span id="preStartScaleMin">—</span>
@@ -791,7 +820,8 @@
       </div>
       <div id="preStartGuidance" class="mt-3 text-sm text-slate-300 flex items-center gap-2" aria-live="polite">
         <span id="preStartIcon" class="inline-flex h-5 w-5 items-center justify-center text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+            aria-hidden="true">
             <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
           </svg>
         </span>

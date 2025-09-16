@@ -190,5 +190,5 @@ function handleHeartRateMeasurement(value) {
         else thumbEl.classList.add('text-amber-400');
       }
     }
-  } catch {}
+  } catch { }
 }

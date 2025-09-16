@@ -73,7 +73,7 @@ export function startTraining(session) {
     const fabMenu = document.getElementById('fabMenu');
     if (fabToggle) fabToggle.classList.remove('hidden');
     if (fabMenu) fabMenu.classList.add('hidden');
-  } catch {}
+  } catch { }
 
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
@@ -110,7 +110,7 @@ export function startTraining(session) {
       if (rangeEl) rangeEl.textContent = range;
       if (hrEl) hrEl.textContent = '—';
       if (guideEl) guideEl.textContent = 'Aguardando leitura da FC...';
-    } catch {}
+    } catch { }
     pre.classList.remove('hidden');
   }
 }
@@ -296,7 +296,7 @@ export function showScreen(which) {
   // Use full width only for plot screen
   if (appRoot) appRoot.classList.toggle('full-bleed', which === 'plot');
   // Apply plot visibility/scaling when entering plot screen
-  if (which === 'plot') { try { applyPlotSettingsToDom(); } catch {} }
+  if (which === 'plot') { try { applyPlotSettingsToDom(); } catch { } }
   if (connectFabs) {
     if (which === 'connect') connectFabs.classList.remove('hidden');
     else connectFabs.classList.add('hidden');
@@ -388,7 +388,7 @@ function showCompletion(stats) {
   // Show 'Carregar novo plano' only for Manual (origin = 'plan')
   try {
     if (planBtn) planBtn.classList.toggle('hidden', state.editOrigin !== 'plan');
-  } catch {}
+  } catch { }
   // Close controls modal; control FAB visibility based on view/live mode
   const controls = document.getElementById('controlsModal');
   if (controls) controls.classList.add('hidden');
@@ -419,7 +419,7 @@ function showCompletion(stats) {
         completedAt: new Date().toISOString(),
         planId: state.trainingSession?.planId || state.trainingSession?.id || null,
         planIdx: (Number.isFinite(Number(state.trainingSession?.planIdx)) ? Number(state.trainingSession?.planIdx)
-                 : (Number.isFinite(Number(state.trainingSession?.idx)) ? Number(state.trainingSession?.idx) : null)),
+          : (Number.isFinite(Number(state.trainingSession?.idx)) ? Number(state.trainingSession?.idx) : null)),
       };
       // Tag manual flow sessions with a clear prefix in the title
       try {
@@ -427,7 +427,7 @@ function showCompletion(stats) {
       } catch { }
       saveCompletedSession(record);
       // Notify Home to refresh Done tab immediately
-      try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch {}
+      try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch { }
     }
   } catch { }
 }
@@ -642,7 +642,7 @@ export function loadCompletedSessionFromExportCsv(text) {
     const fabMenu = document.getElementById('fabMenu');
     if (fabToggle) fabToggle.classList.add('hidden');
     if (fabMenu) fabMenu.classList.add('hidden');
-  } catch {}
+  } catch { }
 
   // Also persist imported sessions into Done list for Home
   try {
@@ -660,8 +660,8 @@ export function loadCompletedSessionFromExportCsv(text) {
       title: `Importado • ${date || 'Sessão'} • ${stages.length} estágios`
     };
     saveCompletedSession(record);
-    try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch {}
-  } catch {}
+    try { window.dispatchEvent(new CustomEvent('sessions:updated')); } catch { }
+  } catch { }
 }
 
 // Import multiple completed sessions from a combined export CSV (single header, many sessions)

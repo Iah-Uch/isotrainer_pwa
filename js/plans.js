@@ -609,7 +609,7 @@ function makeDoneCard(rec, index = 0) {
         parts.push(`Finalizada ${hh}:${mm}`);
       }
     }
-  } catch {}
+  } catch { }
   sub.textContent = parts.join(' • ');
   info.appendChild(title); info.appendChild(sub);
   card.appendChild(info);
@@ -945,7 +945,7 @@ export function applyContrastToDocument(on) {
     // Notify charts/UI to re-style
     window.dispatchEvent(new CustomEvent('ui:contrast', { detail: { on: !!on } }));
     try { window.dispatchEvent(new Event('resize')); } catch { }
-  } catch {}
+  } catch { }
 }
 export function openSettings() {
   const modal = document.getElementById('settingsModal');
@@ -960,11 +960,11 @@ export function openSettings() {
       const v = localStorage.getItem(LEGACY_COLORS_KEY);
       legacyToggle.checked = (v === '1');
     }
-  } catch {}
+  } catch { }
 
   // Initialize plot element toggles and multipliers
-  try { initPlotSettingsUI(); } catch {}
-  try { ensurePlotResizeHook(); } catch {}
+  try { initPlotSettingsUI(); } catch { }
+  try { ensurePlotResizeHook(); } catch { }
   modal.classList.add('flex');
   modal.classList.remove('hidden');
   const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
@@ -972,27 +972,27 @@ export function openSettings() {
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); }, { once: true });
   toggle.onchange = () => {
     const on = !!toggle.checked;
-    try { localStorage.setItem(CONTRAST_KEY, on ? '1' : '0'); } catch {}
+    try { localStorage.setItem(CONTRAST_KEY, on ? '1' : '0'); } catch { }
     applyContrastToDocument(on);
   };
   if (legacyToggle) legacyToggle.onchange = () => {
     const on = !!legacyToggle.checked;
-    try { localStorage.setItem(LEGACY_COLORS_KEY, on ? '1' : '0'); } catch {}
+    try { localStorage.setItem(LEGACY_COLORS_KEY, on ? '1' : '0'); } catch { }
     // Notify charts to rebuild stage bands
-    try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on } })); } catch {}
+    try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on } })); } catch { }
   };
 
   if (resetBtn) resetBtn.onclick = () => {
-    try { resetAllSettingsToDefaults(); } catch {}
+    try { resetAllSettingsToDefaults(); } catch { }
     // Refresh UI controls to reflect defaults
-    try { toggle.checked = isContrastOn(); } catch {}
+    try { toggle.checked = isContrastOn(); } catch { }
     try {
       if (legacyToggle) {
         const v = localStorage.getItem(LEGACY_COLORS_KEY);
         legacyToggle.checked = (v === '1');
       }
-    } catch {}
-    try { initPlotSettingsUI(); } catch {}
+    } catch { }
+    try { initPlotSettingsUI(); } catch { }
   };
 }
 
@@ -1075,7 +1075,7 @@ export function applyPlotSettingsToDom() {
         else frame.style.gridTemplateColumns = '1fr';
       }
     }
-  } catch {}
+  } catch { }
   // Aside scaling (font-size multiplier)
   try {
     const left = document.querySelector('.aside-left');
@@ -1093,16 +1093,16 @@ export function applyPlotSettingsToDom() {
       right.style.fontSize = (base * (1 + rm)).toFixed(2) + 'px';
     }
   } catch { }
-  try { window.dispatchEvent(new Event('resize')); } catch {}
+  try { window.dispatchEvent(new Event('resize')); } catch { }
 }
 
 let plotResizeHooked = false;
 function ensurePlotResizeHook() {
   if (plotResizeHooked) return; plotResizeHooked = true;
   try {
-    window.addEventListener('resize', () => { try { applyPlotSettingsToDom(); } catch {} }, { passive: true });
-    window.addEventListener('orientationchange', () => { try { applyPlotSettingsToDom(); } catch {} }, { passive: true });
-  } catch {}
+    window.addEventListener('resize', () => { try { applyPlotSettingsToDom(); } catch { } }, { passive: true });
+    window.addEventListener('orientationchange', () => { try { applyPlotSettingsToDom(); } catch { } }, { passive: true });
+  } catch { }
 }
 
 function initPlotSettingsUI() {
@@ -1114,7 +1114,7 @@ function initPlotSettingsUI() {
     input.onchange = () => {
       setPlotToggle(key, !!input.checked);
       applyPlotSettingsToDom();
-      try { window.dispatchEvent(new CustomEvent('ui:plotSettingsChanged', { detail: { key, on: !!input.checked } })); } catch {}
+      try { window.dispatchEvent(new CustomEvent('ui:plotSettingsChanged', { detail: { key, on: !!input.checked } })); } catch { }
     };
   }
   // multipliers
@@ -1123,24 +1123,24 @@ function initPlotSettingsUI() {
   if (leftMul) { leftMul.value = String(getAsideMul('left') || 0); leftMul.onchange = () => { setAsideMul('left', parseFloat(leftMul.value) || 0); applyPlotSettingsToDom(); }; }
   if (rightMul) { rightMul.value = String(getAsideMul('right') || 0); rightMul.onchange = () => { setAsideMul('right', parseFloat(rightMul.value) || 0); applyPlotSettingsToDom(); }; }
   // Apply immediately to reflect the current values
-  try { applyPlotSettingsToDom(); } catch {}
+  try { applyPlotSettingsToDom(); } catch { }
 }
 
 function resetAllSettingsToDefaults() {
   // Contrast OFF, Legacy Colors OFF
-  try { localStorage.removeItem(CONTRAST_KEY); } catch {}
-  try { localStorage.removeItem(LEGACY_COLORS_KEY); } catch {}
+  try { localStorage.removeItem(CONTRAST_KEY); } catch { }
+  try { localStorage.removeItem(LEGACY_COLORS_KEY); } catch { }
   // Plot element toggles: remove keys so they default to ON
   try {
     for (const { key } of PLOT_TOGGLES) {
       localStorage.removeItem(PLOT_PREFIX + 'toggle:' + key);
     }
-  } catch {}
+  } catch { }
   // Multipliers: set to 0
-  try { localStorage.removeItem(PLOT_PREFIX + 'left:mul'); } catch {}
-  try { localStorage.removeItem(PLOT_PREFIX + 'right:mul'); } catch {}
+  try { localStorage.removeItem(PLOT_PREFIX + 'left:mul'); } catch { }
+  try { localStorage.removeItem(PLOT_PREFIX + 'right:mul'); } catch { }
   // Apply to document/UI
-  try { applyContrastToDocument(false); } catch {}
-  try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on: false } })); } catch {}
-  try { applyPlotSettingsToDom(); } catch {}
+  try { applyContrastToDocument(false); } catch { }
+  try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on: false } })); } catch { }
+  try { applyPlotSettingsToDom(); } catch { }
 }

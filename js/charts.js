@@ -271,7 +271,7 @@ function attachChartResizers() {
   });
   // Update when legacy color rule toggles
   window.addEventListener('ui:legacyColors', () => {
-    try { syncChartScales(); } catch {}
+    try { syncChartScales(); } catch { }
   });
 }
 
