@@ -4,12 +4,37 @@ import { fmtMMSS } from './utils.js';
 // Helpers
 const toXY = (arr) => arr.map((p) => [p.x, p.y]);
 
+function getLineWidths() {
+  try {
+    const w = window.innerWidth || 0;
+    // Light, non-intrusive scaling
+    if (w >= 1536) return { stage: 3.0, session: 2.2 }; // 2xl
+    if (w >= 1280) return { stage: 2.5, session: 2.0 }; // xl
+    if (w >= 1024) return { stage: 2.2, session: 1.7 }; // lg
+    return { stage: 2.0, session: 1.5 };
+  } catch { return { stage: 2.0, session: 1.5 }; }
+}
+
+function isContrast() {
+  try { return document.documentElement.classList.contains('contrast') || document.body.classList.contains('contrast'); }
+  catch { return false; }
+}
+
+function getColors() {
+  const hc = isContrast();
+  return hc
+    ? { stage: '#ffffff', session: '#ffe15a', axis: 'rgba(255,255,255,1.0)' }
+    // Default theme ~20% brighter overall
+    : { stage: '#ff6b81', session: '#ffb84a', axis: 'rgba(255,255,255,0.72)' };
+}
+
 function buildBoundsMarkLine(bounds, active) {
   if (!bounds) return [];
   const { lo, hi } = bounds;
   const above = active?.above || false;
   const below = active?.below || false;
-  const inactiveAlpha = 0.38; // dimmer when in-range
+  // Default inactiveAlpha 0.38 -> 0.46 (~+20%); contrast is very bright
+  const inactiveAlpha = isContrast() ? 0.95 : 0.46; // super bright in contrast mode
   const activeHiAlpha = above ? 0.98 : inactiveAlpha;
   const activeLoAlpha = below ? 0.98 : inactiveAlpha;
   return [
@@ -29,24 +54,41 @@ function buildBoundsMarkLine(bounds, active) {
 function buildStageBands() {
   const s = state;
   if (!s.trainingSession) return [];
-  const cols = [
-    'rgba(59,130,246,0.28)',
-    'rgba(34,197,94,0.28)',
-    'rgba(234,179,8,0.28)',
-    'rgba(249,115,22,0.28)',
-    'rgba(239,68,68,0.28)'
+  const contrast = isContrast();
+  const cols = contrast ? [
+    'rgba(59,130,246,0.65)',
+    'rgba(34,197,94,0.65)',
+    'rgba(234,179,8,0.65)',
+    'rgba(249,115,22,0.65)',
+    'rgba(239,68,68,0.65)'
+  ] : [
+    // default +20% opacity vs original 0.28 -> ~0.34
+    'rgba(59,130,246,0.34)',
+    'rgba(34,197,94,0.34)',
+    'rgba(234,179,8,0.34)',
+    'rgba(249,115,22,0.34)',
+    'rgba(239,68,68,0.34)'
   ];
-  const hiCols = [
-    'rgba(59,130,246,0.7)',
-    'rgba(34,197,94,0.7)',
-    'rgba(234,179,8,0.7)',
-    'rgba(249,115,22,0.7)',
-    'rgba(239,68,68,0.7)'
+  const hiCols = contrast ? [
+    'rgba(59,130,246,1.0)',
+    'rgba(34,197,94,1.0)',
+    'rgba(234,179,8,1.0)',
+    'rgba(249,115,22,1.0)',
+    'rgba(239,68,68,1.0)'
+  ] : [
+    // default +20% opacity vs original 0.7 -> ~0.84
+    'rgba(59,130,246,0.84)',
+    'rgba(34,197,94,0.84)',
+    'rgba(234,179,8,0.84)',
+    'rgba(249,115,22,0.84)',
+    'rgba(239,68,68,0.84)'
   ];
   let acc = 0;
   const t = performance.now() - (s.pulseAnimation?.startTime || 0);
   const pulse = (Math.sin(t / 400) + 1) / 2;
   const blur = 10 + (pulse * 10);
+  const weakGlow = contrast ? (6 + pulse * 6) : 0;
+  const strongGlow = contrast ? (22 + pulse * 16) : blur;
   const data = [];
   s.trainingSession.stages.forEach((stg, i) => {
     const isCur = i === s.stageIdx;
@@ -55,8 +97,8 @@ function buildStageBands() {
         name: `E${stg.index}`,
         itemStyle: {
           color: isCur ? hiCols[i % hiCols.length] : cols[i % cols.length],
-          shadowBlur: isCur ? blur : 0,
-          shadowColor: isCur ? 'rgba(255,255,255,0.25)' : 'transparent'
+          shadowBlur: isCur ? strongGlow : weakGlow,
+          shadowColor: contrast ? 'rgba(255,255,255,0.55)' : (isCur ? 'rgba(255,255,255,0.25)' : 'transparent')
         },
         label: { show: false },
         xAxis: acc,
@@ -77,6 +119,7 @@ export function setupCharts() {
   const el1 = document.getElementById('hrChart');
   // eslint-disable-next-line no-undef
   state.chart = echarts.init(el1, null, { renderer: 'canvas' });
+  const lw = getLineWidths();
   state.chart.setOption({
     animation: false,
     grid: { left: 0, right: 36, top: 0, bottom: 0 },
@@ -87,7 +130,12 @@ export function setupCharts() {
       data: toXY(state.series),
       smooth: 0.3,
       showSymbol: false,
-      lineStyle: { color: '#f43f5e', width: 2 },
+      lineStyle: {
+        color: getColors().stage,
+        width: lw.stage,
+        shadowBlur: isContrast() ? 16 : 0,
+        shadowColor: isContrast() ? 'rgba(255,255,255,0.8)' : 'transparent'
+      },
       markLine: { symbol: 'none', data: buildBoundsMarkLine(state.currentStageBoundsOriginal) }
     }]
   });
@@ -99,14 +147,19 @@ export function setupCharts() {
   state.sessionChart.setOption({
     animation: false,
     grid: { left: 30, right: 12, top: 10, bottom: 22 },
-    xAxis: { type: 'value', min: 0, max: 1, axisLabel: { color: 'rgba(255,255,255,0.6)', formatter: (v) => fmtMMSS(v) }, axisLine: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
-    yAxis: { type: 'value', min: 40, max: 200, axisLabel: { color: 'rgba(255,255,255,0.6)' }, axisLine: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
+    xAxis: { type: 'value', min: 0, max: 1, axisLabel: { color: getColors().axis || 'rgba(255,255,255,0.6)', formatter: (v) => fmtMMSS(v) }, axisLine: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
+    yAxis: { type: 'value', min: 40, max: 200, axisLabel: { color: getColors().axis || 'rgba(255,255,255,0.6)' }, axisLine: { show: false }, splitLine: { show: false }, axisTick: { show: false } },
     series: [{
       type: 'line',
       data: toXY(state.sessionSeries),
       smooth: 0.3,
       showSymbol: false,
-      lineStyle: { color: '#f59e0b', width: 1.5 },
+      lineStyle: {
+        color: getColors().session,
+        width: lw.session,
+        shadowBlur: isContrast() ? 14 : 0,
+        shadowColor: isContrast() ? 'rgba(255,255,255,0.7)' : 'transparent'
+      },
       markArea: { data: [], silent: true }
     }]
   });
@@ -153,6 +206,13 @@ function attachChartResizers() {
   const doResize = () => {
     try { state.chart?.resize(); } catch { }
     try { state.sessionChart?.resize(); } catch { }
+    // Lightly scale line widths and colors with viewport/contrast
+    try {
+      const lw = getLineWidths();
+      const col = getColors();
+      if (state.chart) state.chart.setOption({ series: [{ lineStyle: { width: lw.stage, color: col.stage, shadowBlur: isContrast() ? 16 : 0, shadowColor: isContrast() ? 'rgba(255,255,255,0.8)' : 'transparent' } }] }, false, true);
+      if (state.sessionChart) state.sessionChart.setOption({ series: [{ lineStyle: { width: lw.session, color: col.session, shadowBlur: isContrast() ? 14 : 0, shadowColor: isContrast() ? 'rgba(255,255,255,0.7)' : 'transparent' } }] }, false, true);
+    } catch { }
     const last = state.series?.[state.series.length - 1];
     if (last) updateHeartMarker(last.x, last.y);
   };

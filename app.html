@@ -341,17 +341,17 @@
         </div>
 
         <div id="frameGrid"
-          class="grid w-full gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[minmax(6rem,9rem)_1fr_minmax(6rem,9rem)] flex-1 min-h-0">
+          class="grid w-full gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[auto_1fr_auto] lg:grid-cols-[auto_1fr_auto] flex-1 min-h-0">
           <aside data-sidebar
-            class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 h-full grid place-items-center">
+            class="aside-left rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 h-full grid place-items-center shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <div class="space-y-2">
               <div id="currentHr" class="text-center">
-                <div id="currentHrValue" class="text-[clamp(4.5rem,3.5vw,5rem)] font-bold text-amber-300 leading-none">--</div>
-                <div class="text-[clamp(0.5rem,1vw,1.6rem)] tracking-wide text-slate-400">bpm</div>
-                <div id="stageRange" class="text-[clamp(1.6rem,2.6vw,1.6rem)] font-semibold text-emerald-300">—</div>
+                <div id="currentHrValue" class="hr-value font-bold text-amber-300 leading-none whitespace-nowrap">--</div>
+                <div class="hr-unit tracking-wide text-slate-400 whitespace-nowrap">bpm</div>
+                <div id="stageRange" class="hr-range font-semibold text-emerald-300 whitespace-nowrap">—</div>
                 <!-- Next-stage hint appears after halfway point of current stage -->
                 <div id="nextStageHint"
-                  class="next-hint inline-flex items-center justify-center gap-1 text-sky-300/80 text-sm">
+                  class="next-hint inline-flex items-center justify-center gap-1 text-sky-300/80 text-sm mt-2">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
                     aria-hidden="true">
                     <path d="M8 5l8 7-8 7V5z" />
@@ -378,7 +378,7 @@
             </div>
           </main>
 
-          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full">
+          <aside data-sidebar class="aside-right rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <!-- Temporizadores maiores -->
             <div class="mt-1 grid grid-cols-1 gap-3">
               <div>
@@ -391,7 +391,7 @@
               </div>
               <div class="only-desktop">
                 <div
-                  class="text-[.68rem] uppercase tracking-wide text-slate-400 flex items-center justify-start sm:justify-start gap-1">
+                  class="target-pct-row text-[.68rem] uppercase tracking-wide text-slate-400 flex items-center justify-start sm:justify-start gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor"
                     aria-hidden="true" title="No alvo (%)">
                     <path
@@ -560,6 +560,8 @@
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportPlan">Importar Periodização</button>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportSession">Importar Sessões Conclúidas</button>
       <div class="my-1 h-px bg-white/10"></div>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuSettings">Configurações</button>
+      <div class="my-1 h-px bg-white/10"></div>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuExportAll">Exportar Sessões Concluídas (CSV)</button>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/50 text-rose-300" id="menuResetApp">Resetar Aplicação</button>
     </div>
@@ -637,6 +639,25 @@
       <div class="mt-4 grid grid-cols-2 gap-2">
         <button id="prevStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">◀ Anterior</button>
         <button id="nextStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">Próximo ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10">
+      <div class="flex items-center justify-between">
+        <h3 id="settingsTitle" class="text-lg font-semibold">Configurações</h3>
+        <button id="settingsClose" class="text-slate-300 hover:text-white text-2xl leading-none" aria-label="Fechar">×</button>
+      </div>
+      <div class="mt-4 space-y-3">
+        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+          <div>
+            <div class="font-medium">Modo de Alto Contraste</div>
+            <div class="text-sm text-slate-400">Deixa os gráficos mais brilhantes para melhor visibilidade.</div>
+          </div>
+          <input id="contrastToggle" type="checkbox" class="h-5 w-5 accent-emerald-600">
+        </label>
       </div>
     </div>
   </div>

@@ -23,6 +23,9 @@ html, body { overflow-x: hidden; }
 }
 .heart-pulse{ animation: beat var(--pulse-period,1s) ease-in-out infinite; will-change: transform, filter; }
 
+/* Light scaling for plot heart marker icon */
+#heartMarker svg{ width: clamp(1rem, 2vw, 1.75rem); height: clamp(1rem, 2vw, 1.75rem); }
+
 
 /* ---------- Plot Heights (compact) ---------- */
 .stage-plot-mobile{ height: 36svh; }
@@ -141,6 +144,34 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 }
 .next-hint.urgent{
   animation: nextHintGlow 1s ease-in-out infinite;
+}
+
+/* Aside proportional scaling (CSS-only, breakpoint-based) */
+.aside-left{ font-size: 14px; }
+@media (min-width: 1024px){ /* lg */ .aside-left{ font-size: 16px; } }
+@media (min-width: 1280px){ /* xl */ .aside-left{ font-size: 18px; } }
+@media (min-width: 1536px){ /* 2xl */ .aside-left{ font-size: 20px; } }
+.hr-value{ font-size: 7.6em; letter-spacing: -0.02em; line-height: .92; }
+.hr-unit{ font-size: 1.18em; }
+.hr-range{ font-size: 2.45em; line-height: 1; }
+#nextStageHint{ font-size: 1.4em; line-height: 1.05; }
+@media (min-width: 1280px){ #nextStageHint{ font-size: 1.7em; } }
+@media (min-width: 1536px){ #nextStageHint{ font-size: 1.9em; } }
+
+.aside-right{ font-size: 14px; }
+@media (min-width: 1024px){ .aside-right{ font-size: 16px; } }
+@media (min-width: 1280px){ .aside-right{ font-size: 18px; } }
+@media (min-width: 1536px){ .aside-right{ font-size: 22px; } }
+.aside-right .timer-xl{ font-size: 3.9em; line-height: .95; letter-spacing: -0.01em; }
+.aside-right #stageInTargetPct{ font-size: 2.2em; }
+.aside-right .target-pct-row svg{ width: 2.2em; height: 2.2em; }
+@media (min-width: 1280px){ /* xl */
+  .aside-right #stageInTargetPct{ font-size: 2.5em; }
+  .aside-right .target-pct-row svg{ width: 2.5em; height: 2.5em; }
+}
+@media (min-width: 1536px){ /* 2xl */
+  .aside-right #stageInTargetPct{ font-size: 2.8em; }
+  .aside-right .target-pct-row svg{ width: 2.8em; height: 2.8em; }
 }
 /* Full-bleed width for plot screen */
 #appRoot.full-bleed {

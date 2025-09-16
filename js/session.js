@@ -139,7 +139,7 @@ export function updateStageUI() {
   resetStageSeries();
 }
 
-// Live metric: percentage of on-target readings for the current stage so far
+// Live metric: percentage of on-target readings for the whole session so far
 export function updateLiveStageInTargetPct() {
   if (!state.trainingSession || state.stageIdx < 0) return;
   const els = [
@@ -147,14 +147,32 @@ export function updateLiveStageInTargetPct() {
     document.getElementById('stageInTargetPctMobile')
   ].filter(Boolean);
   if (!els.length) return;
-  const st = state.trainingSession.stages[state.stageIdx];
-  const lo = st.lower, hi = st.upper;
-  const ys = (state.series || []).map(p => p?.y).filter(v => typeof v === 'number' && isFinite(v));
-  const total = ys.length;
-  if (!total) { for (const el of els) el.textContent = '—'; return; }
-  const inTarget = ys.filter(v => v >= lo && v <= hi).length;
-  const pct = Math.round((inTarget / total) * 100);
-  for (const el of els) el.textContent = `${pct}%`;
+  // Build stage offsets to evaluate in-target over the entire timeline
+  const stages = state.trainingSession.stages || [];
+  if (!stages.length) { for (const el of els) el.textContent = '—'; return; }
+  const offsets = [];
+  let acc = 0;
+  for (const s of stages) {
+    offsets.push({ start: acc, end: acc + s.durationSec, lo: s.lower, hi: s.upper });
+    acc += s.durationSec;
+  }
+  const series = state.sessionSeries || [];
+  let total = 0, inTarget = 0;
+  for (const p of series) {
+    if (!p || typeof p.y !== 'number' || !isFinite(p.y)) continue;
+    total += 1;
+    const x = typeof p.x === 'number' ? p.x : 0;
+    // Find corresponding stage by time (x)
+    let st = null;
+    for (let i = 0; i < offsets.length; i++) {
+      const seg = offsets[i];
+      if (x >= seg.start && x <= seg.end) { st = seg; break; }
+    }
+    if (!st) st = offsets[offsets.length - 1];
+    if (st && p.y >= st.lo && p.y <= st.hi) inTarget += 1;
+  }
+  const pct = total ? Math.round((inTarget / total) * 100) : null;
+  for (const el of els) el.textContent = (pct == null ? '—' : `${pct}%`);
 }
 
 function updateHalfwayNextStageHint(stageElapsedSec) {

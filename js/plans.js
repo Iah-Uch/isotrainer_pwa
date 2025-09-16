@@ -893,6 +893,7 @@ export function bindHomeNav() {
   document.addEventListener('click', (e) => { if (!menu || !menuBtn) return; if (menu.contains(e.target) || menuBtn.contains(e.target)) return; menu.classList.add('hidden'); menuBtn?.setAttribute('aria-expanded', 'false'); });
   document.getElementById('menuManual')?.addEventListener('click', () => { showScreen('plan'); menu?.classList.add('hidden'); });
   document.getElementById('menuImportSession')?.addEventListener('click', () => { document.getElementById('homeImportSessionInput')?.click(); menu?.classList.add('hidden'); });
+  document.getElementById('menuSettings')?.addEventListener('click', () => { try { openSettings(); } finally { menu?.classList.add('hidden'); } });
   document.getElementById('menuExportAll')?.addEventListener('click', () => { try { exportAllDoneCsv(); } finally { menu?.classList.add('hidden'); } });
   document.getElementById('menuResetApp')?.addEventListener('click', () => { try { resetApplication(); } finally { menu?.classList.add('hidden'); } });
 }
@@ -929,4 +930,36 @@ function resetApplication() {
     localStorage.removeItem(STORAGE_DONE_KEY);
   } catch { }
   try { location.reload(); } catch { }
+}
+
+// ============= Settings (Contrast Mode) ============= //
+const CONTRAST_KEY = 'cardiomax:ui:contrast';
+export function isContrastOn() {
+  try { return localStorage.getItem(CONTRAST_KEY) === '1'; } catch { return false; }
+}
+export function applyContrastToDocument(on) {
+  try {
+    document.documentElement.classList.toggle('contrast', !!on);
+    document.body.classList.toggle('contrast', !!on);
+    // Notify charts/UI to re-style
+    window.dispatchEvent(new CustomEvent('ui:contrast', { detail: { on: !!on } }));
+    try { window.dispatchEvent(new Event('resize')); } catch { }
+  } catch {}
+}
+export function openSettings() {
+  const modal = document.getElementById('settingsModal');
+  const closeBtn = document.getElementById('settingsClose');
+  const toggle = document.getElementById('contrastToggle');
+  if (!modal || !toggle) return;
+  try { toggle.checked = isContrastOn(); } catch { }
+  modal.classList.add('flex');
+  modal.classList.remove('hidden');
+  const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  closeBtn?.addEventListener('click', close, { once: true });
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); }, { once: true });
+  toggle.onchange = () => {
+    const on = !!toggle.checked;
+    try { localStorage.setItem(CONTRAST_KEY, on ? '1' : '0'); } catch {}
+    applyContrastToDocument(on);
+  };
 }
