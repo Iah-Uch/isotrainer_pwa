@@ -325,28 +325,37 @@ function dateMatches(dateStr, yyyy, mm, dd) {
 =================================== */
 
 const PAGE_SIZE = 5;
-let currentPage = 1; // pending
-let totalPages = 1;  // pending
-let donePage = 1;    // done
-let doneTotalPages = 1; // done
+let todoPage = 1; // A fazer
+let todoTotalPages = 1;
+let overduePage = 1; // Pendente
+let overdueTotalPages = 1;
+let donePage = 1; // Concluído
+let doneTotalPages = 1;
 
 export function renderHome(plans) {
   const root = document.getElementById('homeScreen');
   if (!root) return;
-  const listEl = document.getElementById('plansList');
+  const todoListEl = document.getElementById('todoList');
+  const overdueListEl = document.getElementById('overdueList');
   const todayEl = document.getElementById('todayPlan');
   const empty = document.getElementById('plansEmpty');
   const emptyState = document.getElementById('homeEmptyState');
   const contentWrap = document.getElementById('homeContentWrap');
   const doneList = document.getElementById('plansDoneList');
-  const tabPendingBtn = document.getElementById('tabPending');
+  const tabTodoBtn = document.getElementById('tabTodo');
+  const tabOverdueBtn = document.getElementById('tabOverdue');
   const tabDoneBtn = document.getElementById('tabDone');
-  const panelPending = document.getElementById('panelPending');
+  const panelTodo = document.getElementById('panelTodo');
+  const panelOverdue = document.getElementById('panelOverdue');
   const panelDone = document.getElementById('panelDone');
-  const pager = document.getElementById('plansPager');
-  const pagerPrev = document.getElementById('pagerPrev');
-  const pagerNext = document.getElementById('pagerNext');
-  const pagerInfo = document.getElementById('pagerInfo');
+  const todoPager = document.getElementById('todoPager');
+  const todoPagerPrev = document.getElementById('todoPagerPrev');
+  const todoPagerNext = document.getElementById('todoPagerNext');
+  const todoPagerInfo = document.getElementById('todoPagerInfo');
+  const overduePager = document.getElementById('overduePager');
+  const overduePagerPrev = document.getElementById('overduePagerPrev');
+  const overduePagerNext = document.getElementById('overduePagerNext');
+  const overduePagerInfo = document.getElementById('overduePagerInfo');
   const src = Array.isArray(plans) ? plans.slice() : [];
   const dones = loadDoneSessions();
   const hasPlans = src.length > 0;
@@ -387,12 +396,49 @@ export function renderHome(plans) {
       return false;
     });
   }
-  const filtered = src.filter(s => !isDone(s));
-  if (!filtered.length) { if (empty) empty.classList.remove('hidden'); } else { if (empty) empty.classList.add('hidden'); }
+  const pendingAll = src.filter(s => !isDone(s));
+  // Never show the small warning box here; it's for first-import guidance only
+  if (empty) empty.classList.add('hidden');
+
+  // Date helpers
+  function parseDateKey(dstr) {
+    const s = String(dstr || '').trim();
+    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m) {
+      const DD = m[1].padStart(2, '0');
+      const MM = m[2].padStart(2, '0');
+      const YYYY = m[3].length === 2 ? ('20' + m[3]) : m[3];
+      return Number(`${YYYY}${MM}${DD}`);
+    }
+    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+      const YYYY = m[1];
+      const MM = m[2].padStart(2, '0');
+      const DD = m[3].padStart(2, '0');
+      return Number(`${YYYY}${MM}${DD}`);
+    }
+    return NaN;
+  }
+  const now = new Date();
+  const todayKey = Number(
+    String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0')
+  );
+  const isToday = (s) => parseDateKey(s?.date) === todayKey;
+  const isFutureOrToday = (s) => {
+    const k = parseDateKey(s?.date);
+    return Number.isFinite(k) && k >= todayKey;
+  };
+  const isPast = (s) => {
+    const k = parseDateKey(s?.date);
+    return Number.isFinite(k) && k < todayKey;
+  };
+
+  const todoItems = pendingAll.filter(isFutureOrToday);
+  const overdueItems = pendingAll.filter(isPast);
 
   if (todayEl) {
     todayEl.innerHTML = '';
-    const today = getTodayPlan(filtered);
+    const today = getTodayPlan(todoItems);
     if (today) {
       // Resolve original index so clicking the Today card opens the correct session
       const todayIdx = src.findIndex(s => (s?.id && today?.id) ? (s.id === today.id) : (s === today));
@@ -405,16 +451,29 @@ export function renderHome(plans) {
     }
   }
 
-  if (listEl) {
-    listEl.innerHTML = '';
-    totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    currentPage = Math.min(Math.max(1, currentPage), totalPages);
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+  // A fazer list (today and forward)
+  if (todoListEl) {
+    todoListEl.innerHTML = '';
+    todoTotalPages = Math.max(1, Math.ceil(todoItems.length / PAGE_SIZE));
+    todoPage = Math.min(Math.max(1, todoPage), todoTotalPages);
+    const start = (todoPage - 1) * PAGE_SIZE;
+    const pageItems = todoItems.slice(start, start + PAGE_SIZE);
     pageItems.forEach((p) => {
-      // Resolve index relative to the original plans array (not the filtered list)
       const origIdx = src.findIndex(s => (s?.id && p?.id) ? (s.id === p.id) : (s === p));
-      listEl.appendChild(makePlanCard(p, false, origIdx >= 0 ? origIdx : 0));
+      todoListEl.appendChild(makePlanCard(p, false, origIdx >= 0 ? origIdx : 0));
+    });
+  }
+
+  // Pendente list (past, not completed)
+  if (overdueListEl) {
+    overdueListEl.innerHTML = '';
+    overdueTotalPages = Math.max(1, Math.ceil(overdueItems.length / PAGE_SIZE));
+    overduePage = Math.min(Math.max(1, overduePage), overdueTotalPages);
+    const startO = (overduePage - 1) * PAGE_SIZE;
+    const pageOverdue = overdueItems.slice(startO, startO + PAGE_SIZE);
+    pageOverdue.forEach((p) => {
+      const origIdx = src.findIndex(s => (s?.id && p?.id) ? (s.id === p.id) : (s === p));
+      overdueListEl.appendChild(makePlanCard(p, false, origIdx >= 0 ? origIdx : 0));
     });
   }
 
@@ -432,13 +491,24 @@ export function renderHome(plans) {
     }
   }
 
-  if (pager && pagerPrev && pagerNext && pagerInfo) {
-    pager.classList.toggle('hidden', filtered.length <= PAGE_SIZE);
-    pagerPrev.disabled = (currentPage <= 1);
-    pagerNext.disabled = (currentPage >= totalPages);
-    pagerInfo.textContent = `Página ${currentPage} de ${totalPages}`;
-    pagerPrev.onclick = () => { if (currentPage > 1) { currentPage -= 1; renderHome(loadStoredPlans()); } };
-    pagerNext.onclick = () => { if (currentPage < totalPages) { currentPage += 1; renderHome(loadStoredPlans()); } };
+  // Todo pager controls
+  if (todoPager && todoPagerPrev && todoPagerNext && todoPagerInfo) {
+    todoPager.classList.toggle('hidden', todoItems.length <= PAGE_SIZE);
+    todoPagerPrev.disabled = (todoPage <= 1);
+    todoPagerNext.disabled = (todoPage >= todoTotalPages);
+    todoPagerInfo.textContent = `Página ${todoPage} de ${todoTotalPages}`;
+    todoPagerPrev.onclick = () => { if (todoPage > 1) { todoPage -= 1; renderHome(loadStoredPlans()); } };
+    todoPagerNext.onclick = () => { if (todoPage < todoTotalPages) { todoPage += 1; renderHome(loadStoredPlans()); } };
+  }
+
+  // Overdue pager controls
+  if (overduePager && overduePagerPrev && overduePagerNext && overduePagerInfo) {
+    overduePager.classList.toggle('hidden', overdueItems.length <= PAGE_SIZE);
+    overduePagerPrev.disabled = (overduePage <= 1);
+    overduePagerNext.disabled = (overduePage >= overdueTotalPages);
+    overduePagerInfo.textContent = `Página ${overduePage} de ${overdueTotalPages}`;
+    overduePagerPrev.onclick = () => { if (overduePage > 1) { overduePage -= 1; renderHome(loadStoredPlans()); } };
+    overduePagerNext.onclick = () => { if (overduePage < overdueTotalPages) { overduePage += 1; renderHome(loadStoredPlans()); } };
   }
 
   // Done pager
@@ -457,26 +527,38 @@ export function renderHome(plans) {
 
   // Tabs
   function activate(tab) {
-    if (!tabPendingBtn || !tabDoneBtn || !panelPending || !panelDone) return;
-    if (!hasPlans && tab === 'pending') tab = 'done';
-    const isPending = tab === 'pending';
-    tabPendingBtn.classList.toggle('bg-slate-800', !isPending);
-    tabPendingBtn.classList.toggle('bg-slate-700', isPending);
-    tabDoneBtn.classList.toggle('bg-slate-800', isPending);
-    tabDoneBtn.classList.toggle('bg-slate-700', !isPending);
-    panelPending.classList.toggle('hidden', !isPending);
-    panelDone.classList.toggle('hidden', isPending);
+    if (!tabTodoBtn || !tabOverdueBtn || !tabDoneBtn || !panelTodo || !panelOverdue || !panelDone) return;
+    if (!hasPlans && (tab === 'todo' || tab === 'overdue')) tab = 'done';
+    const isTodo = tab === 'todo';
+    const isOverdue = tab === 'overdue';
+    const isDone = tab === 'done';
+    tabTodoBtn.classList.toggle('bg-slate-700', isTodo);
+    tabTodoBtn.classList.toggle('bg-slate-800', !isTodo);
+    tabOverdueBtn.classList.toggle('bg-slate-700', isOverdue);
+    tabOverdueBtn.classList.toggle('bg-slate-800', !isOverdue);
+    tabDoneBtn.classList.toggle('bg-slate-700', isDone);
+    tabDoneBtn.classList.toggle('bg-slate-800', !isDone);
+    panelTodo.classList.toggle('hidden', !isTodo);
+    panelOverdue.classList.toggle('hidden', !isOverdue);
+    panelDone.classList.toggle('hidden', !isDone);
   }
-  if (tabPendingBtn) {
-    tabPendingBtn.disabled = !hasPlans;
-    tabPendingBtn.classList.toggle('opacity-50', !hasPlans);
-    tabPendingBtn.classList.toggle('cursor-not-allowed', !hasPlans);
-    tabPendingBtn.title = hasPlans ? '' : 'Importe uma periodização para ver Pendentes';
-    tabPendingBtn.onclick = () => { if (hasPlans) activate('pending'); };
+  if (tabTodoBtn) {
+    tabTodoBtn.disabled = !hasPlans;
+    tabTodoBtn.classList.toggle('opacity-50', !hasPlans);
+    tabTodoBtn.classList.toggle('cursor-not-allowed', !hasPlans);
+    tabTodoBtn.title = hasPlans ? '' : 'Importe uma periodização para ver A fazer';
+    tabTodoBtn.onclick = () => { if (hasPlans) activate('todo'); };
+  }
+  if (tabOverdueBtn) {
+    tabOverdueBtn.disabled = !hasPlans;
+    tabOverdueBtn.classList.toggle('opacity-50', !hasPlans);
+    tabOverdueBtn.classList.toggle('cursor-not-allowed', !hasPlans);
+    tabOverdueBtn.title = hasPlans ? '' : 'Importe uma periodização para ver Pendente';
+    tabOverdueBtn.onclick = () => { if (hasPlans) activate('overdue'); };
   }
   if (tabDoneBtn) { tabDoneBtn.onclick = () => activate('done'); }
   // default tab
-  activate(hasPlans ? 'pending' : 'done');
+  activate(hasPlans ? 'todo' : 'done');
 }
 
 let previewIndex = null;
@@ -543,6 +625,7 @@ function openPreview(index) {
   const modal = document.getElementById('sessionPreviewModal');
   const body = document.getElementById('sessionPreviewBody');
   const startBtn = document.getElementById('sessionPreviewStart');
+  const editBtn = document.getElementById('sessionPreviewEdit');
   // Top bar controls
   const viewBtnTop = document.getElementById('sessionPreviewView');
   const dlBtnTop = document.getElementById('sessionPreviewDownload');
@@ -566,8 +649,12 @@ function openPreview(index) {
   list.appendChild(ul);
   wrap.appendChild(h); wrap.appendChild(meta); wrap.appendChild(list);
   body.appendChild(wrap);
-  // Show only Start (play); hide all other controls
+  // Show Start and optional Edit; hide all other controls
   startBtn?.classList.remove('hidden');
+  if (editBtn) {
+    editBtn.classList.remove('hidden');
+    editBtn.onclick = () => { try { closePreview(); loadPlanForEdit(s, 'home'); showScreen('editPlan'); } catch { } };
+  }
   viewBtnTop?.classList.add('hidden');
   dlBtnTop?.classList.add('hidden');
   renBtnTop?.classList.add('hidden');
@@ -593,9 +680,24 @@ function confirmPreview() {
   const plans = loadStoredPlans();
   const s = plans[idx];
   if (!s) return;
-  // Open editor first; connection will be required when starting
-  loadPlanForEdit(s, 'home');
-  showScreen('editPlan');
+  // Direct start flow: editing is optional via the Edit button
+  try {
+    const sessionCopy = JSON.parse(JSON.stringify(s));
+    if (sessionCopy.id && !sessionCopy.planId) sessionCopy.planId = sessionCopy.id;
+    if (Number.isFinite(Number(sessionCopy.idx)) && !Number.isFinite(Number(sessionCopy.planIdx))) sessionCopy.planIdx = Number(sessionCopy.idx);
+    state.editOrigin = 'home';
+    state.pendingIntent = { type: 'startEdited', session: sessionCopy };
+    state.startReturnScreen = 'home';
+    showScreen('connect');
+    try {
+      const nextBtn = document.getElementById('goToPlanButton');
+      if (nextBtn) nextBtn.disabled = !(state.device && state.device.gatt?.connected);
+    } catch { }
+  } catch {
+    // Fallback: open editor
+    loadPlanForEdit(s, 'home');
+    showScreen('editPlan');
+  }
 }
 
 function openDonePreview(index) {
@@ -604,6 +706,7 @@ function openDonePreview(index) {
   const modal = document.getElementById('sessionPreviewModal');
   const body = document.getElementById('sessionPreviewBody');
   const startBtn = document.getElementById('sessionPreviewStart');
+  const editBtn = document.getElementById('sessionPreviewEdit');
   const dlBtnTop = document.getElementById('sessionPreviewDownload');
   const viewBtnTop = document.getElementById('sessionPreviewView');
   const renBtnTop = document.getElementById('sessionPreviewRename');
@@ -631,6 +734,7 @@ function openDonePreview(index) {
   const leftCtrls = document.getElementById('sessionPreviewFooterLeft');
   const rightCtrls = document.getElementById('sessionPreviewFooterRight');
   if (startBtn) startBtn.classList.add('hidden');
+  if (editBtn) editBtn.classList.add('hidden');
   const canView = !!rec.csv;
   const wireView = (btn) => { if (!btn) return; btn.classList.toggle('hidden', !canView); btn.onclick = () => { try { if (rec.csv) { closePreview(); loadCompletedSessionFromExportCsv(rec.csv); } } catch { } }; };
   wireView(viewBtnTop); wireView(viewBtnBottom);

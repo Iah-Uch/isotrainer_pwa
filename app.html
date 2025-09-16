@@ -84,24 +84,27 @@
 
             <div id="homeContentWrap" class="mt-6">
               <div class="flex w-fit mx-auto rounded-xl overflow-hidden border border-white/10">
-                <button id="tabPending" class="px-4 py-2 bg-slate-700">Pendentes</button>
-                <button id="tabDone" class="px-4 py-2 bg-slate-800">Concluídas</button>
+                <button id="tabTodo" class="px-4 py-2 bg-slate-700">A fazer</button>
+                <button id="tabOverdue" class="px-4 py-2 bg-slate-800">Pendente</button>
+                <button id="tabDone" class="px-4 py-2 bg-slate-800">Concluído</button>
               </div>
-              <div id="panelPending" class="mt-4">
+
+              <!-- A FAZER: hoje e próximas -->
+              <div id="panelTodo" class="mt-4">
                 <h3 class="text-lg font-semibold mb-2">Sessão de hoje</h3>
                 <div id="todayPlan" class="space-y-2"></div>
-                <h3 class="text-lg font-semibold mt-6 mb-2">Todas as sessões</h3>
-                <div id="plansList" class="space-y-2"></div>
-                <div id="plansPager" class="mt-3 flex items-center justify-center gap-2">
-                  <button id="pagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                <h3 class="text-lg font-semibold mt-6 mb-2">Próximas sessões</h3>
+                <div id="todoList" class="space-y-2"></div>
+                <div id="todoPager" class="mt-3 flex items-center justify-center gap-2">
+                  <button id="todoPagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
                     aria-label="Página anterior" title="Anterior">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
                       <path d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <div id="pagerInfo" class="text-sm text-slate-400">—</div>
-                  <button id="pagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <div id="todoPagerInfo" class="text-sm text-slate-400">—</div>
+                  <button id="todoPagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
                     aria-label="Próxima página" title="Próxima">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
@@ -110,6 +113,30 @@
                   </button>
                 </div>
               </div>
+
+              <!-- PENDENTE: atrasadas -->
+              <div id="panelOverdue" class="mt-4 hidden">
+                <div id="overdueList" class="space-y-2"></div>
+                <div id="overduePager" class="mt-3 flex items-center justify-center gap-2">
+                  <button id="overduePagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Página anterior" title="Anterior">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div id="overduePagerInfo" class="text-sm text-slate-400">—</div>
+                  <button id="overduePagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                    aria-label="Próxima página" title="Próxima">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
+                      aria-hidden="true">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- CONCLUÍDO: finalizadas -->
               <div id="panelDone" class="mt-4 hidden">
                 <div id="plansDoneList" class="space-y-2"></div>
                 <div id="donePager" class="mt-3 flex items-center justify-center gap-2">
@@ -253,7 +280,7 @@
       </div>
 
       <!-- PLOT SCREEN -->
-      <div id="plotScreen" class="hidden p-3 sm:p-2 relative">
+      <div id="plotScreen" class="hidden p-3 sm:p-2 relative flex flex-col min-h-svh">
 
         <!-- Floating Action Button + Menu (top-right) -->
         <button id="fabToggle" class="fab" aria-haspopup="true" aria-expanded="false" aria-controls="fabMenu"
@@ -314,13 +341,12 @@
         </div>
 
         <div id="frameGrid"
-          class="grid gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[minmax(6rem,9rem)_1fr_minmax(6rem,9rem)]">
+          class="grid w-full gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[minmax(6rem,9rem)_1fr_minmax(6rem,9rem)] flex-1 min-h-0">
           <aside data-sidebar
-            class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 landscape:h-[50svh] grid place-items-center">
+            class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 h-full grid place-items-center">
             <div class="space-y-2">
               <div id="currentHr" class="text-center">
-                <div id="currentHrValue" class="text-[clamp(4.5rem,3.5vw,5rem)] font-bold text-amber-300 leading-none">
-                  --</div>
+                <div id="currentHrValue" class="text-[clamp(4.5rem,3.5vw,5rem)] font-bold text-amber-300 leading-none">--</div>
                 <div class="text-[clamp(0.5rem,1vw,1.6rem)] tracking-wide text-slate-400">bpm</div>
                 <div id="stageRange" class="text-[clamp(1.6rem,2.6vw,1.6rem)] font-semibold text-emerald-300">—</div>
                 <!-- Next-stage hint appears after halfway point of current stage -->
@@ -336,8 +362,8 @@
             </div>
           </aside>
 
-          <main id="plotStageCard" class="relative overflow-hidden">
-            <div class="relative w-full stage-plot-mobile landscape:h-[50svh] p-0">
+          <main id="plotStageCard" class="relative overflow-hidden h-full min-h-0">
+            <div class="relative w-full h-full p-0 min-h-0">
               <div class="relative w-full h-full rounded-xl bg-slate-950/75 overflow-hidden">
                 <div id="heartMarker" class="absolute left-0 top-0 z-20 opacity-0 heart-pulse"
                   style="transform: translate(-50%, -50%); --pulse-period: 1s; pointer-events: none;">
@@ -352,7 +378,7 @@
             </div>
           </main>
 
-          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center">
+          <aside data-sidebar class="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full">
             <!-- Temporizadores maiores -->
             <div class="mt-1 grid grid-cols-1 gap-3">
               <div>
@@ -402,7 +428,7 @@
 
         <div id="sessionCardContainer" class="mt-2 sm:mt-4 rounded-2xl bg-white/5 p-0">
           <div
-            class="relative w-full session-plot-mobile sm:h-[20svh] min-h-[100px] rounded-xl bg-slate-950/75 overflow-hidden">
+            class="relative w-full h-[22svh] md:h-[24svh] min-h-[120px] rounded-xl bg-slate-950/75 overflow-hidden">
             <div id="sessionHrChart" class="absolute inset-0 w-full h-full"></div>
           </div>
         </div>
@@ -477,6 +503,13 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <button id="sessionPreviewEdit" title="Editar" aria-label="Editar"
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                aria-hidden="true">
+                <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
               </svg>
             </button>
             <button id="sessionPreviewViewBottom" title="Ver" aria-label="Ver"
@@ -612,9 +645,36 @@
   <div id="preStartModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
     role="dialog" aria-modal="true" aria-labelledby="preStartTitle">
     <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10">
-      <h3 id="preStartTitle" class="text-lg font-semibold">Pronto para iniciar?</h3>
-      <p class="mt-2 text-sm text-slate-300">Quando você tocar em Iniciar, o cronômetro começa ao detectar a primeira FC
-        recebida.</p>
+      <h3 id="preStartTitle" class="text-xl font-semibold">Bem-vindo! Prepare-se para começar</h3>
+      <p class="mt-2 text-sm text-slate-300">Antes de iniciar, ajuste a intensidade para entrar no intervalo do 1º estágio. Você pode começar mesmo fora do alvo, se preferir.</p>
+      <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <div class="rounded-xl bg-white/5 p-3">
+          <div class="text-slate-400">Alvo (E1)</div>
+          <div id="preStartStageRange" class="text-lg font-semibold">—</div>
+        </div>
+        <div class="rounded-xl bg-white/5 p-3">
+          <div class="text-slate-400">Sua FC</div>
+          <div id="preStartHrValue" class="text-lg font-semibold">—</div>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="relative h-3 rounded-full bg-slate-800" id="preStartBar" aria-hidden="true">
+          <div id="preStartTarget" class="absolute h-3 rounded-full bg-emerald-600/40" style="left:0;width:0"></div>
+          <div id="preStartThumb" class="absolute -top-1 h-5 w-5 rounded-full border-2 border-white bg-current text-slate-400" style="left:0"></div>
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-400 mt-1">
+          <span id="preStartScaleMin">—</span>
+          <span id="preStartScaleMax">—</span>
+        </div>
+      </div>
+      <div id="preStartGuidance" class="mt-3 text-sm text-slate-300 flex items-center gap-2" aria-live="polite">
+        <span id="preStartIcon" class="inline-flex h-5 w-5 items-center justify-center text-slate-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
+          </svg>
+        </span>
+        <span id="preStartText">Aguardando leitura da FC...</span>
+      </div>
       <div class="mt-4 grid grid-cols-2 gap-2">
         <button id="preStartBackBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2">Voltar</button>
         <button id="preStartGoBtn" class="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2">Iniciar ▶</button>

@@ -126,4 +126,69 @@ function handleHeartRateMeasurement(value) {
   updateStageChart(saturateStage(hr), currentTime);
   updateSessionChart(saturateSession(hr), currentTime);
   try { updateLiveStageInTargetPct(); } catch { }
+
+  // Update Pre-Start modal guidance while user prepares
+  try {
+    if (state.startPending && state.trainingSession && state.trainingSession.stages?.length) {
+      const first = state.trainingSession.stages[0];
+      const hrEl = document.getElementById('preStartHrValue');
+      const guideText = document.getElementById('preStartText');
+      const guideWrap = document.getElementById('preStartGuidance');
+      const iconEl = document.getElementById('preStartIcon');
+      const rangeEl = document.getElementById('preStartStageRange');
+      const targetEl = document.getElementById('preStartTarget');
+      const thumbEl = document.getElementById('preStartThumb');
+      const scaleMinEl = document.getElementById('preStartScaleMin');
+      const scaleMaxEl = document.getElementById('preStartScaleMax');
+      if (hrEl) hrEl.textContent = `${hr} bpm`;
+      if (rangeEl) rangeEl.textContent = `${first.lower}/${first.upper} bpm`;
+      // Compute scale from session bounds if present
+      let scaleMin = (state.trainingSession?.sessionBounds?.min ?? (first.lower - 20));
+      let scaleMax = (state.trainingSession?.sessionBounds?.max ?? (first.upper + 20));
+      if (!Number.isFinite(scaleMin)) scaleMin = first.lower - 20;
+      if (!Number.isFinite(scaleMax)) scaleMax = first.upper + 20;
+      if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
+      const span = Math.max(1, scaleMax - scaleMin);
+      if (scaleMinEl) scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} bpm`;
+      if (scaleMaxEl) scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} bpm`;
+      if (targetEl) {
+        const leftPct = Math.max(0, Math.min(100, ((first.lower - scaleMin) / span) * 100));
+        const rightPct = Math.max(0, Math.min(100, ((first.upper - scaleMin) / span) * 100));
+        targetEl.style.left = `${leftPct}%`;
+        targetEl.style.width = `${Math.max(0, rightPct - leftPct)}%`;
+      }
+      if (thumbEl) {
+        const p = Math.max(0, Math.min(100, ((hr - scaleMin) / span) * 100));
+        thumbEl.style.left = `calc(${p}% - 10px)`; // center the 20px thumb
+      }
+      if (guideText && iconEl && guideWrap && thumbEl) {
+        let msg = 'Aguardando leitura da FC...';
+        let colorClass = 'text-slate-300';
+        let iconSvg = '';
+        if (hr > 0) {
+          if (hr < first.lower) {
+            msg = 'Aumente a intensidade até entrar no alvo.';
+            colorClass = 'text-amber-400';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>';
+          } else if (hr > first.upper) {
+            msg = 'Reduza a intensidade até entrar no alvo.';
+            colorClass = 'text-amber-400';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.59-5.58L4 12l8 8 8-8z"/></svg>';
+          } else {
+            msg = 'Pronto! Você está no alvo. Você pode iniciar.';
+            colorClass = 'text-emerald-400';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 12-12-1.5-1.5z"/></svg>';
+          }
+        }
+        guideText.textContent = msg;
+        iconEl.innerHTML = iconSvg;
+        guideWrap.classList.remove('text-slate-300', 'text-amber-400', 'text-emerald-400', 'text-rose-400');
+        guideWrap.classList.add(colorClass);
+        // Also color the thumb for quick visual cue
+        thumbEl.classList.remove('text-slate-400', 'text-amber-400', 'text-emerald-400');
+        if (colorClass === 'text-emerald-400') thumbEl.classList.add('text-emerald-400');
+        else thumbEl.classList.add('text-amber-400');
+      }
+    }
+  } catch {}
 }

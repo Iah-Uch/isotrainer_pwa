@@ -79,7 +79,39 @@ export function startTraining(session) {
 
   // Show pre-start modal so the user explicitly starts
   const pre = document.getElementById('preStartModal');
-  if (pre) pre.classList.remove('hidden');
+  if (pre) {
+    try {
+      const range = `${firstStage.lower}/${firstStage.upper} bpm`;
+      const rangeEl = document.getElementById('preStartStageRange');
+      const hrEl = document.getElementById('preStartHrValue');
+      const guideEl = document.getElementById('preStartText');
+      const scaleMinEl = document.getElementById('preStartScaleMin');
+      const scaleMaxEl = document.getElementById('preStartScaleMax');
+      const targetEl = document.getElementById('preStartTarget');
+      // Determine scale from overall session bounds if available; else pad ±20
+      let scaleMin = (state.trainingSession?.sessionBounds?.min ?? (firstStage.lower - 20));
+      let scaleMax = (state.trainingSession?.sessionBounds?.max ?? (firstStage.upper + 20));
+      if (!Number.isFinite(scaleMin)) scaleMin = firstStage.lower - 20;
+      if (!Number.isFinite(scaleMax)) scaleMax = firstStage.upper + 20;
+      if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
+      // Update scale labels
+      if (scaleMinEl) scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} bpm`;
+      if (scaleMaxEl) scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} bpm`;
+      // Position target segment
+      if (targetEl) {
+        const rangeSpan = Math.max(1, scaleMax - scaleMin);
+        const leftPct = Math.max(0, Math.min(100, ((firstStage.lower - scaleMin) / rangeSpan) * 100));
+        const rightPct = Math.max(0, Math.min(100, ((firstStage.upper - scaleMin) / rangeSpan) * 100));
+        const widthPct = Math.max(0, rightPct - leftPct);
+        targetEl.style.left = `${leftPct}%`;
+        targetEl.style.width = `${widthPct}%`;
+      }
+      if (rangeEl) rangeEl.textContent = range;
+      if (hrEl) hrEl.textContent = '—';
+      if (guideEl) guideEl.textContent = 'Aguardando leitura da FC...';
+    } catch {}
+    pre.classList.remove('hidden');
+  }
 }
 
 export function updateStageUI() {
@@ -230,6 +262,7 @@ export function showScreen(which) {
   const plot = document.getElementById('plotScreen');
   const complete = document.getElementById('completeScreen');
   const editPlan = document.getElementById('editPlanScreen');
+  const appRoot = document.getElementById('appRoot');
   const connectFabs = document.getElementById('connectFabs');
   const planFabs = document.getElementById('planFabs');
   const homeMenuWrap = document.getElementById('homeMenuWrap');
@@ -241,6 +274,8 @@ export function showScreen(which) {
   if (which === 'plot') plot.classList.remove('hidden');
   if (which === 'complete') complete.classList.remove('hidden');
   if (which === 'editPlan' && editPlan) editPlan.classList.remove('hidden');
+  // Use full width only for plot screen
+  if (appRoot) appRoot.classList.toggle('full-bleed', which === 'plot');
   if (connectFabs) {
     if (which === 'connect') connectFabs.classList.remove('hidden');
     else connectFabs.classList.add('hidden');

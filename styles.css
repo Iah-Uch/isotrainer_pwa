@@ -13,6 +13,8 @@ body{
   color: #e5e7eb;
   -webkit-tap-highlight-color: transparent;
 }
+html, body { overflow-x: hidden; }
+/* no-op */
 @keyframes beat{
   0%{ transform: translate(-50%,-50%) scale(.94); filter: drop-shadow(0 0 .18rem rgba(239,68,68,.35)); }
   25%{ transform: translate(-50%,-50%) scale(1.1); filter: drop-shadow(0 0 .4rem rgba(239,68,68,.55)); }
@@ -44,6 +46,8 @@ body{
   font-size: clamp(2.8rem, 4vw, 2.6rem);
   color: #22d3ee;
 }
+
+/* removed aside em scaling */
 
 /* ---------- Floating Action Button ---------- */
 .fab{
@@ -122,6 +126,8 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   transform: translateY(-4px);
   transition: max-height .25s ease, opacity .25s ease, transform .25s ease;
 }
+
+/* removed frameGrid overrides */
 .next-hint.show{
   max-height: 28px; /* big enough for the line */
   opacity: 1;
@@ -135,4 +141,12 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 }
 .next-hint.urgent{
   animation: nextHintGlow 1s ease-in-out infinite;
+}
+/* Full-bleed width for plot screen */
+#appRoot.full-bleed {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  box-sizing: border-box;
+  padding-left: max(.75rem, var(--inset-left));
+  padding-right: max(.75rem, var(--inset-right));
 }
