@@ -99,6 +99,14 @@ html, body { overflow-x: hidden; }
 /* Ensure visual dimming for aria-disabled controls */
 button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 
+/* Simple Toggle Switch */
+.switch{ position: relative; display: inline-block; width: 42px; height: 24px; }
+.switch input{ opacity:0; width:0; height:0; }
+.slider{ position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#1f2937; transition:.2s; border-radius:9999px; border:1px solid rgba(255,255,255,0.15); }
+.slider:before{ content:""; position:absolute; height:18px; width:18px; left:3px; top:2px; background:white; transition:.2s; border-radius:9999px; }
+.switch input:checked + .slider{ background:#059669; }
+.switch input:checked + .slider:before{ transform: translateX(18px); }
+
 /* --- Horizontal button row helper (mobile) --- */
 .btn-row-scroll{
   /* smoother iOS horizontal scroll */

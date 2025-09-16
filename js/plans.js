@@ -952,6 +952,7 @@ export function openSettings() {
   const closeBtn = document.getElementById('settingsClose');
   const toggle = document.getElementById('contrastToggle');
   const legacyToggle = document.getElementById('legacyColorsToggle');
+  const resetBtn = document.getElementById('settingsResetAll');
   if (!modal || !toggle) return;
   try { toggle.checked = isContrastOn(); } catch { }
   try {
@@ -960,6 +961,10 @@ export function openSettings() {
       legacyToggle.checked = (v === '1');
     }
   } catch {}
+
+  // Initialize plot element toggles and multipliers
+  try { initPlotSettingsUI(); } catch {}
+  try { ensurePlotResizeHook(); } catch {}
   modal.classList.add('flex');
   modal.classList.remove('hidden');
   const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
@@ -976,4 +981,166 @@ export function openSettings() {
     // Notify charts to rebuild stage bands
     try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on } })); } catch {}
   };
+
+  if (resetBtn) resetBtn.onclick = () => {
+    try { resetAllSettingsToDefaults(); } catch {}
+    // Refresh UI controls to reflect defaults
+    try { toggle.checked = isContrastOn(); } catch {}
+    try {
+      if (legacyToggle) {
+        const v = localStorage.getItem(LEGACY_COLORS_KEY);
+        legacyToggle.checked = (v === '1');
+      }
+    } catch {}
+    try { initPlotSettingsUI(); } catch {}
+  };
+}
+
+// ============= Plot Screen: Element Toggles & Multipliers ============= //
+const PLOT_PREFIX = 'cardiomax:plot:';
+const PLOT_TOGGLES = [
+  // Header elements
+  { key: 'header:session', sel: '#sessionMeta', inputId: 'togglePlotHeaderSession' },
+  { key: 'header:athlete', sel: '#sessionAthlete', inputId: 'togglePlotHeaderAthlete' },
+  { key: 'header:stageLabel', sel: '#stageLabel', inputId: 'togglePlotHeaderStageLabel' },
+  { key: 'header:inTargetMobile', sel: '#stageInTargetPctMobileWrap', inputId: 'togglePlotHeaderInTargetMobile' },
+  // Left aside
+  { key: 'left:hrValue', sel: '#currentHrValue', inputId: 'toggleAsideLeftHrValue' },
+  { key: 'left:hrUnit', sel: '#currentHr .hr-unit', inputId: 'toggleAsideLeftHrUnit' },
+  { key: 'left:stageRange', sel: '#stageRange', inputId: 'toggleAsideLeftStageRange' },
+  { key: 'left:nextHint', sel: '#nextStageHint', inputId: 'toggleAsideLeftNextHint' },
+  // Main chart
+  { key: 'main:heartMarker', sel: '#heartMarker', inputId: 'toggleHeartMarker' },
+  { key: 'main:stageChart', sel: '#hrChart', inputId: 'toggleStageChart' },
+  // Right aside
+  { key: 'right:stageElapsed', sel: '#stageElapsed', inputId: 'toggleAsideRightStageElapsed' },
+  { key: 'right:totalRemaining', sel: '#totalRemaining', inputId: 'toggleAsideRightTotalRemaining' },
+  { key: 'right:inTarget', sel: '.target-pct-row', inputId: 'toggleAsideRightInTarget' },
+  // Bottom session chart
+  { key: 'bottom:sessionChart', sel: '#sessionCardContainer', inputId: 'toggleSessionChart' }
+];
+
+function getPlotToggle(key) {
+  try {
+    const v = localStorage.getItem(PLOT_PREFIX + 'toggle:' + key);
+    return v == null ? true : v === '1';
+  } catch { return true; }
+}
+function setPlotToggle(key, on) {
+  try { localStorage.setItem(PLOT_PREFIX + 'toggle:' + key, on ? '1' : '0'); } catch { }
+}
+function getAsideMul(which) {
+  try { return parseFloat(localStorage.getItem(PLOT_PREFIX + which + ':mul') || '0') || 0; } catch { return 0; }
+}
+function setAsideMul(which, v) {
+  try { localStorage.setItem(PLOT_PREFIX + which + ':mul', String(v)); } catch { }
+}
+
+export function applyPlotSettingsToDom() {
+  // Visibility
+  for (const { key, sel } of PLOT_TOGGLES) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const on = getPlotToggle(key); // default off
+    el.classList.toggle('hidden', !on);
+  }
+  // Hide entire asides if all their elements are off
+  const leftOn = (
+    getPlotToggle('left:hrValue') ||
+    getPlotToggle('left:hrUnit') ||
+    getPlotToggle('left:stageRange') ||
+    getPlotToggle('left:nextHint')
+  );
+  const rightOn = (
+    getPlotToggle('right:stageElapsed') ||
+    getPlotToggle('right:totalRemaining') ||
+    getPlotToggle('right:inTarget')
+  );
+  const leftAside = document.querySelector('.aside-left');
+  const rightAside = document.querySelector('.aside-right');
+  if (leftAside) leftAside.classList.toggle('hidden', !leftOn);
+  if (rightAside) rightAside.classList.toggle('hidden', !rightOn);
+
+  // Adjust grid columns to fill gaps on larger/landscape layouts
+  try {
+    const frame = document.getElementById('frameGrid');
+    const isWide = (window.matchMedia && (window.matchMedia('(min-width: 1024px)').matches || window.matchMedia('(orientation: landscape)').matches));
+    if (frame) {
+      if (!isWide) {
+        frame.style.gridTemplateColumns = '';
+      } else {
+        if (leftOn && rightOn) frame.style.gridTemplateColumns = 'auto 1fr auto';
+        else if (leftOn && !rightOn) frame.style.gridTemplateColumns = 'auto 1fr';
+        else if (!leftOn && rightOn) frame.style.gridTemplateColumns = '1fr auto';
+        else frame.style.gridTemplateColumns = '1fr';
+      }
+    }
+  } catch {}
+  // Aside scaling (font-size multiplier)
+  try {
+    const left = document.querySelector('.aside-left');
+    const right = document.querySelector('.aside-right');
+    const lm = Math.max(-0.9, getAsideMul('left'));
+    const rm = Math.max(-0.9, getAsideMul('right'));
+    if (left) {
+      if (!left.dataset.baseFontPx) { left.dataset.baseFontPx = String(parseFloat(getComputedStyle(left).fontSize) || 16); }
+      const base = parseFloat(left.dataset.baseFontPx) || 16;
+      left.style.fontSize = (base * (1 + lm)).toFixed(2) + 'px';
+    }
+    if (right) {
+      if (!right.dataset.baseFontPx) { right.dataset.baseFontPx = String(parseFloat(getComputedStyle(right).fontSize) || 16); }
+      const base = parseFloat(right.dataset.baseFontPx) || 16;
+      right.style.fontSize = (base * (1 + rm)).toFixed(2) + 'px';
+    }
+  } catch { }
+  try { window.dispatchEvent(new Event('resize')); } catch {}
+}
+
+let plotResizeHooked = false;
+function ensurePlotResizeHook() {
+  if (plotResizeHooked) return; plotResizeHooked = true;
+  try {
+    window.addEventListener('resize', () => { try { applyPlotSettingsToDom(); } catch {} }, { passive: true });
+    window.addEventListener('orientationchange', () => { try { applyPlotSettingsToDom(); } catch {} }, { passive: true });
+  } catch {}
+}
+
+function initPlotSettingsUI() {
+  // wire toggles
+  for (const { key, inputId } of PLOT_TOGGLES) {
+    const input = document.getElementById(inputId);
+    if (!input) continue;
+    input.checked = getPlotToggle(key);
+    input.onchange = () => {
+      setPlotToggle(key, !!input.checked);
+      applyPlotSettingsToDom();
+      try { window.dispatchEvent(new CustomEvent('ui:plotSettingsChanged', { detail: { key, on: !!input.checked } })); } catch {}
+    };
+  }
+  // multipliers
+  const leftMul = document.getElementById('asideLeftMul');
+  const rightMul = document.getElementById('asideRightMul');
+  if (leftMul) { leftMul.value = String(getAsideMul('left') || 0); leftMul.onchange = () => { setAsideMul('left', parseFloat(leftMul.value) || 0); applyPlotSettingsToDom(); }; }
+  if (rightMul) { rightMul.value = String(getAsideMul('right') || 0); rightMul.onchange = () => { setAsideMul('right', parseFloat(rightMul.value) || 0); applyPlotSettingsToDom(); }; }
+  // Apply immediately to reflect the current values
+  try { applyPlotSettingsToDom(); } catch {}
+}
+
+function resetAllSettingsToDefaults() {
+  // Contrast OFF, Legacy Colors OFF
+  try { localStorage.removeItem(CONTRAST_KEY); } catch {}
+  try { localStorage.removeItem(LEGACY_COLORS_KEY); } catch {}
+  // Plot element toggles: remove keys so they default to ON
+  try {
+    for (const { key } of PLOT_TOGGLES) {
+      localStorage.removeItem(PLOT_PREFIX + 'toggle:' + key);
+    }
+  } catch {}
+  // Multipliers: set to 0
+  try { localStorage.removeItem(PLOT_PREFIX + 'left:mul'); } catch {}
+  try { localStorage.removeItem(PLOT_PREFIX + 'right:mul'); } catch {}
+  // Apply to document/UI
+  try { applyContrastToDocument(false); } catch {}
+  try { window.dispatchEvent(new CustomEvent('ui:legacyColors', { detail: { on: false } })); } catch {}
+  try { applyPlotSettingsToDom(); } catch {}
 }

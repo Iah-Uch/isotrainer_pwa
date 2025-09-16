@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { now, fmtMMSS, parseTimeToSeconds } from './utils.js';
 import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales, plotStageSliceByIndex } from './charts.js';
+import { applyPlotSettingsToDom } from './plans.js';
 import { saveCompletedSession } from './plans.js';
 
 export function parseTrainingCsv(text) {
@@ -294,6 +295,8 @@ export function showScreen(which) {
   if (which === 'editPlan' && editPlan) editPlan.classList.remove('hidden');
   // Use full width only for plot screen
   if (appRoot) appRoot.classList.toggle('full-bleed', which === 'plot');
+  // Apply plot visibility/scaling when entering plot screen
+  if (which === 'plot') { try { applyPlotSettingsToDom(); } catch {} }
   if (connectFabs) {
     if (which === 'connect') connectFabs.classList.remove('hidden');
     else connectFabs.classList.add('hidden');

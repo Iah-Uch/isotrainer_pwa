@@ -4,7 +4,7 @@ import { setupCharts } from './charts.js';
 import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv, loadCompletedSessionFromExportCsv, stopTraining } from './session.js';
 import { loadPlanForEdit } from './edit-plan.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
-import { bindHomeNav, loadStoredPlans, isContrastOn, applyContrastToDocument } from './plans.js';
+import { bindHomeNav, loadStoredPlans, isContrastOn, applyContrastToDocument, applyPlotSettingsToDom } from './plans.js';
 
 // Boot
 window.addEventListener('load', async () => {
@@ -14,6 +14,7 @@ window.addEventListener('load', async () => {
   await checkBluetoothSupport();
   try { bindHomeNav(); } catch { }
   try { showScreen('home'); } catch { }
+  try { applyPlotSettingsToDom(); } catch {}
 });
 
 
