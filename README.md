@@ -87,6 +87,19 @@ Notes:
 - Total duration is computed as the sum of `durationSec` across stages.
 
 
+## Importing Periodization (Bulk) CSV
+The Home screen supports importing a periodization file containing multiple sessions. Format mirrors the server export (semicolon‑separated):
+
+- Line 0 (meta): `<numSessions>;<initialDate>;<finalDate>;<athleteName>`
+- Optional header (line 1): `Training;Date;Stage;Stage Type;Time;MinBPM;MaxBPM`
+- Lines 2+: `<sessionNo>;<DD/MM/YYYY>;<stageNo>;<type>;<HH:MM:SS>;<min>;<max>`
+
+Behavior:
+- Sessions are grouped by `sessionNo`. Stages are accumulated until the next `sessionNo` appears.
+- Session total duration is computed from its stages.
+- The importer also auto‑detects a single long HEX payload and will attempt XOR‑decrypt (first 16 hex chars as the key) when encountered.
+
+
 ## Exported CSV Format
 Exports a normalized, semicolon‑separated CSV with a `type` discriminator:
 - Header columns: `type;date;athlete;stage_index;duration_sec;lower;upper;avg_bpm;min_bpm;max_bpm;in_target_pct;samples;elapsed_sec;stage_elapsed_sec;hr;in_target`
@@ -117,6 +130,7 @@ Exports a normalized, semicolon‑separated CSV with a `type` discriminator:
 - Naming: `camelCase` for vars/functions, `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants.
 - Errors: wrap async Web Bluetooth calls with `try/catch`; update visible status text and rethrow with context when appropriate.
 - Logging: prefer user‑visible status updates; guard debug logs behind a `DEBUG` flag if added later.
+- Formatting/linting: if Prettier is available, run `npx prettier -w .`.
 
 
 ## Testing
@@ -148,7 +162,7 @@ The included `docker-compose.yml` is configured for Traefik with TLS and a produ
 
 ## Browser Support & Known Limitations
 - Chrome/Edge desktop and Android: Supported for Web Bluetooth.
-- iOS/Safari: Web Bluetooth support is not supported, use BlueFy;
+- iOS/Safari: Web Bluetooth is not supported; use a WebBLE‑enabled browser like BlueFy.
 - Some devices may require OS‑level pairing before appearing in the chooser.
 
 

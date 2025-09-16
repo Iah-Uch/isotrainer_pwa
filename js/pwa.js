@@ -1,52 +1,72 @@
 // Module: PWA install UI and update helpers.
 let deferredPrompt = null;
 
-const installBtn = document.getElementById('installBtn');
-const openAppBtn = document.getElementById('openAppBtn');
+const installBtn = document.getElementById("installBtn");
+const openAppBtn = document.getElementById("openAppBtn");
 
 function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
 }
 
-function hideInstall() { if (installBtn) installBtn.classList.add('hidden'); }
-function showInstall() { if (installBtn) installBtn.classList.remove('hidden'); }
-function hideOpen() { if (openAppBtn) openAppBtn.classList.add('hidden'); }
-function showOpen() { if (openAppBtn) openAppBtn.classList.remove('hidden'); }
+function hideInstall() {
+  if (installBtn) installBtn.classList.add("hidden");
+}
+function showInstall() {
+  if (installBtn) installBtn.classList.remove("hidden");
+}
+function hideOpen() {
+  if (openAppBtn) openAppBtn.classList.add("hidden");
+}
+function showOpen() {
+  if (openAppBtn) openAppBtn.classList.remove("hidden");
+}
 
 function isLikelyInstalled() {
   // Heuristic: remember install event; some platforms don’t expose a direct API.
-  const flag = localStorage.getItem('pwaInstalled') === '1';
+  const flag = localStorage.getItem("pwaInstalled") === "1";
   return flag;
 }
 
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
   if (!isStandalone() && !isLikelyInstalled()) showInstall();
 });
 
-window.addEventListener('appinstalled', () => {
+window.addEventListener("appinstalled", () => {
   deferredPrompt = null;
   hideInstall();
-  try { localStorage.setItem('pwaInstalled', '1'); } catch { }
+  try {
+    localStorage.setItem("pwaInstalled", "1");
+  } catch {}
   showOpen();
 });
 
-installBtn?.addEventListener('click', async () => {
+installBtn?.addEventListener("click", async () => {
   if (!deferredPrompt) return;
   hideInstall();
   deferredPrompt.prompt();
-  try { await deferredPrompt.userChoice; } catch { }
+  try {
+    await deferredPrompt.userChoice;
+  } catch {}
   deferredPrompt = null;
 });
 
 // Initial UI state
 if (isStandalone()) hideInstall();
-if (isLikelyInstalled()) { hideInstall(); showOpen(); } else { hideOpen(); }
+if (isLikelyInstalled()) {
+  hideInstall();
+  showOpen();
+} else {
+  hideOpen();
+}
 
 // Auto-reload once when the new SW takes control.
 let reloadedForUpdate = false;
-navigator.serviceWorker?.addEventListener('controllerchange', () => {
+navigator.serviceWorker?.addEventListener("controllerchange", () => {
   if (reloadedForUpdate) return;
   reloadedForUpdate = true;
   window.location.reload();
@@ -59,63 +79,71 @@ function showUpdatePrompt(reg) {
   if (!waiting) return;
 
   // Create a simple banner.
-  const banner = document.createElement('div');
-  banner.setAttribute('role', 'status');
-  banner.className = 'fixed inset-x-0 bottom-0 z-50 mx-auto mb-3 w-fit max-w-full rounded-xl bg-slate-900 text-slate-100 border border-white/10 shadow-2xl px-4 py-2 flex items-center gap-3';
-  banner.innerHTML = '<span class="text-sm">Uma atualização está disponível.</span>';
+  const banner = document.createElement("div");
+  banner.setAttribute("role", "status");
+  banner.className =
+    "fixed inset-x-0 bottom-0 z-50 mx-auto mb-3 w-fit max-w-full rounded-xl bg-slate-900 text-slate-100 border border-white/10 shadow-2xl px-4 py-2 flex items-center gap-3";
+  banner.innerHTML =
+    '<span class="text-sm">Uma atualização está disponível.</span>';
 
-  const updateBtn = document.createElement('button');
-  updateBtn.className = 'px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm';
-  updateBtn.textContent = 'Atualizar agora';
+  const updateBtn = document.createElement("button");
+  updateBtn.className =
+    "px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm";
+  updateBtn.textContent = "Atualizar agora";
 
-  const dismissBtn = document.createElement('button');
-  dismissBtn.className = 'px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm';
-  dismissBtn.textContent = 'Depois';
+  const dismissBtn = document.createElement("button");
+  dismissBtn.className =
+    "px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm";
+  dismissBtn.textContent = "Depois";
 
   banner.appendChild(updateBtn);
   banner.appendChild(dismissBtn);
   document.body.appendChild(banner);
 
-  const cleanup = () => { banner.remove(); };
+  const cleanup = () => {
+    banner.remove();
+  };
 
   // If the waiting worker changes state (e.g., becomes redundant), remove banner.
-  waiting.addEventListener('statechange', () => {
-    if (waiting.state === 'redundant') cleanup();
+  waiting.addEventListener("statechange", () => {
+    if (waiting.state === "redundant") cleanup();
   });
 
-  updateBtn.addEventListener('click', () => {
-    try { waiting.postMessage('skipWaiting'); } catch { }
+  updateBtn.addEventListener("click", () => {
+    try {
+      waiting.postMessage("skipWaiting");
+    } catch {}
     // Banner will be removed after controllerchange reload
   });
-  dismissBtn.addEventListener('click', cleanup);
+  dismissBtn.addEventListener("click", cleanup);
 }
 
 // Proactively check for updates and activate them.
-if ('serviceWorker' in navigator) {
+if ("serviceWorker" in navigator) {
   // Ensure there is a registration and force an update on open
-  navigator.serviceWorker.register('/sw.js').catch(() => { });
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
   const withReg = async (cb) => {
     try {
       let reg = await navigator.serviceWorker.getRegistration();
       if (!reg) reg = await navigator.serviceWorker.ready;
       if (reg) cb(reg);
-    } catch { }
+    } catch {}
   };
 
   withReg((reg) => {
     // Try to fetch the latest SW.
-    reg.update().catch(() => { });
+    reg.update().catch(() => {});
 
     // If an update is already waiting, prompt the user
     if (reg.waiting && navigator.serviceWorker.controller) {
       showUpdatePrompt(reg);
     }
 
-    reg.addEventListener('updatefound', () => {
+    reg.addEventListener("updatefound", () => {
       const sw = reg.installing;
       if (!sw) return;
-      sw.addEventListener('statechange', () => {
-        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+      sw.addEventListener("statechange", () => {
+        if (sw.state === "installed" && navigator.serviceWorker.controller) {
           // New update installed, prompt to activate
           showUpdatePrompt(reg);
         }
@@ -123,15 +151,17 @@ if ('serviceWorker' in navigator) {
     });
 
     // Periodically check for updates when visible.
-    const tryUpdate = () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); };
+    const tryUpdate = () => {
+      if (document.visibilityState === "visible") reg.update().catch(() => {});
+    };
     const int = setInterval(tryUpdate, 60 * 1000 * 10); // every 10 min
-    document.addEventListener('visibilitychange', tryUpdate);
-    window.addEventListener('beforeunload', () => clearInterval(int));
+    document.addEventListener("visibilitychange", tryUpdate);
+    window.addEventListener("beforeunload", () => clearInterval(int));
   });
 }
 
 // Opening behavior: rely on link capturing to route to installed PWA.
-openAppBtn?.addEventListener('click', (e) => {
+openAppBtn?.addEventListener("click", (e) => {
   // Ensure a direct top-level navigation; link capturing opens PWA window
   // if supported and the app is installed. No special handling; let the anchor work.
 });

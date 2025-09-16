@@ -1,16 +1,26 @@
 // Module: Central app state shared across modules.
 export const state = {
   // BLE.
-  device: null, server: null, service: null, characteristic: null,
+  device: null,
+  server: null,
+  service: null,
+  characteristic: null,
   // Charts.
-  chart: null, sessionChart: null,
+  chart: null,
+  sessionChart: null,
   // Data.
-  series: [], sessionSeries: [],
+  series: [],
+  sessionSeries: [],
   // Session/timers.
   trainingSession: null,
-  stageIdx: -1, sessionStartMs: null, stageStartMs: null,
-  timerHandle: null, paused: false, pausedAtMs: null,
-  accumulatedPauseOffset: 0, stageAccumulatedPauseOffset: 0,
+  stageIdx: -1,
+  sessionStartMs: null,
+  stageStartMs: null,
+  timerHandle: null,
+  paused: false,
+  pausedAtMs: null,
+  accumulatedPauseOffset: 0,
+  stageAccumulatedPauseOffset: 0,
   waitingForFirstHR: false,
   // Pre-start gate: true shows modal and defers timing.
   startPending: false,
