@@ -1,7 +1,6 @@
-// Minimal QR scanning that feeds the plan textarea (#csvInput)
-// Uses global QrScanner from the UMD bundle. The UMD build auto-resolves the
-// worker path relative to the script URL, so setting WORKER_PATH is unnecessary
-// and triggers warnings in newer versions.
+// Module: Minimal QR scanning to fill the plan textarea (#csvInput).
+// Uses global QrScanner (UMD). The UMD build auto-resolves the worker path;
+// setting WORKER_PATH is unnecessary.
 import { startTrainingFromCsvText } from './main.js';
 
 let qrScanner = null;
@@ -34,10 +33,10 @@ function openQr() {
   qrScanner = new QrScanner(video, (result) => {
     if (!result) return;
     lastText = String(result.data || result).trim();
-    // Put the scanned text directly into the textarea and close the modal
+    // Put the scanned text directly into the textarea and close the modal.
     const textarea = el('csvInput');
     if (textarea) textarea.value = lastText;
-    // Stop and close immediately after successful scan
+    // Stop and close immediately after a successful scan.
     qrScanner?.stop();
     closeQr();
   }, {
@@ -78,7 +77,7 @@ function useResult() {
   const textarea = el('csvInput');
   if (textarea) textarea.value = lastText;
   closeQr();
-  // Use the same flow as "Load Plan & Start"
+  // Use the same flow as "Carregar plano e iniciar".
   startTrainingFromCsvText(lastText);
 }
 

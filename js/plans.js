@@ -1,3 +1,4 @@
+// Module: Plans import, storage, rendering and interactions.
 import { parseTimeToSeconds, fmtMMSS, pad2 } from './utils.js';
 import { state } from './state.js';
 import { loadPlanForEdit } from './edit-plan.js';
@@ -12,7 +13,7 @@ export function loadStoredPlans() {
     if (!raw) return [];
     const plans = JSON.parse(raw);
     if (!Array.isArray(plans)) return [];
-    // Migration: ensure each session has a stable id
+    // Migration: ensure each session has a stable id.
     let mutated = false;
     for (let i = 0; i < plans.length; i++) {
       const s = plans[i];
@@ -20,7 +21,7 @@ export function loadStoredPlans() {
         s.id = 'plan_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36) + '_' + i;
         mutated = true;
       }
-      // Migration: ensure a stable numeric index (based on current order)
+      // Migration: ensure a stable numeric index (based on current order).
       if (isValidSession(s) && (typeof s.idx !== 'number' || !Number.isFinite(s.idx))) {
         s.idx = i + 1;
         mutated = true;
@@ -61,15 +62,15 @@ export function saveDoneSessions(arr) {
 }
 export function saveCompletedSession(record) {
   const cur = loadDoneSessions();
-  // Prepend newest
+  // Prepend newest.
   try {
     if (!record || typeof record !== 'object') return;
-    // De-duplicate by exact CSV content when available
+    // De-duplicate by exact CSV content when available.
     try {
       if (record.csv) {
         const idx = cur.findIndex(r => r && r.csv && r.csv === record.csv);
         if (idx !== -1) {
-          // Already present; do not add duplicate
+          // Already present; do not add duplicate.
           return saveDoneSessions(cur);
         }
       }
@@ -85,12 +86,10 @@ function isValidSession(s) {
   return s && typeof s.date === 'string' && typeof s.athlete === 'string' && Array.isArray(s.stages) && s.stages.length > 0;
 }
 
-/* ================================
-   XOR + HEX DECODING (matches server)
-   - First 16 hex chars are the key (8 bytes)
+/* XOR + HEX decoding (server-compatible)
+   - First 16 hex chars are key (8 bytes)
    - Remaining hex is payload
-   - Decrypt: data[i] ^ key[i % key.length]
-=================================== */
+   - Decrypt: data[i] ^ key[i % key.length] */
 
 function ensureHex(str, label = 'conteúdo') {
   const s = String(str || '').trim();
@@ -134,32 +133,27 @@ function xorDecryptHexBlob(blob) {
   }
 }
 
-/**
- * Decide how to interpret the file:
- * - If it looks like a single long hex blob (even length, hex only), we try XOR decrypt.
- * - Otherwise we treat it as plain semicolon-separated text.
- */
+// Decide how to interpret the file:
+// - If it looks like a single hex blob (even length, hex only), try XOR decrypt.
+// - Otherwise, treat it as plain semicolon-separated text.
 function tryDecodeContent(rawText) {
   if (!rawText) return '';
   const s = String(rawText).trim();
-  // Compact: strip whitespace to detect hex-only payloads saved with accidental wraps
+  // Strip whitespace to detect hex-only payloads saved with accidental wraps.
   const compact = s.replace(/\s+/g, '');
   const hexish = compact.startsWith('0x') || compact.startsWith('0X') ? compact.slice(2) : compact;
   if (/^[0-9a-fA-F]+$/.test(hexish) && (hexish.length % 2 === 0)) {
-    // Try as encrypted blob
+    // Try as encrypted blob.
     try { return xorDecryptHexBlob(hexish); } catch { /* fall through */ }
   }
-  // Fallback to plaintext (semicolon-separated)
+  // Fallback to plaintext (semicolon-separated).
   return s;
 }
 
-/* ================================
-   CSV (semicolon) parsing – mirrors server format
-   Lines:
-     0: <numSessions>;<initialDate>;<finalDate>;<athleteName>
-     1: Training;Date;Stage;Stage Type;Time;MinBPM;MaxBPM
-     2+: <sessionNo>;<DD/MM/YYYY>;<stageNo>;<type>;<HH:MM:SS>;<min>;<max>
-=================================== */
+/* CSV parsing (semicolon), mirrors server format
+   0: <numSessions>;<initialDate>;<finalDate>;<athleteName>
+   1: Training;Date;Stage;Stage Type;Time;MinBPM;MaxBPM
+   2+: <sessionNo>;<DD/MM/YYYY>;<stageNo>;<type>;<HH:MM:SS>;<min>;<max> */
 
 function normalizeText(text) {
   // Strip BOM, trim ends
@@ -226,7 +220,7 @@ export function parsePeriodizationCsv(text) {
   // Meta line
   const meta = parseMetaLine(lines[0]);
 
-  // Header handling: accept a header row; if the second line is not a header, assume data begins there.
+  // Accept a header row; if line 2 is not a header, assume data begins there.
   let idx = 1;
   const p1 = lines[idx]?.split(';') ?? [];
   if (looksLikeHeader(p1)) idx += 1;
@@ -240,9 +234,9 @@ export function parsePeriodizationCsv(text) {
     const parts = lines[i].split(';').map(s => s.trim());
     const row = parseRow(parts, i + 1);
 
-    // New session boundary?
+    // New session boundary.
     if (currentSessionNum !== row.sessionNum) {
-      // push previous session if present
+      // Push previous session if present.
       if (current && current.stages.length) {
         current.totalDurationSec = current.stages.reduce((a, s) => a + s.durationSec, 0);
         sessions.push(current);
@@ -250,9 +244,9 @@ export function parsePeriodizationCsv(text) {
       currentSessionNum = row.sessionNum;
       stageCounter = 0;
       current = {
-        date: row.dateStr,       // string in DD/MM/YYYY for your UI matching
-        athlete: meta.athlete,   // from meta line
-        type: row.type || null,  // optional
+        date: row.dateStr,       // DD/MM/YYYY to match UI.
+        athlete: meta.athlete,   // From meta line.
+        type: row.type || null,  // Optional.
         stages: [],
         totalDurationSec: 0
       };
@@ -268,7 +262,7 @@ export function parsePeriodizationCsv(text) {
     });
   }
 
-  // Push last session (important)
+  // Push the last session.
   if (current && current.stages.length) {
     current.totalDurationSec = current.stages.reduce((a, s) => a + s.durationSec, 0);
     sessions.push(current);
@@ -276,19 +270,15 @@ export function parsePeriodizationCsv(text) {
 
   if (!sessions.length) throw new Error('Nenhuma sessão de treino encontrada.');
 
-  // Optional: check declared vs parsed; not fatal, but could be useful
+  // Optional: check declared vs parsed; not fatal.
   if (Number.isFinite(meta.numSessions) && meta.numSessions !== sessions.length) {
-    // We won’t throw; just keep parsed result. Uncomment if you want to enforce:
-    // throw new Error(`Contagem de sessões divergente: declarado ${meta.numSessions}, encontrado ${sessions.length}.`);
-    // no-op
+    // Keep parsed result; do not enforce.
   }
 
   return sessions;
 }
 
-/* ================================
-   Utility: today's plan selection
-=================================== */
+/* Utility: today's plan selection. */
 
 export function getTodayPlan(plans) {
   if (!plans || !plans.length) return null;
@@ -320,9 +310,7 @@ function dateMatches(dateStr, yyyy, mm, dd) {
   return false;
 }
 
-/* ================================
-   Rendering & interactions
-=================================== */
+/* Rendering & interactions. */
 
 const PAGE_SIZE = 5;
 let todoPage = 1; // A fazer
@@ -361,8 +349,8 @@ export function renderHome(plans) {
   const hasPlans = src.length > 0;
 
   // Empty state rules:
-  // - Show the beautiful import dropzone whenever there are no plans (even if there are done sessions)
-  // - Show the main content (tabs/lists) only if there are plans or done sessions
+  // - Show the import dropzone whenever there are no plans (even if there are done sessions).
+  // - Show the main content (tabs/lists) only if there are plans or done sessions.
   const homeActions = document.getElementById('homeActions');
   const homeMenuWrap = document.getElementById('homeMenuWrap');
   if (!hasPlans) {
@@ -381,8 +369,8 @@ export function renderHome(plans) {
     if (empty) empty.classList.add('hidden');
     return;
   }
-  // Remove done sessions from pending preferring stable plan id; fall back to
-  // index match only when id linkage is unavailable (older records).
+  // Remove done sessions from pending, preferring stable plan id.
+  // Fall back to index match only when id linkage is unavailable.
   function isDone(s) {
     if (!s) return false;
     const sid = s.id;
@@ -397,7 +385,7 @@ export function renderHome(plans) {
     });
   }
   const pendingAll = src.filter(s => !isDone(s));
-  // Never show the small warning box here; it's for first-import guidance only
+  // Never show the small warning box here; it's for first-import guidance only.
   if (empty) empty.classList.add('hidden');
 
   // Date helpers
@@ -451,7 +439,7 @@ export function renderHome(plans) {
     }
   }
 
-  // A fazer list (today and forward)
+  // A fazer (today and forward).
   if (todoListEl) {
     todoListEl.innerHTML = '';
     todoTotalPages = Math.max(1, Math.ceil(todoItems.length / PAGE_SIZE));
@@ -464,7 +452,7 @@ export function renderHome(plans) {
     });
   }
 
-  // Pendente list (past, not completed)
+  // Pendente (past, not completed).
   if (overdueListEl) {
     overdueListEl.innerHTML = '';
     overdueTotalPages = Math.max(1, Math.ceil(overdueItems.length / PAGE_SIZE));
@@ -477,7 +465,7 @@ export function renderHome(plans) {
     });
   }
 
-  // Done list
+  // Concluído (done list).
   if (doneList) {
     doneList.innerHTML = '';
     if (!dones.length) {
@@ -491,7 +479,7 @@ export function renderHome(plans) {
     }
   }
 
-  // Todo pager controls
+  // Todo pager controls.
   if (todoPager && todoPagerPrev && todoPagerNext && todoPagerInfo) {
     todoPager.classList.toggle('hidden', todoItems.length <= PAGE_SIZE);
     todoPagerPrev.disabled = (todoPage <= 1);
@@ -501,7 +489,7 @@ export function renderHome(plans) {
     todoPagerNext.onclick = () => { if (todoPage < todoTotalPages) { todoPage += 1; renderHome(loadStoredPlans()); } };
   }
 
-  // Overdue pager controls
+  // Overdue pager controls.
   if (overduePager && overduePagerPrev && overduePagerNext && overduePagerInfo) {
     overduePager.classList.toggle('hidden', overdueItems.length <= PAGE_SIZE);
     overduePagerPrev.disabled = (overduePage <= 1);
@@ -511,7 +499,7 @@ export function renderHome(plans) {
     overduePagerNext.onclick = () => { if (overduePage < overdueTotalPages) { overduePage += 1; renderHome(loadStoredPlans()); } };
   }
 
-  // Done pager
+  // Done pager.
   const dp = document.getElementById('donePager');
   const dPrev = document.getElementById('donePagerPrev');
   const dNext = document.getElementById('donePagerNext');
@@ -840,14 +828,12 @@ export function bindHomeNav() {
   });
   try { renderHome(loadStoredPlans()); } catch { }
 
-  // Preview modal wiring
-  // Cancel button removed; close via X or backdrop
+  // Preview modal wiring. Close via X or backdrop.
   document.getElementById('sessionPreviewClose')?.addEventListener('click', closePreview);
   document.getElementById('sessionPreviewStart')?.addEventListener('click', confirmPreview);
   const modal = document.getElementById('sessionPreviewModal');
   modal?.addEventListener('click', (e) => { if (e.target === modal) closePreview(); });
-  // Empty-state big import button
-  // Empty state drag & drop zone wiring
+  // Empty state drag & drop zone wiring.
   const dropzone = document.getElementById('homeEmptyDropzone');
   if (dropzone) {
     const highlight = (on) => {
@@ -879,9 +865,9 @@ export function bindHomeNav() {
       reader.readAsText(f);
     });
   }
-  // Update Home when sessions complete
+  // Update Home when sessions complete.
   window.addEventListener('sessions:updated', () => { try { renderHome(loadStoredPlans()); } catch { } });
-  // Hamburger menu visibility & actions
+  // Hamburger menu visibility and actions.
   const actions = document.getElementById('homeActions');
   const menuWrap = document.getElementById('homeMenuWrap');
   const menuBtn = document.getElementById('homeMenuBtn');

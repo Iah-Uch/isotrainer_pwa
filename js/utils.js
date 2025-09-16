@@ -1,4 +1,4 @@
-
+// Module: Small helpers for time and formatting.
 export const now = () => Date.now();
 export function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 export function fmtMMSS(sec) { sec = Math.max(0, Math.floor(sec)); const m = Math.floor(sec / 60), s = sec % 60; return `${pad2(m)}:${pad2(s)}`; }

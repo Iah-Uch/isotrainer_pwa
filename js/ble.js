@@ -1,3 +1,4 @@
+// Module: Web Bluetooth (BLE) connection and heart-rate stream handling.
 import { state } from './state.js';
 import { now } from './utils.js';
 import { updateStageChart, updateSessionChart } from './charts.js';
@@ -14,7 +15,7 @@ export async function checkBluetoothSupport() {
     if (typeof navigator.bluetooth.getAvailability === 'function') {
       const avail = await navigator.bluetooth.getAvailability();
       if (!avail) {
-        // Inform the user but do not hard-block attempts; some runtimes misreport.
+        // Inform user but do not block attempts; some runtimes misreport.
         document.getElementById('status').textContent = 'Adaptador Bluetooth possivelmente indisponível. Você ainda pode tentar conectar.';
       }
     }
@@ -31,13 +32,13 @@ export async function connectToDevice() {
   try {
     document.getElementById('status').textContent = 'Abrindo seletor de dispositivo...';
     document.getElementById('connectButton').disabled = true;
-    // Primary path: filter by heart_rate service.
+    // Prefer filtering by heart_rate service.
     try {
       state.device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }], optionalServices: ['heart_rate'] });
     } catch (err) {
-      // If filtering is unsupported or fails, fall back to acceptAllDevices and filter after connect.
+      // Fall back to acceptAllDevices when filtering is unsupported.
       if (err?.name === 'NotFoundError') {
-        // User canceled or no device selected; restore UI and exit gracefully.
+        // User canceled or no device selected; restore UI and exit.
         document.getElementById('status').textContent = 'Nenhum dispositivo selecionado.';
         document.getElementById('connectButton').disabled = false;
         document.getElementById('disconnectButton').disabled = true;
@@ -59,7 +60,7 @@ export async function connectToDevice() {
     addDisconnectListener();
     try { window.dispatchEvent(new CustomEvent('ble:connected')); } catch { }
   } catch (err) {
-    // Provide clearer guidance for common compatibility issues
+    // Show a concise error.
     const msg = err?.message || String(err);
     document.getElementById('status').textContent = `Erro: ${msg}`;
     document.getElementById('connectButton').disabled = false;
@@ -75,7 +76,7 @@ function addDisconnectListener() { if (state.device) state.device.addEventListen
 function saturateStage(hr) {
   if (state.trainingSession && state.stageIdx >= 0) {
     const { lower, upper } = state.trainingSession.stages[state.stageIdx];
-    // Clamp to buffered bounds (±10) so hrChart has slack
+    // Clamp to buffered bounds (±10) so the stage chart has slack.
     const lo = lower - 10;
     const hi = upper + 10;
     if (hr < lo) return lo;
@@ -106,12 +107,12 @@ function handleHeartRateMeasurement(value) {
   }
   if (state.paused) return;
 
-  // NORMAL HUD
+  // Update HUD.
   const currentHrValue = document.getElementById('currentHrValue');
   if (currentHrValue) {
     currentHrValue.textContent = String(hr);
   } else {
-    // Backward compatibility if layout not updated
+    // Back-compat if layout not updated.
     const currentHr = document.getElementById('currentHr');
     if (currentHr) currentHr.textContent = `${hr} bpm`;
   }
@@ -127,7 +128,7 @@ function handleHeartRateMeasurement(value) {
   updateSessionChart(saturateSession(hr), currentTime);
   try { updateLiveStageInTargetPct(); } catch { }
 
-  // Update Pre-Start modal guidance while user prepares
+  // Update Pre-Start modal guidance while user prepares.
   try {
     if (state.startPending && state.trainingSession && state.trainingSession.stages?.length) {
       const first = state.trainingSession.stages[0];
@@ -142,7 +143,7 @@ function handleHeartRateMeasurement(value) {
       const scaleMaxEl = document.getElementById('preStartScaleMax');
       if (hrEl) hrEl.textContent = `${hr} bpm`;
       if (rangeEl) rangeEl.textContent = `${first.lower}/${first.upper} bpm`;
-      // Compute scale from session bounds if present
+      // Compute scale from session bounds when present.
       let scaleMin = (state.trainingSession?.sessionBounds?.min ?? (first.lower - 20));
       let scaleMax = (state.trainingSession?.sessionBounds?.max ?? (first.upper + 20));
       if (!Number.isFinite(scaleMin)) scaleMin = first.lower - 20;
@@ -159,7 +160,7 @@ function handleHeartRateMeasurement(value) {
       }
       if (thumbEl) {
         const p = Math.max(0, Math.min(100, ((hr - scaleMin) / span) * 100));
-        thumbEl.style.left = `calc(${p}% - 10px)`; // center the 20px thumb
+        thumbEl.style.left = `calc(${p}% - 10px)`; // Center the 20px thumb.
       }
       if (guideText && iconEl && guideWrap && thumbEl) {
         let msg = 'Aguardando leitura da FC...';
@@ -184,7 +185,7 @@ function handleHeartRateMeasurement(value) {
         iconEl.innerHTML = iconSvg;
         guideWrap.classList.remove('text-slate-300', 'text-amber-400', 'text-emerald-400', 'text-rose-400');
         guideWrap.classList.add(colorClass);
-        // Also color the thumb for quick visual cue
+        // Color the thumb for a quick visual cue.
         thumbEl.classList.remove('text-slate-400', 'text-amber-400', 'text-emerald-400');
         if (colorClass === 'text-emerald-400') thumbEl.classList.add('text-emerald-400');
         else thumbEl.classList.add('text-amber-400');

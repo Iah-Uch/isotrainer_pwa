@@ -14,7 +14,7 @@ body{
   -webkit-tap-highlight-color: transparent;
 }
 html, body { overflow-x: hidden; }
-/* no-op */
+/* Reserved hook (no-op). */
 @keyframes beat{
   0%{ transform: translate(-50%,-50%) scale(.94); filter: drop-shadow(0 0 .18rem rgba(239,68,68,.35)); }
   25%{ transform: translate(-50%,-50%) scale(1.1); filter: drop-shadow(0 0 .4rem rgba(239,68,68,.55)); }
@@ -23,11 +23,11 @@ html, body { overflow-x: hidden; }
 }
 .heart-pulse{ animation: beat var(--pulse-period,1s) ease-in-out infinite; will-change: transform, filter; }
 
-/* Light scaling for plot heart marker icon */
+/* Light scaling for plot heart marker icon. */
 #heartMarker svg{ width: clamp(1rem, 2vw, 1.75rem); height: clamp(1rem, 2vw, 1.75rem); }
 
 
-/* ---------- Plot Heights (compact) ---------- */
+/* Plot heights (compact). */
 .stage-plot-mobile{ height: 36svh; }
 .session-plot-mobile{ height: 13svh; min-height: 100px; }
 @media (min-width: 768px){
@@ -35,7 +35,7 @@ html, body { overflow-x: hidden; }
   .session-plot-mobile{ height: 12svh; }
 }
 
-/* ---------- Bigger timers ---------- */
+/* Bigger timers. */
 .timer-lg{
   font-weight: 800;
   line-height: 1.1;
@@ -50,9 +50,9 @@ html, body { overflow-x: hidden; }
   color: #22d3ee;
 }
 
-/* removed aside em scaling */
+/* Removed aside em scaling (replaced by responsive sizing below). */
 
-/* ---------- Floating Action Button ---------- */
+/* Floating Action Button. */
 .fab{
   position: absolute;
   top: max(0.5rem, calc(var(--inset-top) + 0.25rem));
@@ -94,12 +94,12 @@ html, body { overflow-x: hidden; }
 }
 .fab-item:hover{ background: #0e172a; }
 
-/* Utility */
+/* Utility. */
 .hidden{ display: none !important; }
 /* Ensure visual dimming for aria-disabled controls */
 button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 
-/* Simple Toggle Switch */
+/* Simple toggle switch. */
 .switch{ position: relative; display: inline-block; width: 42px; height: 24px; }
 .switch input{ opacity:0; width:0; height:0; }
 .slider{ position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#1f2937; transition:.2s; border-radius:9999px; border:1px solid rgba(255,255,255,0.15); }
@@ -107,7 +107,7 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
 .switch input:checked + .slider{ background:#059669; }
 .switch input:checked + .slider:before{ transform: translateX(18px); }
 
-/* --- Horizontal button row helper (mobile) --- */
+/* Horizontal button row helper (mobile). */
 .btn-row-scroll{
   /* smoother iOS horizontal scroll */
   -webkit-overflow-scrolling: touch;
@@ -121,7 +121,7 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   flex: 0 0 .5rem;
 }
 
-/* ---------- Responsive Visibility (mobile includes landscape) ---------- */
+/* Responsive visibility (mobile includes landscape). */
 .only-mobile{ display: inline-flex !important; }
 .only-desktop{ display: none !important; }
 @media (min-width: 1024px) and (min-height: 550px){
@@ -129,7 +129,7 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   .only-desktop{ display: block !important; }
 }
 
-/* ---------- Subtle reveal for next-stage hint ---------- */
+/* Subtle reveal for next-stage hint. */
 .next-hint{
   overflow: hidden;
   max-height: 0;
@@ -138,14 +138,14 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   transition: max-height .25s ease, opacity .25s ease, transform .25s ease;
 }
 
-/* removed frameGrid overrides */
+/* Removed frameGrid overrides. */
 .next-hint.show{
   max-height: 28px; /* big enough for the line */
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Blink + glow in final 10% of stage */
+/* Blink + glow in final 10% of stage. */
 @keyframes nextHintGlow {
   0%, 100% { filter: drop-shadow(0 0 0 rgba(56,189,248,0)); }
   50% { filter: drop-shadow(0 0 10px rgba(56,189,248,0.65)); }
@@ -154,7 +154,7 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   animation: nextHintGlow 1s ease-in-out infinite;
 }
 
-/* Aside proportional scaling (CSS-only, breakpoint-based) */
+/* Aside proportional scaling (CSS-only, breakpoint-based). */
 .aside-left{ font-size: 14px; }
 @media (min-width: 1024px){ /* lg */ .aside-left{ font-size: 16px; } }
 @media (min-width: 1280px){ /* xl */ .aside-left{ font-size: 18px; } }
@@ -181,7 +181,7 @@ button[aria-disabled="true"]{ opacity: .3; cursor: not-allowed; }
   .aside-right #stageInTargetPct{ font-size: 2.8em; }
   .aside-right .target-pct-row svg{ width: 2.8em; height: 2.8em; }
 }
-/* Full-bleed width for plot screen */
+/* Full-bleed width for plot screen. */
 #appRoot.full-bleed {
   width: 100vw !important;
   max-width: 100vw !important;

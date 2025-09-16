@@ -1,7 +1,8 @@
+// Module: Charts (stage + session plots) and responsive rendering.
 import { state } from './state.js';
 import { fmtMMSS } from './utils.js';
 
-// Helpers
+// Helper: map series objects to ECharts tuples.
 const toXY = (arr) => arr.map((p) => [p.x, p.y]);
 
 function getLineWidths() {
@@ -41,7 +42,7 @@ function buildBoundsMarkLine(bounds, active) {
   const { lo, hi } = bounds;
   const above = active?.above || false;
   const below = active?.below || false;
-  // Default inactiveAlpha 0.38 -> 0.46 (~+20%); contrast is very bright
+  // Default inactiveAlpha 0.38 -> 0.46 (~+20%); contrast is very bright.
   const inactiveAlpha = isContrast() ? 0.95 : 0.46; // super bright in contrast mode
   const activeHiAlpha = above ? 0.98 : inactiveAlpha;
   const activeLoAlpha = below ? 0.98 : inactiveAlpha;
@@ -89,7 +90,7 @@ function buildStageBands() {
       case 'red': default: return `rgba(239,68,68,${op})`;
     }
   };
-  // Fallback palette for non-legacy (index-cycled)
+  // Fallback palette for non-legacy (index-cycled).
   const cols = contrast ? [
     'rgba(59,130,246,0.65)',
     'rgba(34,197,94,0.65)',
@@ -179,7 +180,7 @@ export function setupCharts() {
     }]
   });
 
-  // Session chart
+  // Session chart.
   const el2 = document.getElementById('sessionHrChart');
   // eslint-disable-next-line no-undef
   state.sessionChart = echarts.init(el2, null, { renderer: 'canvas' });
@@ -203,10 +204,10 @@ export function setupCharts() {
     }]
   });
 
-  // Attach responsive behavior for mobile: resize on viewport/container changes
+  // Attach responsive behavior for mobile: resize on viewport/container changes.
   attachChartResizers();
 
-  // Click anywhere on the session chart to select a stage by time
+  // Click anywhere on the session chart to select a stage by time.
   try {
     const handleClick = (offsetX, offsetY) => {
       if (!state.trainingSession || !state.sessionSeries?.length) return;
@@ -226,9 +227,9 @@ export function setupCharts() {
       if (idx < 0) return;
       window.dispatchEvent(new CustomEvent('session:stageSelected', { detail: { index: idx } }));
     };
-    // Prefer ZRender click for reliability
+    // Prefer ZRender click for reliability.
     state.sessionChart.getZr().on('click', (e) => handleClick(e.offsetX, e.offsetY));
-    // Fallback: ECharts click
+    // Fallback: ECharts click.
     state.sessionChart.on('click', (params) => {
       const ev = params?.event; if (!ev) return; handleClick(ev.offsetX, ev.offsetY);
     });
@@ -257,7 +258,7 @@ function attachChartResizers() {
   };
   window.addEventListener('resize', schedule, { passive: true });
   window.addEventListener('orientationchange', schedule, { passive: true });
-  // Observe container size changes
+  // Observe container size changes.
   try {
     const ro = new ResizeObserver(schedule);
     const el1 = document.getElementById('hrChart');
@@ -265,11 +266,11 @@ function attachChartResizers() {
     if (el1) ro.observe(el1.parentElement || el1);
     if (el2) ro.observe(el2.parentElement || el2);
   } catch { }
-  // Re-resize when route navigates to plot
+  // Re-resize when route navigates to plot.
   window.addEventListener('router:navigate', (e) => {
     const route = e.detail?.route; if (route === 'plot') schedule();
   });
-  // Update when legacy color rule toggles
+  // Update when legacy color rule toggles.
   window.addEventListener('ui:legacyColors', () => {
     try { syncChartScales(); } catch { }
   });
@@ -346,7 +347,7 @@ export function updateSessionChart(hr, tMs) {
   state.sessionSeries.push({ x: Math.max(0, totalElapsedSec), y: hr });
 }
 
-// Plot only the points for a given stage index into the stage chart (hrChart)
+// Plot only the points for a given stage index into the stage chart (hrChart).
 export function plotStageSliceByIndex(index) {
   if (!state.trainingSession || !Array.isArray(state.trainingSession.stages)) return;
   const stages = state.trainingSession.stages;
@@ -355,10 +356,10 @@ export function plotStageSliceByIndex(index) {
   const duration = stages[index].durationSec;
   const end = start + duration;
   const lo = stages[index].lower, hi = stages[index].upper;
-  // Set axes and bounds for this stage
+  // Set axes and bounds for this stage.
   setYAxis(lo, hi);
   setStageXAxis(duration);
-  // Fill series with slice from sessionSeries
+  // Fill series with slice from sessionSeries.
   const slice = (state.sessionSeries || []).filter(p => typeof p?.x === 'number' && p.x >= start && p.x <= end);
   state.series.length = 0;
   for (const p of slice) { state.series.push({ x: Math.max(0, p.x - start), y: p.y }); }

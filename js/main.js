@@ -1,4 +1,5 @@
 
+// Module: App bootstrap and UI wiring.
 import { state } from './state.js';
 import { setupCharts } from './charts.js';
 import { parseTrainingCsv, startTraining, tick, nextStage, prevStage, showScreen, pauseTraining, resumeTraining, setPlayPauseVisual, exportSessionCsv, loadCompletedSessionFromExportCsv, stopTraining } from './session.js';
@@ -6,10 +7,10 @@ import { loadPlanForEdit } from './edit-plan.js';
 import { connectToDevice, disconnectFromDevice, checkBluetoothSupport } from './ble.js';
 import { bindHomeNav, loadStoredPlans, isContrastOn, applyContrastToDocument, applyPlotSettingsToDom } from './plans.js';
 
-// Boot
+// Boot: initialize charts and early UI preferences.
 window.addEventListener('load', async () => {
   setupCharts();
-  // Apply persisted UI contrast preference early
+  // Apply persisted UI contrast preference early.
   try { applyContrastToDocument(isContrastOn()); } catch { }
   await checkBluetoothSupport();
   try { bindHomeNav(); } catch { }
@@ -19,12 +20,12 @@ window.addEventListener('load', async () => {
 
 
 
-// UI wiring
+// Event wiring: connect/disconnect and navigation.
 document.getElementById('connectButton').addEventListener('click', async () => { if (await checkBluetoothSupport()) await connectToDevice(); });
 document.getElementById('disconnectButton').addEventListener('click', () => { disconnectFromDevice(); switchToConnect(); });
 document.getElementById('connectBackBtn')?.addEventListener('click', () => {
   try {
-    // Cancel any pending start and return to origin (editor if available)
+    // Cancel any pending start and return to origin (editor if available).
     state.pendingIntent = null;
     const dest = state.startReturnScreen;
     state.startReturnScreen = null;
@@ -58,7 +59,7 @@ document.getElementById('nextStageBtn').addEventListener('click', () => nextStag
 document.getElementById('prevStageBtn').addEventListener('click', () => prevStage());
 document.getElementById('backButton').addEventListener('click', () => showScreen('home'));
 
-// Import finished session (CSV) on Home
+// Import a finished session (CSV) from Home.
 const importBtn = document.getElementById('homeImportSessionBtn');
 const importInput = document.getElementById('homeImportSessionInput');
 importBtn?.addEventListener('click', () => importInput?.click());
@@ -85,7 +86,7 @@ function switchToConnect() {
   showScreen('connect');
 }
 
-// modal
+// Modal: training controls.
 const modal = document.getElementById('controlsModal'), openBtn = document.getElementById('openControls');
 const closeBtn = document.getElementById('closeControls'), closeBtn2 = document.getElementById('closeControls2');
 let lastFocused = null;
@@ -102,19 +103,19 @@ openBtn.addEventListener('click', openModal);
 closeBtn.addEventListener('click', closeModal);
 modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-// Play/Pause
+// Play/pause toggle.
 const playPauseBtn = document.getElementById('playPauseBtn');
 playPauseBtn.addEventListener('click', () => { if (!state.trainingSession) return; state.paused ? resumeTraining() : pauseTraining(); });
 
 
 
-// Session events fan-out
+// Tick the session loop.
 window.addEventListener('session:tick', () => tick());
 
-// Simple helpers for other modules
+// Handle BLE disconnect from other modules.
 window.addEventListener('ble:disconnected', () => switchToConnect());
 
-// Exported helper for QR and button flows
+// Start a session from CSV text (used by QR and button flows).
 export function startTrainingFromCsvText(text) {
   const err = document.getElementById('csvError'); err.classList.add('hidden');
   if (!(state.device && state.device.gatt?.connected)) {
@@ -129,17 +130,17 @@ export function startTrainingFromCsvText(text) {
   }
 }
 
-// Pre-start modal wiring
+// Pre-start modal wiring.
 const preStartModal = document.getElementById('preStartModal');
 const preStartGoBtn = document.getElementById('preStartGoBtn');
 const preStartBackBtn = document.getElementById('preStartBackBtn');
 preStartGoBtn?.addEventListener('click', () => {
-  // Allow session to begin on next HR notification
+  // Allow session to begin on next HR notification.
   state.startPending = false;
   preStartModal?.classList.add('hidden');
 });
 preStartBackBtn?.addEventListener('click', () => {
-  // Cancel prepared session and return to Plan screen
+  // Cancel prepared session and return to the Plan screen.
   preStartModal?.classList.add('hidden');
   stopTraining();
   try {
@@ -152,10 +153,10 @@ preStartBackBtn?.addEventListener('click', () => {
     showScreen('home');
   }
 });
-// Dismiss on backdrop click
+// Dismiss modal on backdrop click.
 preStartModal?.addEventListener('click', (e) => { if (e.target === preStartModal) preStartModal.classList.add('hidden'); });
 
-// Completion navigation buttons
+// Completion screen actions.
 document.getElementById('completeBackBtn')?.addEventListener('click', () => { showScreen('home'); });
 document.getElementById('completePlanBtn')?.addEventListener('click', () => {
   showScreen('plan');
@@ -177,4 +178,4 @@ document.getElementById('completeRestoreFab')?.addEventListener('click', () => {
   if (fab) fab.classList.add('hidden');
 });
 
-// Do not auto-navigate on connect; user advances with Next on Connect
+// Do not auto-navigate on connect; user advances with Next on Connect.

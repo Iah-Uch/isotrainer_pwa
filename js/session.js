@@ -1,3 +1,4 @@
+// Module: Session lifecycle, UI updates, metrics and CSV import/export.
 import { state } from './state.js';
 import { now, fmtMMSS, parseTimeToSeconds } from './utils.js';
 import { resetStageSeries, resetSessionSeries, setYAxis, setStageXAxis, syncChartScales, plotStageSliceByIndex } from './charts.js';
@@ -31,11 +32,11 @@ export function startTraining(session) {
   state.trainingSession = session;
   state.isImportedSession = false;
   state.stageIdx = 0;
-  // Arm waiting state but gate actual start behind user Play
+  // Arm waiting state; gate actual start behind user Play.
   state.waitingForFirstHR = true;
   state.startPending = true;
 
-  // UI priming (normal mode)
+  // Prime UI (normal mode).
   document.getElementById('sessionAthlete').textContent = session.athlete || '—';
   document.getElementById('sessionMeta').textContent = `${session.date}`;
   document.getElementById('stageLabel').textContent = 'Aguardando FC...';
@@ -50,10 +51,10 @@ export function startTraining(session) {
   const firstStage = session.stages[0];
   setYAxis(firstStage.lower, firstStage.upper);
   setStageXAxis(firstStage.durationSec);
-  // Initialize countdown with full stage duration
+  // Initialize countdown with full stage duration.
   const stageEl = document.getElementById('stageElapsed');
   if (stageEl) stageEl.textContent = fmtMMSS(firstStage.durationSec);
-  // No fullscreen HUD elements to prime
+  // No fullscreen HUD elements to prime.
 
   const allLows = session.stages.map(s => s.lower);
   const allHighs = session.stages.map(s => s.upper);
@@ -67,7 +68,7 @@ export function startTraining(session) {
   showScreen('plot');
   setTimeout(() => { state.chart?.resize(); state.sessionChart?.resize(); }, 10);
 
-  // Ensure FAB is visible in live mode (may have been hidden by view mode previously)
+  // Ensure FAB is visible in live mode (may have been hidden by view mode).
   try {
     const fabToggle = document.getElementById('fabToggle');
     const fabMenu = document.getElementById('fabMenu');
@@ -78,7 +79,7 @@ export function startTraining(session) {
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
 
-  // Show pre-start modal so the user explicitly starts
+  // Show pre-start modal so the user explicitly starts.
   const pre = document.getElementById('preStartModal');
   if (pre) {
     try {
@@ -89,16 +90,16 @@ export function startTraining(session) {
       const scaleMinEl = document.getElementById('preStartScaleMin');
       const scaleMaxEl = document.getElementById('preStartScaleMax');
       const targetEl = document.getElementById('preStartTarget');
-      // Determine scale from overall session bounds if available; else pad ±20
+      // Determine scale from overall session bounds; else pad ±20.
       let scaleMin = (state.trainingSession?.sessionBounds?.min ?? (firstStage.lower - 20));
       let scaleMax = (state.trainingSession?.sessionBounds?.max ?? (firstStage.upper + 20));
       if (!Number.isFinite(scaleMin)) scaleMin = firstStage.lower - 20;
       if (!Number.isFinite(scaleMax)) scaleMax = firstStage.upper + 20;
       if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
-      // Update scale labels
+      // Update scale labels.
       if (scaleMinEl) scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} bpm`;
       if (scaleMaxEl) scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} bpm`;
-      // Position target segment
+      // Position the target segment.
       if (targetEl) {
         const rangeSpan = Math.max(1, scaleMax - scaleMin);
         const leftPct = Math.max(0, Math.min(100, ((firstStage.lower - scaleMin) / rangeSpan) * 100));
@@ -120,27 +121,27 @@ export function updateStageUI() {
   const label = `E${st.index}/${state.trainingSession.stages.length} • ${fmtMMSS(st.durationSec)}`;
   document.getElementById('stageLabel').textContent = label;
   document.getElementById('stageRange').textContent = `${st.lower}/${st.upper}`;
-  // Reset stage countdown to full duration
+  // Reset stage countdown to full duration.
   const el = document.getElementById('stageElapsed');
   if (el) el.textContent = fmtMMSS(st.durationSec);
-  // Reset live metrics display (both desktop and mobile targets)
+  // Reset live metrics display (both desktop and mobile targets).
   const pctEls = [
     document.getElementById('stageInTargetPct'),
     document.getElementById('stageInTargetPctMobile')
   ].filter(Boolean);
   for (const elPct of pctEls) { elPct.textContent = '—'; }
-  // Hide next-stage hint when entering a new stage
+  // Hide next-stage hint when entering a new stage.
   const hint = document.getElementById('nextStageHint');
   if (hint) hint.classList.remove('show');
 
-  // No fullscreen HUD stage text
+  // No fullscreen HUD stage text.
 
   setYAxis(st.lower, st.upper);
   setStageXAxis(st.durationSec);
   resetStageSeries();
 }
 
-// Live metric: percentage of on-target readings for the whole session so far
+// Live metric: percent of on-target readings for the session so far.
 export function updateLiveStageInTargetPct() {
   if (!state.trainingSession || state.stageIdx < 0) return;
   const els = [
@@ -148,7 +149,7 @@ export function updateLiveStageInTargetPct() {
     document.getElementById('stageInTargetPctMobile')
   ].filter(Boolean);
   if (!els.length) return;
-  // Build stage offsets to evaluate in-target over the entire timeline
+  // Build stage offsets to evaluate in-target over the entire timeline.
   const stages = state.trainingSession.stages || [];
   if (!stages.length) { for (const el of els) el.textContent = '—'; return; }
   const offsets = [];
@@ -163,7 +164,7 @@ export function updateLiveStageInTargetPct() {
     if (!p || typeof p.y !== 'number' || !isFinite(p.y)) continue;
     total += 1;
     const x = typeof p.x === 'number' ? p.x : 0;
-    // Find corresponding stage by time (x)
+    // Find corresponding stage by time.
     let st = null;
     for (let i = 0; i < offsets.length; i++) {
       const seg = offsets[i];
@@ -215,7 +216,7 @@ export function tick() {
   const stageElapsedText = fmtMMSS(stageRemainingSec);
   document.getElementById('stageElapsed').textContent = stageElapsedText;
 
-  // Show next-stage bounds hint after halfway point
+  // Show next-stage bounds hint after halfway point.
   try { updateHalfwayNextStageHint(stageElapsedSec); } catch { }
 
   const totalElapsed = computeTotalElapsedSec(nowMs);
@@ -223,7 +224,7 @@ export function tick() {
   const totalRemainingText = fmtMMSS(totalRemainingSec);
   document.getElementById('totalRemaining').textContent = totalRemainingText;
 
-  // No fullscreen HUD timers
+  // No fullscreen HUD timers.
 
   if (stageElapsedSec >= st.durationSec) { nextStage(); }
 }

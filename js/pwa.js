@@ -1,4 +1,4 @@
-// Handle PWA install UI + auto-update client helpers
+// Module: PWA install UI and update helpers.
 let deferredPrompt = null;
 
 const installBtn = document.getElementById('installBtn');
@@ -44,7 +44,7 @@ installBtn?.addEventListener('click', async () => {
 if (isStandalone()) hideInstall();
 if (isLikelyInstalled()) { hideInstall(); showOpen(); } else { hideOpen(); }
 
-// Auto-reload once when the new SW takes control
+// Auto-reload once when the new SW takes control.
 let reloadedForUpdate = false;
 navigator.serviceWorker?.addEventListener('controllerchange', () => {
   if (reloadedForUpdate) return;
@@ -58,7 +58,7 @@ function showUpdatePrompt(reg) {
   const waiting = reg.waiting;
   if (!waiting) return;
 
-  // Create a simple banner
+  // Create a simple banner.
   const banner = document.createElement('div');
   banner.setAttribute('role', 'status');
   banner.className = 'fixed inset-x-0 bottom-0 z-50 mx-auto mb-3 w-fit max-w-full rounded-xl bg-slate-900 text-slate-100 border border-white/10 shadow-2xl px-4 py-2 flex items-center gap-3';
@@ -78,7 +78,7 @@ function showUpdatePrompt(reg) {
 
   const cleanup = () => { banner.remove(); };
 
-  // If the waiting worker changes state (e.g., becomes redundant), remove banner
+  // If the waiting worker changes state (e.g., becomes redundant), remove banner.
   waiting.addEventListener('statechange', () => {
     if (waiting.state === 'redundant') cleanup();
   });
@@ -90,7 +90,7 @@ function showUpdatePrompt(reg) {
   dismissBtn.addEventListener('click', cleanup);
 }
 
-// Proactively check for updates and activate them
+// Proactively check for updates and activate them.
 if ('serviceWorker' in navigator) {
   // Ensure there is a registration and force an update on open
   navigator.serviceWorker.register('/sw.js').catch(() => { });
@@ -103,7 +103,7 @@ if ('serviceWorker' in navigator) {
   };
 
   withReg((reg) => {
-    // Try to fetch the latest SW
+    // Try to fetch the latest SW.
     reg.update().catch(() => { });
 
     // If an update is already waiting, prompt the user
@@ -122,7 +122,7 @@ if ('serviceWorker' in navigator) {
       });
     });
 
-    // Periodically check for updates when visible
+    // Periodically check for updates when visible.
     const tryUpdate = () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); };
     const int = setInterval(tryUpdate, 60 * 1000 * 10); // every 10 min
     document.addEventListener('visibilitychange', tryUpdate);
@@ -132,7 +132,6 @@ if ('serviceWorker' in navigator) {
 
 // Opening behavior: rely on link capturing to route to installed PWA.
 openAppBtn?.addEventListener('click', (e) => {
-  // Ensure a direct top-level navigation; link capturing will open PWA window
-  // if supported and the app is installed.
-  // No special handling; let the anchor work. This prevents blocking if API unsupported.
+  // Ensure a direct top-level navigation; link capturing opens PWA window
+  // if supported and the app is installed. No special handling; let the anchor work.
 });

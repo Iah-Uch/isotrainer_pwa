@@ -1,9 +1,10 @@
+// Module: Plan editor (stage adjustments and start flow).
 import { fmtMMSS, parseTimeToSeconds } from './utils.js';
 import { startTraining, showScreen } from './session.js';
 import { state } from './state.js';
 
 let originalSession = null;
-let working = null; // mutable copy
+let working = null; // Mutable copy.
 let selected = new Set();
 const HR_MIN = 0, HR_MAX = 300;
 
@@ -72,7 +73,7 @@ function render() {
     `;
     body.appendChild(tr);
   });
-  // header checkbox state
+  // Header checkbox state.
   const selAll = document.getElementById('editSelAll');
   if (selAll) selAll.checked = (selected.size === (working?.stages?.length || 0) && selected.size > 0);
   updateAdjTimeButtons();
@@ -112,7 +113,7 @@ function onClick(e) {
     if (t.checked) selected.add(idx); else selected.delete(idx);
     render(); return;
   }
-  // Row time controls removed; time adjustments are global via top bar selection
+  // Row time controls removed; time adjustments are global via top bar selection.
   if (act === 'addLower') {
     const d = Number(t.dataset.delta) || 0;
     const caps = stageCaps(i);
@@ -129,7 +130,7 @@ function onClick(e) {
     working.stages[i].upper = clamp(Math.round(working.stages[i].upper + d), minV, maxV);
     render();
   }
-  // Per-row reset removed
+  // Per-row reset removed.
   if (act === 'adjTime') {
     const d = Number(t.dataset.delta) || 0;
     if (selected.size === 0) return;
@@ -142,7 +143,7 @@ function onClick(e) {
     });
     recalcTotal(); render();
   }
-  // Global controls are time-only
+  // Global controls are time-only.
 }
 
 function onInput(e) {
@@ -205,12 +206,12 @@ export function loadPlanForEdit(session, origin = null) {
 
 export function startWithEditedPlan() {
   if (!validate()) return;
-  // Ensure indices are sequential
+  // Ensure indices are sequential.
   working.stages.forEach((s, idx) => { s.index = idx + 1; });
   recalcTotal();
-  // Always show Connect next (even if already connected), then proceed via Next
+  // Always show Connect next (even if already connected), then proceed via Next.
   const sessionCopy = deepCopySession(working);
-  // Propagate stable plan id for done-session linking
+  // Propagate stable plan id for done-session linking.
   if (sessionCopy.id && !sessionCopy.planId) sessionCopy.planId = sessionCopy.id;
   if (Number.isFinite(sessionCopy.idx) && !Number.isFinite(sessionCopy.planIdx)) sessionCopy.planIdx = sessionCopy.idx;
   state.pendingIntent = { type: 'startEdited', session: sessionCopy };
@@ -237,7 +238,7 @@ export function backToPlan() {
   }
 }
 
-// Events
+// Events.
 document.addEventListener('click', (e) => {
   if (document.getElementById('editPlanScreen')?.classList.contains('hidden')) return;
   onClick(e);
@@ -248,7 +249,7 @@ document.addEventListener('input', (e) => {
   updateAdjTimeButtons();
 });
 
-// Select all handler
+// Select-all handler.
 document.getElementById('editSelAll')?.addEventListener('change', (e) => {
   if (!working) return;
   if (e.target.checked) selected = new Set(working.stages.map((_, idx) => idx));
