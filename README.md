@@ -1,177 +1,219 @@
 # CardioMax Web
 
-A Progressive Web App (PWA) for cardiovascular training periodization. CardioMax connects to Bluetooth Heart Rate (HR) monitors via Web Bluetooth, guides structured training sessions with live charts and stage targets, and exports rich session data for analysis.
+[![Docker](https://img.shields.io/badge/docker-ready-2496ed)](#)
+[![Made with JS](https://img.shields.io/badge/made%20with-JavaScript-f7df1e)](#)
 
-The UI is currently in Brazilian Portuguese (pt-BR). This README documents architecture, setup, operations, and deployment in English for engineering and operations teams.
 
+
+## Table of Contents
+
+- [Highlights](#highlights)
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Project Structure](#project-structure)
+- [Architecture](#architecture)
+- [Core Workflows](#core-workflows)
+- [CSV Session Format](#csv-session-format)
+- [Testing](#testing)
+- [Docker & Deploy](#docker--deploy)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+---
 
 ## Highlights
-- Web Bluetooth HR: Connects to devices exposing the `heart_rate` GATT service; subscribes to `heart_rate_measurement` notifications.
-- Session engine: Load a training plan (CSV or QR), edit targets, start/pause, and navigate stages.
-- Live analytics: Real‑time stage chart with target bounds and full‑session chart with stage bands (ECharts).
-- QR import: Scan a QR that contains the CSV plan and populate the editor automatically.
-- PWA/Installable: App manifest, service worker, link capture, update prompts, and screen wake‑lock.
-- CSV export: One normalized CSV with session summary, per‑stage stats, and time series.
-- Containerized deploy: Nginx static serving with strict routing, cache headers, and Traefik labels via docker‑compose.
 
+- 🚀 Web Bluetooth HR: Connects to devices exposing the standard `heart_rate` service.
+- 📈 Live charts: Stage and full‑session plots with dynamic bounds and target bands.
+- 🎯 Stage guidance: Clear in‑target indicators, halfway/next‑stage hints, and countdowns.
+- 📥 Import/Export: Load training plans from CSV; import completed sessions; local history.
+- 📱 PWA install: Add to home screen; automatic update prompts (network‑fresh SW).
+- 🧭 No backend: Fully static; use locally or behind your own HTTPS reverse proxy.
 
-## Repository Structure
-- `index.html`: Landing + PWA install surface; links into the app (`app.html`).
-- `app.html`: Main application shell and UI (connect, plan, edit, plot, complete screens).
-- `styles.css`: Global styles (Tailwind via CDN, plus custom styles).
-- `icons/`: App icons and logo assets used by the PWA.
-- `manifest.webmanifest`: PWA metadata (start URL `app.html`, icons, shortcuts).
-- `sw.js`: Network‑only service worker with cache clearing and update flow.
-- `js/` (ES modules):
-  - `main.js`: App bootstrap and UI wiring.
-  - `ble.js`: Web Bluetooth connect/disconnect and HR measurement handling.
-  - `session.js`: CSV parsing, session state machine, timers, stats, and CSV export.
-  - `charts.js`: ECharts stage/session charts, bounds, and bands.
-  - `state.js`: Central shared state container.
-  - `utils.js`: Time and formatting helpers.
-  - `ui-fab.js`: Floating action button and quick actions.
-  - `qr.js`: QR scanner integration (QrScanner UMD).
-  - `pwa.js`: Install prompt UI and client‑side update prompts.
-  - `wake-lock.js`: Screen wake‑lock support during sessions.
-- Deployment:
-  - `Dockerfile`, `docker-compose.yml`, `nginx.conf`.
+---
 
+## Quick Start
+
+Choose one of the options below to run locally.
+
+- Live server (simplest, recommended for dev)
+
+- Docker (Nginx static image):
+  ```bash
+  docker build -t cardiomax-web .
+  docker run --rm -p 8080:80 cardiomax-web
+  # Visit http://localhost:8080
+  ```
+
+Notes
+- Web Bluetooth requires HTTPS or `localhost`. Use a local server (as above) or HTTPS.
+- Use Chrome/Edge on desktop or Chrome on Android. iOS support requires a WebBLE browser.
+
+---
 
 ## Requirements
-- Browser: Chrome or Edge (Desktop/Android) with Web Bluetooth support.
-- Transport: HTTPS or `http://localhost` (required by Web Bluetooth).
-- Hardware: Bluetooth HR monitor supporting the standard Heart Rate service.
 
+- Browser: Chrome 79+ or Edge 79+ with Bluetooth and permissions enabled.
+- Device: Bluetooth heart‑rate monitor exposing the `heart_rate` service and
+  `heart_rate_measurement` characteristic.
+- HTTPS: Required for Web Bluetooth on production hosts. `localhost` is allowed in dev.
 
-## Run Locally
-No build step is required; this is a static site.
+---
 
-- Serve the folder (needed for Web Bluetooth):
-  - Any static server works if it serves from project root.
-- Open `index.html` (landing) or `app.html` directly.
-- Allow Bluetooth permissions when prompted and ensure your OS Bluetooth adapter is enabled.
+## Project Structure
 
-
-## Using the App
-1. Connect HR monitor
-   - From the Connect screen, click “Conectar ao dispositivo”. Choose a device that exposes the `heart_rate` service.
-2. Load plan
-   - Paste CSV into the plan textarea or scan a QR containing the CSV (button “Ler QR”).
-   - Optionally open the Edit screen to adjust per‑stage targets.
-3. Start session
-   - Start and wait for the first HR reading to kick off timers and charts.
-   - Use the floating action button (FAB) for Play/Pause, Stage Controls (Prev/Next), or navigate back.
-4. Review and export
-   - At completion, review session stats and export CSV.
-
-
-## Training Plan CSV Format
-A minimal, semicolon‑separated format is used.
-
-Header (single line):
-- `ignored;ignored;date;athlete`
-
-Stages (one per line):
-- `index;HH:MM:SS;lower;upper`
-
-Example:
 ```
-ignored;ignored;2025-09-03;Fulano da Silva
-1;00:10:00;120;140
-2;00:05:00;130;150
-3;00:08:00;110;130
+.
+├─ index.html               # Entry (Home / Connect / Plan)
+├─ app.html                 # Full app layout / training flows
+├─ styles.css               # Global styles (2‑space, single quotes)
+├─ js/
+│  ├─ main.js              # App bootstrap, routing, UI bindings
+│  ├─ ble.js               # Web Bluetooth connect, HR notifications, disconnect
+│  ├─ charts.js            # ECharts setup, scales, markers, stage/session series
+│  ├─ session.js           # Session lifecycle, timers, UI updates, CSV import
+│  ├─ plans.js             # Plans store (localStorage), history, migrations
+│  ├─ edit-plan.js         # Plan editor logic and interactions
+│  ├─ ui-fab.js            # Floating action menu (controls)
+│  ├─ utils.js             # Time/format helpers
+│  ├─ state.js             # Central shared state (device, charts, timers)
+│  ├─ qr.js                # QR features (e.g., import via QR)
+│  └─ pwa.js               # Install UI, update prompts, SW registration
+├─ sw.js                    # Network‑fresh service worker (no caching)
+├─ manifest.webmanifest     # PWA manifest
+├─ icons/                   # App icons
+├─ nginx.conf               # Strict static serving for Docker image
+├─ Dockerfile               # Static Nginx container
+└─ docker-compose.yml       # Example deploy (Traefik labels)
 ```
 
-Notes:
-- `upper` must be strictly greater than `lower` per stage.
-- Total duration is computed as the sum of `durationSec` across stages.
+---
 
+## Architecture
 
-## Importing Periodization (Bulk) CSV
-The Home screen supports importing a periodization file containing multiple sessions. Format mirrors the server export (semicolon‑separated):
+- Core runtime: Vanilla JS ES modules with a minimal shared `state` module.
+- Live charts: ECharts canvas instances for stage and full session.
+- Comms: Web Bluetooth GATT, `heart_rate` → `heart_rate_measurement` notifications.
+- Persistence: LocalStorage for plans (`cardiomax:plans`) and done sessions
+  (`cardiomax:doneSessions`). No server‑side storage.
+- PWA: Installable; service worker enforces fresh network fetches and prompts on updates.
 
-- Line 0 (meta): `<numSessions>;<initialDate>;<finalDate>;<athleteName>`
-- Optional header (line 1): `Training;Date;Stage;Stage Type;Time;MinBPM;MaxBPM`
-- Lines 2+: `<sessionNo>;<DD/MM/YYYY>;<stageNo>;<type>;<HH:MM:SS>;<min>;<max>`
+```mermaid
+flowchart LR
+  subgraph UI
+    H[Home / Connect]
+    P[Plans / Editor]
+    T[Training HUD]
+  end
 
-Behavior:
-- Sessions are grouped by `sessionNo`. Stages are accumulated until the next `sessionNo` appears.
-- Session total duration is computed from its stages.
-- The importer also auto‑detects a single long HEX payload and will attempt XOR‑decrypt (first 16 hex chars as the key) when encountered.
+  B[(BLE HR Sensor)] -- GATT notify --> BLE
+  BLE[ble.js] -- HR samples --> S[state.js]
+  S -- update --> CH[charts.js]
+  S -- timers/ticks --> J[session.js]
+  P -- save/load --> LS[(localStorage)]
+  J -- start/pause/next --> S
+  H -- navigation --> P
+  H -- connect/disconnect --> BLE
+```
 
+---
 
-## Exported CSV Format
-Exports a normalized, semicolon‑separated CSV with a `type` discriminator:
-- Header columns: `type;date;athlete;stage_index;duration_sec;lower;upper;avg_bpm;min_bpm;max_bpm;in_target_pct;samples;elapsed_sec;stage_elapsed_sec;hr;in_target`
-- Rows:
-  - `summary`: One row summarizing the overall session.
-  - `stage`: One row per stage with per‑stage stats and sample counts.
-  - `series`: Full time series points, aligned to global elapsed seconds and per‑stage elapsed, with `in_target` flag.
+## Core Workflows
 
+- Connect a device
+  1) Click Connect → Choose a heart‑rate device (HTTPS or localhost only)
+  2) App subscribes to `heart_rate_measurement` and starts receiving samples
+  3) UI enables planning and start buttons
 
-## Architecture Overview
-- Web Bluetooth (`js/ble.js`):
-  - Checks availability, requests device filtered by `heart_rate`, subscribes to `characteristicvaluechanged` events, and derives bpm values.
-  - Starts timers and updates charts on the first HR value; handles disconnects gracefully.
-- Session engine (`js/session.js`):
-  - Parses CSV, controls stage transitions, handles pause/resume, and computes session and per‑stage statistics.
-  - Emits a completion UI with key metrics and supports CSV export.
-- Charts (`js/charts.js`):
-  - Stage chart: live HR with target bounds and dynamic highlight when above/below range.
-  - Session chart: global HR trace with per‑stage bands; responsive resizing and heart marker positioning.
-- PWA (`manifest.webmanifest`, `sw.js`, `js/pwa.js`):
-  - Install prompt, link capture, update prompt when a new SW is available; network‑only SW with cache clearing.
-- Wake Lock (`js/wake-lock.js`): Keeps the screen awake during sessions.
+- Start a session
+  1) Load plan CSV (or pick a saved plan)
+  2) Pre‑start modal shows current HR vs. target for Stage 1
+  3) Press Play to begin timing; stage and session charts stream in real time
+  4) Mid‑stage hints and in‑target percentage update live
 
+- Complete & save
+  - Upon finishing, a summary is stored locally (`cardiomax:doneSessions`).
+  - You can import exported CSVs back for review.
 
-## Coding Standards
-- Formatting: 2 spaces, single quotes, semicolons, max line length 100.
-- Imports: external first, then internal (`js/*.js`), then styles; group with a blank line between groups.
-- Naming: `camelCase` for vars/functions, `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants.
-- Errors: wrap async Web Bluetooth calls with `try/catch`; update visible status text and rethrow with context when appropriate.
-- Logging: prefer user‑visible status updates; guard debug logs behind a `DEBUG` flag if added later.
-- Formatting/linting: if Prettier is available, run `npx prettier -w .`.
+---
+
+## CSV Session Format
+
+- Header (semicolon separated): `ignored;ignored;date;athlete`
+- Rows: `index;HH:MM:SS;lower;upper`
+
+Example
+```csv
+Sessao;X;2024-09-30;Atleta X
+1;00:05:00;120;140
+2;00:06:00;130;150
+3;00:04:30;140;160
+```
+
+Validation rules
+- Each stage requires numeric `index`, `lower < upper`, and valid duration `HH:MM:SS`.
+- The app derives `totalDurationSec` and computes in‑target metrics across the session.
+
 
 
 ## Testing
-- No automated tests are configured. Prefer manual verification on Chrome/Edge with a Bluetooth HR device.
-- If adding tests: place in `tests/`, name `*.spec.js`, and focus on critical flows (BLE connect/disconnect, session lifecycle, chart updates).
+
+This is a hardware‑in‑the‑loop app; prioritize manual verification in Chrome/Edge.
+
+- Critical paths
+  - BLE connect/disconnect, HR streaming, reconnection on drop
+  - Session start/pause/resume/next/prev, countdown accuracy
+  - Charts: bounds, markers, stage bands, responsiveness
+
+- Suggested flow
+  1) Start local server on `localhost`
+  2) Pair a heart‑rate sensor (OS‑level) if needed
+  3) Connect via the app and verify live HR
+  4) Import a sample CSV plan and run a short session
+
+---
+
+## Docker & Deploy
+
+- Local image
+  ```bash
+  docker build -t cardiomax-web .
+  docker run --rm -p 8080:80 cardiomax-web
+  ```
+
+- Reverse proxy (Traefik example)
+  - `docker-compose.yml` includes Traefik labels and `proxy` network.
+  - Set your domain, TLS resolver, and ensure HTTPS termination for Web Bluetooth.
+
+- Nginx config
+  - Serves a strict allowlist of static files, denies dotfiles, and disables caching.
+  - PWA endpoints (`/sw.js`, `/manifest.webmanifest`) are explicitly whitelisted.
 
 
-## Deployment
-### Docker (Nginx)
-- Build image: `docker build -t cardiomax-web:latest .`
-- Run locally: `docker run --rm -p 8080:80 cardiomax-web:latest` then visit `http://localhost:8080`.
-
-### Docker Compose (Traefik example)
-The included `docker-compose.yml` is configured for Traefik with TLS and a production hostname in the`cstera` environment.
-- Ensure a Traefik `proxy` network exists and certificates are configured.
-- Start: `docker compose up -d`.
-
-### Nginx behavior
-- Strict routing for only public files and directories; denies hidden files (`/.…`).
-- Cache headers for static assets; `sw.js` and the manifest are served with `no-cache`.
-
-
-## Security & Privacy
-- Web Bluetooth requires HTTPS (or `localhost`), user gesture, and permission.
-- The app stores session state in memory; no PII is persisted by default.
-- Service worker is network‑only and clears caches on install/activate.
-- Nginx blocks hidden files and only exposes intended static paths.
-
-
-## Browser Support & Known Limitations
-- Chrome/Edge desktop and Android: Supported for Web Bluetooth.
-- iOS/Safari: Web Bluetooth is not supported; use a WebBLE‑enabled browser like BlueFy.
-- Some devices may require OS‑level pairing before appearing in the chooser.
-
+---
 
 ## Troubleshooting
-- “Web Bluetooth unavailable” or disabled Connect button:
-  - Use a supported browser, serve over HTTPS or `localhost`, and ensure Bluetooth is enabled on the host.
-- No devices shown:
-  - The HR monitor must expose the standard `heart_rate` GATT service; wake or pair the device.
-- Charts don’t resize:
-  - Ensure the app is on the Plot screen; resizing is scheduled on route/viewport changes.
-- Update not applied:
-  - The app prompts for updates when a new service worker is installed. Click “Atualizar agora” or reload.
+
+- “Web Bluetooth not available”
+  - Use Chrome/Edge on desktop or Chrome on Android. Serve over HTTPS or `localhost`.
+  - Ensure OS Bluetooth is on and the adapter is not in use by another app.
+
+- Cannot find device
+  - Some devices require OS‑level pairing first. Replace battery or wake the sensor.
+
+- No data after connect
+  - The device must expose `heart_rate` service and `heart_rate_measurement` notifications.
+  - Check site permissions: Page Info → Site settings → Allow Bluetooth.
+
+- iOS support
+  - Safari support is limited. Use a WebBLE‑enabled browser, or run on Android/desktop.
+
+---
+
+## Contributing
+
+- Conventional Commits for clean history (e.g., `feat: add stage chart smoothing`).
+- Keep PRs focused; include a short summary, screenshots for UI, and test notes.
+- Follow the code style and module boundaries; prefer user‑visible status to console logs.
+
+---
