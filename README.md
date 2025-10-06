@@ -1,4 +1,4 @@
-# CardioMax Web
+# IsoTrainer Web
 
 [![Docker](https://img.shields.io/badge/docker-ready-2496ed)](#)
 [![Made with JS](https://img.shields.io/badge/made%20with-JavaScript-f7df1e)](#)
@@ -40,8 +40,8 @@ Choose one of the options below to run locally.
 
 - Docker (Nginx static image):
   ```bash
-  docker build -t cardiomax-web .
-  docker run --rm -p 8080:80 cardiomax-web
+  docker build -t isotrainer-web .
+  docker run --rm -p 8080:80 isotrainer-web
   # Visit http://localhost:8080
   ```
 
@@ -94,8 +94,8 @@ Notes
 - Core runtime: Vanilla JS ES modules with a minimal shared `state` module.
 - Live charts: ECharts canvas instances for stage and full session.
 - Comms: Web Bluetooth GATT, `heart_rate` → `heart_rate_measurement` notifications.
-- Persistence: LocalStorage for plans (`cardiomax:plans`) and done sessions
-  (`cardiomax:doneSessions`). No server‑side storage.
+- Persistence: LocalStorage for plans (`isotrainer:plans`) and done sessions
+  (`isotrainer:doneSessions`). No server‑side storage.
 - PWA: Installable; service worker enforces fresh network fetches and prompts on updates.
 
 ```mermaid
@@ -132,7 +132,7 @@ flowchart LR
   4) Mid‑stage hints and in‑target percentage update live
 
 - Complete & save
-  - Upon finishing, a summary is stored locally (`cardiomax:doneSessions`).
+  - Upon finishing, a summary is stored locally (`isotrainer:doneSessions`).
   - You can import exported CSVs back for review.
 
 ---
@@ -177,8 +177,8 @@ This is a hardware‑in‑the‑loop app; prioritize manual verification in Chro
 
 - Local image
   ```bash
-  docker build -t cardiomax-web .
-  docker run --rm -p 8080:80 cardiomax-web
+  docker build -t isotrainer-web .
+  docker run --rm -p 8080:80 isotrainer-web
   ```
 
 - Reverse proxy (Traefik example)

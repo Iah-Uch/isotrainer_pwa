@@ -32,7 +32,7 @@ function isContrast() {
 // Persisted UI flag for legacy color rules
 function isLegacyGalileuColorsOn() {
   try {
-    const v = localStorage.getItem("cardiomax:ui:legacy-galileu-colors");
+    const v = localStorage.getItem("isotrainer:ui:legacy-galileu-colors");
     return v === "1";
   } catch {
     return false;

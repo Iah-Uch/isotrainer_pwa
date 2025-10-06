@@ -1,10 +1,10 @@
 version: "3.9"
 
 services:
-  cardiomax:
+  isotrainer:
     build: .
-    image: cardiomax-web:latest
-    container_name: cardiomax-web
+    image: isotrainer-web:latest
+    container_name: isotrainer-web
     restart: unless-stopped
     expose:
       - "80"
@@ -12,11 +12,11 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cardiomax.rule=Host(`cardiomax.cstera.alphaomegahealth.com.br`)"
-      - "traefik.http.routers.cardiomax.entrypoints=https"
-      - "traefik.http.routers.cardiomax.tls=true"
-      - "traefik.http.routers.cardiomax.tls.certresolver=cloudflare"
-      - "traefik.http.services.cardiomax.loadbalancer.server.port=80"
+      - "traefik.http.routers.isotrainer.rule=Host(`isotrainer.cstera.alphaomegahealth.com.br`)"
+      - "traefik.http.routers.isotrainer.entrypoints=https"
+      - "traefik.http.routers.isotrainer.tls=true"
+      - "traefik.http.routers.isotrainer.tls.certresolver=cloudflare"
+      - "traefik.http.services.isotrainer.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
 
 networks:

@@ -4,8 +4,8 @@ import { state } from "./state.js";
 import { loadPlanForEdit } from "./edit-plan.js";
 import { showScreen, loadCompletedSessionFromExportCsv } from "./session.js";
 
-const STORAGE_KEY = "cardiomax:plans";
-const STORAGE_DONE_KEY = "cardiomax:doneSessions";
+const STORAGE_KEY = "isotrainer:plans";
+const STORAGE_DONE_KEY = "isotrainer:doneSessions";
 
 export function loadStoredPlans() {
   try {
@@ -947,7 +947,7 @@ function openDonePreview(index) {
         const a = document.createElement("a");
         const dateSlug = String(rec.date || "").replace(/\s+/g, "_");
         a.href = url;
-        a.download = `cardiomax_${dateSlug || "session"}.csv`;
+        a.download = `isotrainer_${dateSlug || "session"}.csv`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -1278,7 +1278,7 @@ function exportAllDoneCsv() {
   const a = document.createElement("a");
   const dateSlug = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   a.href = url;
-  a.download = `cardiomax_sessoes_${dateSlug}.csv`;
+  a.download = `isotrainer_sessoes_${dateSlug}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1300,8 +1300,8 @@ function resetApplication() {
 }
 
 // ============= Settings (Contrast Mode & Colors) ============= //
-const CONTRAST_KEY = "cardiomax:ui:contrast";
-const LEGACY_COLORS_KEY = "cardiomax:ui:legacy-galileu-colors";
+const CONTRAST_KEY = "isotrainer:ui:contrast";
+const LEGACY_COLORS_KEY = "isotrainer:ui:legacy-galileu-colors";
 export function isContrastOn() {
   try {
     return localStorage.getItem(CONTRAST_KEY) === "1";
@@ -1403,7 +1403,7 @@ export function openSettings() {
 }
 
 // ============= Plot Screen: Element Toggles & Multipliers ============= //
-const PLOT_PREFIX = "cardiomax:plot:";
+const PLOT_PREFIX = "isotrainer:plot:";
 const PLOT_TOGGLES = [
   // Header elements
   {

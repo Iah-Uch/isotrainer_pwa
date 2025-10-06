@@ -672,7 +672,7 @@ export function exportSessionCsv() {
     "_",
   );
   a.href = url;
-  a.download = `cardiomax_${dateSlug || "session"}.csv`;
+  a.download = `isotrainer_${dateSlug || "session"}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -812,7 +812,7 @@ export function loadCompletedSessionFromExportCsv(text) {
   const hasType = header.includes("type");
   if (!hasType)
     throw new Error(
-      "Formato não suportado. Importe um CSV exportado do CardioMax.",
+      "Formato não suportado. Importe um CSV exportado do IsoTrainer.",
     );
 
   const TYPE = colIdx("type");
