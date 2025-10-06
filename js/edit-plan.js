@@ -274,7 +274,7 @@ export function startWithEditedPlan() {
     const nextBtn = document.getElementById("goToPlanButton");
     if (nextBtn)
       nextBtn.disabled = !(state.device && state.device.gatt?.connected);
-  } catch {}
+  } catch { }
 }
 
 export function backToPlan() {

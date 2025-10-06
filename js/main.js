@@ -35,17 +35,17 @@ window.addEventListener("load", async () => {
   // Apply persisted UI contrast preference early.
   try {
     applyContrastToDocument(isContrastOn());
-  } catch {}
+  } catch { }
   await checkBluetoothSupport();
   try {
     bindHomeNav();
-  } catch {}
+  } catch { }
   try {
     showScreen("home");
-  } catch {}
+  } catch { }
   try {
     applyPlotSettingsToDom();
-  } catch {}
+  } catch { }
 });
 
 // Event wiring: connect/disconnect and navigation.
@@ -70,7 +70,7 @@ document.getElementById("connectBackBtn")?.addEventListener("click", () => {
       showScreen("plan");
       return;
     }
-  } catch {}
+  } catch { }
   showScreen("home");
 });
 document.getElementById("goToPlanButton").addEventListener("click", () => {
@@ -209,7 +209,7 @@ const preStartModal = document.getElementById("preStartModal");
 const preStartGoBtn = document.getElementById("preStartGoBtn");
 const preStartBackBtn = document.getElementById("preStartBackBtn");
 preStartGoBtn?.addEventListener("click", () => {
-  // Allow session to begin on next HR notification.
+  // Allow session to begin on next Force notification.
   state.startPending = false;
   preStartModal?.classList.add("hidden");
 });

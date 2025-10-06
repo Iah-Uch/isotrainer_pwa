@@ -44,7 +44,7 @@ function getColors() {
   return hc
     ? { stage: "#ffffff", session: "#ffe15a", axis: "rgba(255,255,255,1.0)" }
     : // Default theme ~20% brighter overall
-      { stage: "#ff6b81", session: "#ffb84a", axis: "rgba(255,255,255,0.72)" };
+    { stage: "#ff6b81", session: "#ffb84a", axis: "rgba(255,255,255,0.72)" };
 }
 
 function buildBoundsMarkLine(bounds, active) {
@@ -137,34 +137,34 @@ function buildStageBands() {
   // Fallback palette for non-legacy (index-cycled).
   const cols = contrast
     ? [
-        "rgba(59,130,246,0.65)",
-        "rgba(34,197,94,0.65)",
-        "rgba(234,179,8,0.65)",
-        "rgba(249,115,22,0.65)",
-        "rgba(239,68,68,0.65)",
-      ]
+      "rgba(59,130,246,0.65)",
+      "rgba(34,197,94,0.65)",
+      "rgba(234,179,8,0.65)",
+      "rgba(249,115,22,0.65)",
+      "rgba(239,68,68,0.65)",
+    ]
     : [
-        "rgba(59,130,246,0.34)",
-        "rgba(34,197,94,0.34)",
-        "rgba(234,179,8,0.34)",
-        "rgba(249,115,22,0.34)",
-        "rgba(239,68,68,0.34)",
-      ];
+      "rgba(59,130,246,0.34)",
+      "rgba(34,197,94,0.34)",
+      "rgba(234,179,8,0.34)",
+      "rgba(249,115,22,0.34)",
+      "rgba(239,68,68,0.34)",
+    ];
   const hiCols = contrast
     ? [
-        "rgba(59,130,246,1.0)",
-        "rgba(34,197,94,1.0)",
-        "rgba(234,179,8,1.0)",
-        "rgba(249,115,22,1.0)",
-        "rgba(239,68,68,1.0)",
-      ]
+      "rgba(59,130,246,1.0)",
+      "rgba(34,197,94,1.0)",
+      "rgba(234,179,8,1.0)",
+      "rgba(249,115,22,1.0)",
+      "rgba(239,68,68,1.0)",
+    ]
     : [
-        "rgba(59,130,246,0.84)",
-        "rgba(34,197,94,0.84)",
-        "rgba(234,179,8,0.84)",
-        "rgba(249,115,22,0.84)",
-        "rgba(239,68,68,0.84)",
-      ];
+      "rgba(59,130,246,0.84)",
+      "rgba(34,197,94,0.84)",
+      "rgba(234,179,8,0.84)",
+      "rgba(249,115,22,0.84)",
+      "rgba(239,68,68,0.84)",
+    ];
 
   let acc = 0;
   const t = performance.now() - (s.pulseAnimation?.startTime || 0);
@@ -212,7 +212,7 @@ function buildStageBands() {
 
 export function setupCharts() {
   // Stage chart
-  const el1 = document.getElementById("hrChart");
+  const el1 = document.getElementById("forceChart");
   // eslint-disable-next-line no-undef
   state.chart = echarts.init(el1, null, { renderer: "canvas" });
   const lw = getLineWidths();
@@ -300,7 +300,7 @@ export function setupCharts() {
           [offsetX, offsetY],
         );
         x = Array.isArray(xy) ? xy[0] : null;
-      } catch {}
+      } catch { }
       if (typeof x !== "number" || !isFinite(x)) return;
       const stages = state.trainingSession.stages || [];
       let acc = 0;
@@ -330,7 +330,7 @@ export function setupCharts() {
       if (!ev) return;
       handleClick(ev.offsetX, ev.offsetY);
     });
-  } catch {}
+  } catch { }
 }
 
 let resizeAttached = false;
@@ -348,10 +348,10 @@ function attachChartResizers() {
   const doResize = () => {
     try {
       state.chart?.resize();
-    } catch {}
+    } catch { }
     try {
       state.sessionChart?.resize();
-    } catch {}
+    } catch { }
     // Lightly scale line widths and colors with viewport/contrast
     try {
       const lw = getLineWidths();
@@ -394,20 +394,20 @@ function attachChartResizers() {
           false,
           true,
         );
-    } catch {}
+    } catch { }
     const last = state.series?.[state.series.length - 1];
-    if (last) updateHeartMarker(last.x, last.y);
+    if (last) updateForceMarker(last.x, last.y);
   };
   window.addEventListener("resize", schedule, { passive: true });
   window.addEventListener("orientationchange", schedule, { passive: true });
   // Observe container size changes.
   try {
     const ro = new ResizeObserver(schedule);
-    const el1 = document.getElementById("hrChart");
+    const el1 = document.getElementById("forceChart");
     const el2 = document.getElementById("sessionHrChart");
     if (el1) ro.observe(el1.parentElement || el1);
     if (el2) ro.observe(el2.parentElement || el2);
-  } catch {}
+  } catch { }
   // Re-resize when route navigates to plot.
   window.addEventListener("router:navigate", (e) => {
     const route = e.detail?.route;
@@ -417,7 +417,7 @@ function attachChartResizers() {
   window.addEventListener("ui:legacyColors", () => {
     try {
       syncChartScales();
-    } catch {}
+    } catch { }
   });
 }
 
@@ -429,7 +429,7 @@ export function resetStageSeries() {
       false,
       true,
     );
-  const marker = document.getElementById("heartMarker");
+  const marker = document.getElementById("forceMarker");
   if (marker) marker.style.opacity = "0";
 }
 
@@ -489,8 +489,8 @@ export function syncChartScales() {
     );
 }
 
-function updateHeartMarker(x, y) {
-  const marker = document.getElementById("heartMarker");
+function updateForceMarker(x, y) {
+  const marker = document.getElementById("forceMarker");
   if (!marker || !state.chart) return;
   // eslint-disable-next-line no-undef
   const [px, py] = state.chart.convertToPixel(
@@ -505,11 +505,11 @@ function updateHeartMarker(x, y) {
   marker.style.opacity = "1";
 }
 
-export function updateStageChart(hr, tMs) {
+export function updateStageChart(force, tMs) {
   if (!state.stageStartMs) return;
   const x =
     (tMs - state.stageStartMs - state.stageAccumulatedPauseOffset) / 1000;
-  const pt = { x: Math.max(0, x), y: hr };
+  const pt = { x: Math.max(0, x), y: force };
   state.series.push(pt);
   if (state.chart) {
     state.chart.setOption(
@@ -518,8 +518,8 @@ export function updateStageChart(hr, tMs) {
       true,
     );
     const b = state.currentStageBoundsOriginal || {};
-    const above = typeof b.hi === "number" && hr > b.hi;
-    const below = typeof b.lo === "number" && hr < b.lo;
+    const above = typeof b.hi === "number" && force > b.hi;
+    const below = typeof b.lo === "number" && force < b.lo;
     state.chart.setOption(
       {
         series: [
@@ -534,20 +534,20 @@ export function updateStageChart(hr, tMs) {
       false,
       true,
     );
-    updateHeartMarker(pt.x, pt.y);
+    updateForceMarker(pt.x, pt.y);
   }
 }
 
-export function updateSessionChart(hr, tMs) {
+export function updateSessionChart(force, tMs) {
   if (!state.sessionStartMs || state.paused) return;
   const totalElapsedSec = Math.max(
     0,
     (tMs - state.sessionStartMs - state.accumulatedPauseOffset) / 1000,
   );
-  state.sessionSeries.push({ x: Math.max(0, totalElapsedSec), y: hr });
+  state.sessionSeries.push({ x: Math.max(0, totalElapsedSec), y: force });
 }
 
-// Plot only the points for a given stage index into the stage chart (hrChart).
+// Plot only the points for a given stage index into the stage chart (forceChart).
 export function plotStageSliceByIndex(index) {
   if (!state.trainingSession || !Array.isArray(state.trainingSession.stages))
     return;

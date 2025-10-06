@@ -41,7 +41,7 @@ window.addEventListener("appinstalled", () => {
   hideInstall();
   try {
     localStorage.setItem("pwaInstalled", "1");
-  } catch {}
+  } catch { }
   showOpen();
 });
 
@@ -51,7 +51,7 @@ installBtn?.addEventListener("click", async () => {
   deferredPrompt.prompt();
   try {
     await deferredPrompt.userChoice;
-  } catch {}
+  } catch { }
   deferredPrompt = null;
 });
 
@@ -112,7 +112,7 @@ function showUpdatePrompt(reg) {
   updateBtn.addEventListener("click", () => {
     try {
       waiting.postMessage("skipWaiting");
-    } catch {}
+    } catch { }
     // Banner will be removed after controllerchange reload
   });
   dismissBtn.addEventListener("click", cleanup);
@@ -121,18 +121,18 @@ function showUpdatePrompt(reg) {
 // Proactively check for updates and activate them.
 if ("serviceWorker" in navigator) {
   // Ensure there is a registration and force an update on open
-  navigator.serviceWorker.register("/sw.js").catch(() => {});
+  navigator.serviceWorker.register("/sw.js").catch(() => { });
   const withReg = async (cb) => {
     try {
       let reg = await navigator.serviceWorker.getRegistration();
       if (!reg) reg = await navigator.serviceWorker.ready;
       if (reg) cb(reg);
-    } catch {}
+    } catch { }
   };
 
   withReg((reg) => {
     // Try to fetch the latest SW.
-    reg.update().catch(() => {});
+    reg.update().catch(() => { });
 
     // If an update is already waiting, prompt the user
     if (reg.waiting && navigator.serviceWorker.controller) {
@@ -152,7 +152,7 @@ if ("serviceWorker" in navigator) {
 
     // Periodically check for updates when visible.
     const tryUpdate = () => {
-      if (document.visibilityState === "visible") reg.update().catch(() => {});
+      if (document.visibilityState === "visible") reg.update().catch(() => { });
     };
     const int = setInterval(tryUpdate, 60 * 1000 * 10); // every 10 min
     document.addEventListener("visibilitychange", tryUpdate);

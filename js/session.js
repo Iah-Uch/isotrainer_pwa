@@ -57,14 +57,14 @@ export function startTraining(session) {
   state.isImportedSession = false;
   state.stageIdx = 0;
   // Arm waiting state; gate actual start behind user Play.
-  state.waitingForFirstHR = true;
+  state.waitingForFirstSample = true;
   state.startPending = true;
 
   // Prime UI (normal mode).
   document.getElementById("sessionAthlete").textContent =
     session.athlete || "—";
   document.getElementById("sessionMeta").textContent = `${session.date}`;
-  document.getElementById("stageLabel").textContent = "Aguardando FC...";
+  document.getElementById("stageLabel").textContent = "Aguardando força...";
   document.getElementById("stageRange").textContent = "—";
   document.getElementById("stageElapsed").textContent = "00:00";
   document.getElementById("totalRemaining").textContent = fmtMMSS(
@@ -108,7 +108,7 @@ export function startTraining(session) {
     const fabMenu = document.getElementById("fabMenu");
     if (fabToggle) fabToggle.classList.remove("hidden");
     if (fabMenu) fabMenu.classList.add("hidden");
-  } catch {}
+  } catch { }
 
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
@@ -117,9 +117,9 @@ export function startTraining(session) {
   const pre = document.getElementById("preStartModal");
   if (pre) {
     try {
-      const range = `${firstStage.lower}/${firstStage.upper} bpm`;
+      const range = `${firstStage.lower}/${firstStage.upper} N`;
       const rangeEl = document.getElementById("preStartStageRange");
-      const hrEl = document.getElementById("preStartHrValue");
+      const forceEl = document.getElementById("preStartForceValue");
       const guideEl = document.getElementById("preStartText");
       const scaleMinEl = document.getElementById("preStartScaleMin");
       const scaleMaxEl = document.getElementById("preStartScaleMax");
@@ -134,9 +134,9 @@ export function startTraining(session) {
       if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
       // Update scale labels.
       if (scaleMinEl)
-        scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} bpm`;
+        scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} N`;
       if (scaleMaxEl)
-        scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} bpm`;
+        scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} N`;
       // Position the target segment.
       if (targetEl) {
         const rangeSpan = Math.max(1, scaleMax - scaleMin);
@@ -153,9 +153,9 @@ export function startTraining(session) {
         targetEl.style.width = `${widthPct}%`;
       }
       if (rangeEl) rangeEl.textContent = range;
-      if (hrEl) hrEl.textContent = "—";
-      if (guideEl) guideEl.textContent = "Aguardando leitura da FC...";
-    } catch {}
+      if (forceEl) forceEl.textContent = "—";
+      if (guideEl) guideEl.textContent = "Aguardando leitura de força...";
+    } catch { }
     pre.classList.remove("hidden");
   }
 }
@@ -277,7 +277,7 @@ export function computeTotalElapsedSec(nowMs) {
 }
 
 export function tick() {
-  if (!state.trainingSession || state.paused || state.waitingForFirstHR) return;
+  if (!state.trainingSession || state.paused || state.waitingForFirstSample) return;
   const nowMs = now();
   const st = state.trainingSession.stages[state.stageIdx];
   const stageElapsedSec = Math.max(
@@ -295,7 +295,7 @@ export function tick() {
   // Show next-stage bounds hint after halfway point.
   try {
     updateHalfwayNextStageHint(stageElapsedSec);
-  } catch {}
+  } catch { }
 
   const totalElapsed = computeTotalElapsedSec(nowMs);
   const totalRemainingSec = Math.max(
@@ -383,7 +383,7 @@ export function stopTraining() {
   state.paused = false;
   state.pausedAtMs = null;
   state.accumulatedPauseOffset = state.stageAccumulatedPauseOffset = 0;
-  state.waitingForFirstHR = false;
+  state.waitingForFirstSample = false;
   state.isImportedSession = false;
 }
 
@@ -429,7 +429,7 @@ export function showScreen(which) {
   if (which === "plot") {
     try {
       applyPlotSettingsToDom();
-    } catch {}
+    } catch { }
   }
   if (connectFabs) {
     if (which === "connect") connectFabs.classList.remove("hidden");
@@ -457,11 +457,11 @@ export function animationLoop() {
       const data = (state.sessionSeries || []).map((p) => [p.x, p.y]);
       try {
         state.sessionChart.setOption({ series: [{ data }] }, false, true);
-      } catch {}
+      } catch { }
       // Rebuild stage bands to keep current-stage pulse/highlight in sync
       try {
         syncChartScales();
-      } catch {}
+      } catch { }
     }
     state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
   }
@@ -494,16 +494,16 @@ export function computeSessionStats() {
 
   for (const p of points) {
     if (p && typeof p.y === "number") {
-      const hr = p.y;
-      sum += hr;
+      const force = p.y;
+      sum += force;
       count += 1;
-      if (hr < min) min = hr;
-      if (hr > max) max = hr;
+      if (force < min) min = force;
+      if (force > max) max = force;
       const x = p.x;
       const st =
         stageOffsets.find((r) => x >= r.start && x <= r.end) ||
         stageOffsets[stageOffsets.length - 1];
-      if (st && hr >= st.lo && hr <= st.hi) inTargetCount += 1;
+      if (st && force >= st.lo && force <= st.hi) inTargetCount += 1;
     }
   }
   const avg = count ? Math.round(sum / count) : 0;
@@ -521,9 +521,9 @@ function showCompletion(stats) {
     const el = document.getElementById(id);
     if (el) el.textContent = String(v);
   };
-  set("statAvg", `${stats.avg} bpm`);
-  set("statMax", `${stats.max} bpm`);
-  set("statMin", `${stats.min} bpm`);
+  set("statAvg", `${stats.avg} N`);
+  set("statMax", `${stats.max} N`);
+  set("statMin", `${stats.min} N`);
   set("statInTarget", `${stats.inTargetPct}%`);
   // Completion UI behavior (imported sessions keep modal hidden for interaction)
   const modal = document.getElementById("completeScreen");
@@ -552,7 +552,7 @@ function showCompletion(stats) {
   try {
     if (planBtn)
       planBtn.classList.toggle("hidden", state.editOrigin !== "plan");
-  } catch {}
+  } catch { }
   // Close controls modal; control FAB visibility based on view/live mode
   const controls = document.getElementById("controlsModal");
   if (controls) controls.classList.add("hidden");
@@ -592,14 +592,14 @@ function showCompletion(stats) {
       // Tag manual flow sessions with a clear prefix in the title
       try {
         if (state.editOrigin === "plan") record.title = `Manual • ${baseTitle}`;
-      } catch {}
+      } catch { }
       saveCompletedSession(record);
       // Notify Home to refresh Done tab immediately
       try {
         window.dispatchEvent(new CustomEvent("sessions:updated"));
-      } catch {}
+      } catch { }
     }
-  } catch {}
+  } catch { }
 }
 
 function formatNumber(n, digits = 0) {
@@ -639,14 +639,14 @@ function computePerStageStats() {
     let idx = offsets.findIndex((r) => x >= r.start && x <= r.end);
     if (idx === -1) idx = stages.length - 1;
     const st = per[idx];
-    const hr = p.y;
-    st.sum += hr;
+    const force = p.y;
+    st.sum += force;
     st.count += 1;
-    if (hr < st.min) st.min = hr;
-    if (hr > st.max) st.max = hr;
+    if (force < st.min) st.min = force;
+    if (force > st.max) st.max = force;
     const lo = stages[idx].lower,
       hi = stages[idx].upper;
-    if (hr >= lo && hr <= hi) st.inTarget += 1;
+    if (force >= lo && force <= hi) st.inTarget += 1;
   }
   return per.map((s, i) => ({
     index: i + 1,
@@ -694,14 +694,14 @@ function buildExportCsvFromState() {
     "duration_sec",
     "lower",
     "upper",
-    "avg_bpm",
-    "min_bpm",
-    "max_bpm",
+    "avg_force",
+    "min_force",
+    "max_force",
     "in_target_pct",
     "samples",
     "elapsed_sec",
     "stage_elapsed_sec",
-    "hr",
+    "force",
     "in_target",
   ];
   const rows = [];
@@ -759,14 +759,14 @@ function buildExportCsvFromState() {
   }
   for (const p of state.sessionSeries || []) {
     const t = typeof p.x === "number" ? p.x : 0;
-    const hr = typeof p.y === "number" ? p.y : "";
+    const force = typeof p.y === "number" ? p.y : "";
     let idx = offsets.findIndex((r) => t >= r.start && t <= r.end);
     if (idx === -1) idx = session.stages.length - 1;
     const stage = session.stages[idx];
     const stageElapsed = Math.max(0, t - offsets[idx].start);
     const inTarget =
-      typeof hr === "number"
-        ? hr >= stage.lower && hr <= stage.upper
+      typeof force === "number"
+        ? force >= stage.lower && force <= stage.upper
           ? 1
           : 0
         : "";
@@ -785,7 +785,7 @@ function buildExportCsvFromState() {
       "",
       formatNumber(t, 2),
       formatNumber(stageElapsed, 2),
-      hr,
+      force,
       inTarget,
     ]);
   }
@@ -808,6 +808,13 @@ export function loadCompletedSessionFromExportCsv(text) {
     if (i === -1) throw new Error(`Coluna ausente no CSV: ${name}`);
     return i;
   };
+  const colIdxAny = (...names) => {
+    for (const name of names) {
+      const idx = header.indexOf(name);
+      if (idx !== -1) return idx;
+    }
+    throw new Error(`Coluna ausente no CSV: ${names.join(" | ")}`);
+  };
   // Detect exported format
   const hasType = header.includes("type");
   if (!hasType)
@@ -823,7 +830,7 @@ export function loadCompletedSessionFromExportCsv(text) {
   const LOWER = colIdx("lower");
   const UPPER = colIdx("upper");
   const ELAPSED = colIdx("elapsed_sec");
-  const HR = colIdx("hr");
+  const FORCE = colIdxAny("force", "force");
 
   // Detect if this is a full export (multiple sessions concatenated under a single header)
   let summaryCount = 0;
@@ -836,7 +843,7 @@ export function loadCompletedSessionFromExportCsv(text) {
       const imported = importAllCompletedSessionsFromCsv(text);
       try {
         window.dispatchEvent(new CustomEvent("sessions:updated"));
-      } catch {}
+      } catch { }
       alert(
         `Exportação completa detectada. ${imported} sessão(ões) importadas.`,
       );
@@ -869,14 +876,14 @@ export function loadCompletedSessionFromExportCsv(text) {
       stages.push({ index: idx, durationSec: dur, lower: lo, upper: hi });
     } else if (t === "series") {
       const x = Number(parts[ELAPSED] || 0);
-      const y = Number(parts[HR] || NaN);
+      const y = Number(parts[FORCE] || NaN);
       if (isFinite(x) && isFinite(y)) series.push({ x, y });
     }
   }
 
   if (!stages.length) throw new Error("Nenhum estágio encontrado no CSV.");
   if (!series.length)
-    throw new Error("Nenhuma série de frequência cardíaca encontrada no CSV.");
+    throw new Error("Nenhuma série de força encontrada no CSV.");
   if (!totalDurationSec) {
     totalDurationSec = stages.reduce((a, s) => a + s.durationSec, 0);
   }
@@ -886,7 +893,7 @@ export function loadCompletedSessionFromExportCsv(text) {
   const session = { date, athlete, stages, totalDurationSec };
   state.trainingSession = session;
   state.stageIdx = 0;
-  state.waitingForFirstHR = false;
+  state.waitingForFirstSample = false;
   state.isImportedSession = true;
   state.sessionStartMs = null;
   state.stageStartMs = null;
@@ -925,7 +932,7 @@ export function loadCompletedSessionFromExportCsv(text) {
     // Push series to chart now
     const data = (state.sessionSeries || []).map((p) => [p.x, p.y]);
     state.sessionChart?.setOption({ series: [{ data }] }, false, true);
-  } catch {}
+  } catch { }
 
   // Navigate to plot and show completion stats
   showScreen("plot");
@@ -933,11 +940,11 @@ export function loadCompletedSessionFromExportCsv(text) {
     try {
       state.chart?.resize();
       state.sessionChart?.resize();
-    } catch {}
+    } catch { }
   }, 10);
   try {
     plotStageSliceByIndex(0);
-  } catch {}
+  } catch { }
   const stats = computeSessionStats();
   showCompletion(stats);
 
@@ -947,7 +954,7 @@ export function loadCompletedSessionFromExportCsv(text) {
     const fabMenu = document.getElementById("fabMenu");
     if (fabToggle) fabToggle.classList.add("hidden");
     if (fabMenu) fabMenu.classList.add("hidden");
-  } catch {}
+  } catch { }
 
   // Also persist imported sessions into Done list for Home
   try {
@@ -967,8 +974,8 @@ export function loadCompletedSessionFromExportCsv(text) {
     saveCompletedSession(record);
     try {
       window.dispatchEvent(new CustomEvent("sessions:updated"));
-    } catch {}
-  } catch {}
+    } catch { }
+  } catch { }
 }
 
 // Import multiple completed sessions from a combined export CSV (single header, many sessions)
@@ -985,6 +992,13 @@ function importAllCompletedSessionsFromCsv(text) {
     if (i === -1) throw new Error(`Coluna ausente no CSV: ${name}`);
     return i;
   };
+  const colIdxAny = (...names) => {
+    for (const name of names) {
+      const idx = header.indexOf(name);
+      if (idx !== -1) return idx;
+    }
+    throw new Error(`Coluna ausente no CSV: ${names.join(" | ")}`);
+  };
   const TYPE = colIdx("type");
   const DATE = colIdx("date");
   const ATHLETE = colIdx("athlete");
@@ -993,7 +1007,7 @@ function importAllCompletedSessionsFromCsv(text) {
   const LOWER = colIdx("lower");
   const UPPER = colIdx("upper");
   const ELAPSED = colIdx("elapsed_sec");
-  const HR = colIdx("hr");
+  const FORCE = colIdxAny("force", "force");
 
   // Group lines by session, delimited by 'summary'
   const sessions = [];
@@ -1029,7 +1043,7 @@ function importAllCompletedSessionsFromCsv(text) {
       current.csvLines.push(lines[i]);
     } else if (t === "series") {
       const x = Number(parts[ELAPSED] || 0);
-      const y = Number(parts[HR] || NaN);
+      const y = Number(parts[FORCE] || NaN);
       if (isFinite(x) && isFinite(y)) current.series.push({ x, y });
       current.csvLines.push(lines[i]);
     } else {
@@ -1067,7 +1081,7 @@ function importAllCompletedSessionsFromCsv(text) {
     try {
       saveCompletedSession(record);
       imported += 1;
-    } catch {}
+    } catch { }
   }
   return imported;
 }
@@ -1095,18 +1109,18 @@ function computeStatsForSeries(series, stages) {
   }
   for (const p of points) {
     if (!p || typeof p.y !== "number") continue;
-    const hr = p.y;
-    sum += hr;
+    const force = p.y;
+    sum += force;
     count += 1;
-    if (hr < min) min = hr;
-    if (hr > max) max = hr;
+    if (force < min) min = force;
+    if (force > max) max = force;
     const x = typeof p.x === "number" ? p.x : 0;
     const idx = Math.max(
       0,
       offsets.findIndex((r) => x >= r.start && x <= r.end),
     );
     const st = offsets[idx] || offsets[offsets.length - 1];
-    if (st && hr >= st.lo && hr <= st.hi) inTarget += 1;
+    if (st && force >= st.lo && force <= st.hi) inTarget += 1;
   }
   return {
     avg: count ? Math.round(sum / count) : 0,
@@ -1127,8 +1141,8 @@ window.addEventListener("session:stageSelected", (e) => {
   updateStageUI();
   try {
     plotStageSliceByIndex(idx);
-  } catch {}
+  } catch { }
   try {
     syncChartScales();
-  } catch {}
+  } catch { }
 });

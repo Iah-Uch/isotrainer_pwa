@@ -23,7 +23,7 @@
 
 ## Highlights
 
-- 🚀 Web Bluetooth HR: Connects to devices exposing the standard `heart_rate` service.
+- 🚀 Web Bluetooth força: conecta a dinamômetros TeraForce com streaming contínuo de dados.
 - 📈 Live charts: Stage and full‑session plots with dynamic bounds and target bands.
 - 🎯 Stage guidance: Clear in‑target indicators, halfway/next‑stage hints, and countdowns.
 - 📥 Import/Export: Load training plans from CSV; import completed sessions; local history.
@@ -54,8 +54,10 @@ Notes
 ## Requirements
 
 - Browser: Chrome 79+ or Edge 79+ with Bluetooth and permissions enabled.
-- Device: Bluetooth heart‑rate monitor exposing the `heart_rate` service and
-  `heart_rate_measurement` characteristic.
+- Dispositivo: dinamômetro TeraForce com firmware compatível (BLE). Suporte
+  confirmado para as variantes que publicam o serviço Nordic UART
+  (`6e400001-b5a3-f393-e0a9-e50e24dcca9e`) ou os serviços legados `0xffb0`
+  / `0xffd0` com característica de notificação dedicada a força.
 - HTTPS: Required for Web Bluetooth on production hosts. `localhost` is allowed in dev.
 
 ---
@@ -69,7 +71,7 @@ Notes
 ├─ styles.css               # Global styles (2‑space, single quotes)
 ├─ js/
 │  ├─ main.js              # App bootstrap, routing, UI bindings
-│  ├─ ble.js               # Web Bluetooth connect, HR notifications, disconnect
+│  ├─ ble.js               # Web Bluetooth connect, força (N) via notificações
 │  ├─ charts.js            # ECharts setup, scales, markers, stage/session series
 │  ├─ session.js           # Session lifecycle, timers, UI updates, CSV import
 │  ├─ plans.js             # Plans store (localStorage), history, migrations
@@ -93,7 +95,7 @@ Notes
 
 - Core runtime: Vanilla JS ES modules with a minimal shared `state` module.
 - Live charts: ECharts canvas instances for stage and full session.
-- Comms: Web Bluetooth GATT, `heart_rate` → `heart_rate_measurement` notifications.
+- Comms: Web Bluetooth GATT, serviço proprietário do TeraForce → característica de força com notificações.
 - Persistence: LocalStorage for plans (`isotrainer:plans`) and done sessions
   (`isotrainer:doneSessions`). No server‑side storage.
 - PWA: Installable; service worker enforces fresh network fetches and prompts on updates.
@@ -106,8 +108,8 @@ flowchart LR
     T[Training HUD]
   end
 
-  B[(BLE HR Sensor)] -- GATT notify --> BLE
-  BLE[ble.js] -- HR samples --> S[state.js]
+  B[(TeraForce BLE)] -- GATT notify --> BLE
+  BLE[ble.js] -- força (N) --> S[state.js]
   S -- update --> CH[charts.js]
   S -- timers/ticks --> J[session.js]
   P -- save/load --> LS[(localStorage)]
@@ -120,16 +122,18 @@ flowchart LR
 
 ## Core Workflows
 
-- Connect a device
-  1) Click Connect → Choose a heart‑rate device (HTTPS or localhost only)
-  2) App subscribes to `heart_rate_measurement` and starts receiving samples
-  3) UI enables planning and start buttons
+- Conectar um dispositivo
+  1) Clique em Conectar → escolha o dinamômetro TeraForce (HTTPS ou localhost)
+  2) O app localiza automaticamente o serviço compatível e se inscreve nos
+     pacotes de força emitidos pelo equipamento
+  3) A UI habilita os botões de planejamento/início e inicia a telemetria em N
 
-- Start a session
-  1) Load plan CSV (or pick a saved plan)
-  2) Pre‑start modal shows current HR vs. target for Stage 1
-  3) Press Play to begin timing; stage and session charts stream in real time
-  4) Mid‑stage hints and in‑target percentage update live
+- Iniciar uma sessão
+  1) Importe o plano CSV (ou escolha um salvo)
+  2) O pré-start mostra a força atual x alvo do primeiro estágio
+  3) Pressione Play para iniciar a cronometragem; os gráficos exibem a força
+     lida em tempo real
+  4) As dicas de ajuste e o percentual dentro da zona são atualizados ao vivo
 
 - Complete & save
   - Upon finishing, a summary is stored locally (`isotrainer:doneSessions`).
@@ -161,15 +165,15 @@ Validation rules
 This is a hardware‑in‑the‑loop app; prioritize manual verification in Chrome/Edge.
 
 - Critical paths
-  - BLE connect/disconnect, HR streaming, reconnection on drop
+  - BLE connect/disconnect, streaming de força, reconexão em caso de queda
   - Session start/pause/resume/next/prev, countdown accuracy
   - Charts: bounds, markers, stage bands, responsiveness
 
-- Suggested flow
-  1) Start local server on `localhost`
-  2) Pair a heart‑rate sensor (OS‑level) if needed
-  3) Connect via the app and verify live HR
-  4) Import a sample CSV plan and run a short session
+- Fluxo sugerido
+  1) Inicie um servidor local em `localhost`
+  2) Pareie o TeraForce no SO (caso necessário)
+  3) Conecte pelo app e confirme a leitura de força em tempo real
+  4) Importe um plano de exemplo e execute uma sessão curta
 
 ---
 
@@ -201,8 +205,9 @@ This is a hardware‑in‑the‑loop app; prioritize manual verification in Chro
 - Cannot find device
   - Some devices require OS‑level pairing first. Replace battery or wake the sensor.
 
-- No data after connect
-  - The device must expose `heart_rate` service and `heart_rate_measurement` notifications.
+- Sem dados após conectar
+  - Verifique se o firmware do TeraForce expõe um dos serviços suportados
+    (Nordic UART `6e400001` ou legados `0xffb0`/`0xffd0`) com notificações ativas.
   - Check site permissions: Page Info → Site settings → Allow Bluetooth.
 
 - iOS support

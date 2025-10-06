@@ -53,8 +53,8 @@ body {
   will-change: transform, filter;
 }
 
-/* Light scaling for plot heart marker icon. */
-#heartMarker svg {
+/* Light scaling for plot force marker icon. */
+#forceMarker svg {
   width: clamp(1rem, 2vw, 1.75rem);
   height: clamp(1rem, 2vw, 1.75rem);
 }
@@ -283,15 +283,15 @@ button[aria-disabled="true"] {
     font-size: 20px;
   }
 }
-.hr-value {
+.force-value {
   font-size: 7.6em;
   letter-spacing: -0.02em;
   line-height: 0.92;
 }
-.hr-unit {
+.force-unit {
   font-size: 1.18em;
 }
-.hr-range {
+.force-range {
   font-size: 2.45em;
   line-height: 1;
 }

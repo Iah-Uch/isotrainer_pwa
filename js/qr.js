@@ -84,7 +84,7 @@ function retryQr() {
   if (retry) retry.disabled = true;
   if (hint) hint.textContent = "Aponte a câmera para o QR code";
   if (err) err.classList.add("hidden");
-  qrScanner?.start().catch(() => {});
+  qrScanner?.start().catch(() => { });
 }
 
 function useResult() {

@@ -39,7 +39,7 @@ export function loadStoredPlans() {
     if (mutated) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-      } catch {}
+      } catch { }
     }
     return plans.filter(isValidSession);
   } catch {
@@ -68,7 +68,7 @@ export function savePlans(plans) {
       }
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-  } catch {}
+  } catch { }
 }
 
 export function loadDoneSessions() {
@@ -84,7 +84,7 @@ export function loadDoneSessions() {
 export function saveDoneSessions(arr) {
   try {
     localStorage.setItem(STORAGE_DONE_KEY, JSON.stringify(arr || []));
-  } catch {}
+  } catch { }
 }
 export function saveCompletedSession(record) {
   const cur = loadDoneSessions();
@@ -100,7 +100,7 @@ export function saveCompletedSession(record) {
           return saveDoneSessions(cur);
         }
       }
-    } catch {}
+    } catch { }
     if (!record.id)
       record.id = Math.random().toString(36).slice(2) + Date.now().toString(36);
     if (!record.title)
@@ -486,8 +486,8 @@ export function renderHome(plans) {
   const now = new Date();
   const todayKey = Number(
     String(now.getFullYear()) +
-      String(now.getMonth() + 1).padStart(2, "0") +
-      String(now.getDate()).padStart(2, "0"),
+    String(now.getMonth() + 1).padStart(2, "0") +
+    String(now.getDate()).padStart(2, "0"),
   );
   const isToday = (s) => parseDateKey(s?.date) === todayKey;
   const isFutureOrToday = (s) => {
@@ -740,7 +740,7 @@ function makeDoneCard(rec, index = 0) {
   const parts = [];
   parts.push(`${rec.stagesCount} estágios`);
   parts.push(`${fmtMMSS(rec.totalDurationSec)}`);
-  if (rec?.stats?.avg != null) parts.push(`Média ${rec.stats.avg} bpm`);
+  if (rec?.stats?.avg != null) parts.push(`Média ${rec.stats.avg} N`);
   // Append completion time if available
   try {
     if (rec?.completedAt) {
@@ -751,7 +751,7 @@ function makeDoneCard(rec, index = 0) {
         parts.push(`Finalizada ${hh}:${mm}`);
       }
     }
-  } catch {}
+  } catch { }
   sub.textContent = parts.join(" • ");
   info.appendChild(title);
   info.appendChild(sub);
@@ -819,7 +819,7 @@ function openPreview(index) {
         closePreview();
         loadPlanForEdit(s, "home");
         showScreen("editPlan");
-      } catch {}
+      } catch { }
     };
   }
   viewBtnTop?.classList.add("hidden");
@@ -865,7 +865,7 @@ function confirmPreview() {
       const nextBtn = document.getElementById("goToPlanButton");
       if (nextBtn)
         nextBtn.disabled = !(state.device && state.device.gatt?.connected);
-    } catch {}
+    } catch { }
   } catch {
     // Fallback: open editor
     loadPlanForEdit(s, "home");
@@ -908,9 +908,9 @@ function openDonePreview(index) {
     d.innerHTML = `<div class="text-slate-400 text-xs">${label}</div><div class="font-semibold">${val}</div>`;
     return d;
   };
-  stats.appendChild(mk("FC média", `${rec?.stats?.avg ?? 0} bpm`));
-  stats.appendChild(mk("FC máx", `${rec?.stats?.max ?? 0} bpm`));
-  stats.appendChild(mk("FC mín", `${rec?.stats?.min ?? 0} bpm`));
+  stats.appendChild(mk("Força média", `${rec?.stats?.avg ?? 0} N`));
+  stats.appendChild(mk("Força máx", `${rec?.stats?.max ?? 0} N`));
+  stats.appendChild(mk("Força mín", `${rec?.stats?.min ?? 0} N`));
   stats.appendChild(mk("No alvo", `${rec?.stats?.inTargetPct ?? 0}%`));
   wrap.appendChild(titleText);
   wrap.appendChild(meta);
@@ -932,7 +932,7 @@ function openDonePreview(index) {
           closePreview();
           loadCompletedSessionFromExportCsv(rec.csv);
         }
-      } catch {}
+      } catch { }
     };
   };
   wireView(viewBtnTop);
@@ -952,7 +952,7 @@ function openDonePreview(index) {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-      } catch {}
+      } catch { }
     };
   };
   wireDownload(dlBtnTop);
@@ -992,7 +992,7 @@ function openDonePreview(index) {
       try {
         input.focus();
         input.select();
-      } catch {}
+      } catch { }
     }, 0);
     function saveRename() {
       const arr = loadDoneSessions();
@@ -1008,16 +1008,16 @@ function openDonePreview(index) {
       titleText.textContent = val;
       try {
         renderHome(loadStoredPlans());
-      } catch {}
+      } catch { }
       form.replaceWith(titleText);
       try {
         closePreview();
-      } catch {}
+      } catch { }
       // Return to Done tab after renaming
       setTimeout(() => {
         try {
           document.getElementById("tabDone")?.click();
-        } catch {}
+        } catch { }
       }, 0);
     }
     function cancelRename() {
@@ -1065,15 +1065,15 @@ function deleteDone(index) {
   saveDoneSessions(arr);
   try {
     renderHome(loadStoredPlans());
-  } catch {}
+  } catch { }
   try {
     closePreview();
-  } catch {}
+  } catch { }
   // Ensure Done tab remains active
   setTimeout(() => {
     try {
       document.getElementById("tabDone")?.click();
-    } catch {}
+    } catch { }
   }, 0);
 }
 
@@ -1107,7 +1107,7 @@ export function bindHomeNav() {
     try {
       document.getElementById("homeActions")?.classList.add("hidden");
       document.getElementById("homeMenuWrap")?.classList.remove("hidden");
-    } catch {}
+    } catch { }
   };
   importPlansInput?.addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
@@ -1125,7 +1125,7 @@ export function bindHomeNav() {
   });
   try {
     renderHome(loadStoredPlans());
-  } catch {}
+  } catch { }
 
   // Preview modal wiring. Close via X or backdrop.
   document
@@ -1189,7 +1189,7 @@ export function bindHomeNav() {
   window.addEventListener("sessions:updated", () => {
     try {
       renderHome(loadStoredPlans());
-    } catch {}
+    } catch { }
   });
   // Hamburger menu visibility and actions.
   const actions = document.getElementById("homeActions");
@@ -1255,7 +1255,7 @@ function exportAllDoneCsv() {
     return;
   }
   const HEADER =
-    "type;date;athlete;stage_index;duration_sec;lower;upper;avg;min;max;inTargetPct;samples;elapsed_sec;stage_elapsed_sec;hr;inTarget";
+    "type;date;athlete;stage_index;duration_sec;lower;upper;avg;min;max;inTargetPct;samples;elapsed_sec;stage_elapsed_sec;force;inTarget";
   const parts = [HEADER];
   for (const rec of dones) {
     const csv = String(rec?.csv || "").trim();
@@ -1293,10 +1293,10 @@ function resetApplication() {
   try {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_DONE_KEY);
-  } catch {}
+  } catch { }
   try {
     location.reload();
-  } catch {}
+  } catch { }
 }
 
 // ============= Settings (Contrast Mode & Colors) ============= //
@@ -1319,8 +1319,8 @@ export function applyContrastToDocument(on) {
     );
     try {
       window.dispatchEvent(new Event("resize"));
-    } catch {}
-  } catch {}
+    } catch { }
+  } catch { }
 }
 export function openSettings() {
   const modal = document.getElementById("settingsModal");
@@ -1331,21 +1331,21 @@ export function openSettings() {
   if (!modal || !toggle) return;
   try {
     toggle.checked = isContrastOn();
-  } catch {}
+  } catch { }
   try {
     if (legacyToggle) {
       const v = localStorage.getItem(LEGACY_COLORS_KEY);
       legacyToggle.checked = v === "1";
     }
-  } catch {}
+  } catch { }
 
   // Initialize plot element toggles and multipliers
   try {
     initPlotSettingsUI();
-  } catch {}
+  } catch { }
   try {
     ensurePlotResizeHook();
-  } catch {}
+  } catch { }
   modal.classList.add("flex");
   modal.classList.remove("hidden");
   const close = () => {
@@ -1364,7 +1364,7 @@ export function openSettings() {
     const on = !!toggle.checked;
     try {
       localStorage.setItem(CONTRAST_KEY, on ? "1" : "0");
-    } catch {}
+    } catch { }
     applyContrastToDocument(on);
   };
   if (legacyToggle)
@@ -1372,33 +1372,33 @@ export function openSettings() {
       const on = !!legacyToggle.checked;
       try {
         localStorage.setItem(LEGACY_COLORS_KEY, on ? "1" : "0");
-      } catch {}
+      } catch { }
       // Notify charts to rebuild stage bands
       try {
         window.dispatchEvent(
           new CustomEvent("ui:legacyColors", { detail: { on } }),
         );
-      } catch {}
+      } catch { }
     };
 
   if (resetBtn)
     resetBtn.onclick = () => {
       try {
         resetAllSettingsToDefaults();
-      } catch {}
+      } catch { }
       // Refresh UI controls to reflect defaults
       try {
         toggle.checked = isContrastOn();
-      } catch {}
+      } catch { }
       try {
         if (legacyToggle) {
           const v = localStorage.getItem(LEGACY_COLORS_KEY);
           legacyToggle.checked = v === "1";
         }
-      } catch {}
+      } catch { }
       try {
         initPlotSettingsUI();
-      } catch {}
+      } catch { }
     };
 }
 
@@ -1428,14 +1428,14 @@ const PLOT_TOGGLES = [
   },
   // Left aside
   {
-    key: "left:hrValue",
-    sel: "#currentHrValue",
-    inputId: "toggleAsideLeftHrValue",
+    key: "left:forceValue",
+    sel: "#currentForceValue",
+    inputId: "toggleAsideLeftForceValue",
   },
   {
-    key: "left:hrUnit",
-    sel: "#currentHr .hr-unit",
-    inputId: "toggleAsideLeftHrUnit",
+    key: "left:forceUnit",
+    sel: "#currentForce .force-unit",
+    inputId: "toggleAsideLeftForceUnit",
   },
   {
     key: "left:stageRange",
@@ -1449,11 +1449,11 @@ const PLOT_TOGGLES = [
   },
   // Main chart
   {
-    key: "main:heartMarker",
-    sel: "#heartMarker",
-    inputId: "toggleHeartMarker",
+    key: "main:forceMarker",
+    sel: "#forceMarker",
+    inputId: "toggleForceMarker",
   },
-  { key: "main:stageChart", sel: "#hrChart", inputId: "toggleStageChart" },
+  { key: "main:stageChart", sel: "#forceChart", inputId: "toggleStageChart" },
   // Right aside
   {
     key: "right:stageElapsed",
@@ -1489,7 +1489,7 @@ function getPlotToggle(key) {
 function setPlotToggle(key, on) {
   try {
     localStorage.setItem(PLOT_PREFIX + "toggle:" + key, on ? "1" : "0");
-  } catch {}
+  } catch { }
 }
 function getAsideMul(which) {
   try {
@@ -1503,7 +1503,7 @@ function getAsideMul(which) {
 function setAsideMul(which, v) {
   try {
     localStorage.setItem(PLOT_PREFIX + which + ":mul", String(v));
-  } catch {}
+  } catch { }
 }
 
 export function applyPlotSettingsToDom() {
@@ -1516,8 +1516,8 @@ export function applyPlotSettingsToDom() {
   }
   // Hide entire asides if all their elements are off
   const leftOn =
-    getPlotToggle("left:hrValue") ||
-    getPlotToggle("left:hrUnit") ||
+    getPlotToggle("left:forceValue") ||
+    getPlotToggle("left:forceUnit") ||
     getPlotToggle("left:stageRange") ||
     getPlotToggle("left:nextHint");
   const rightOn =
@@ -1549,7 +1549,7 @@ export function applyPlotSettingsToDom() {
         else frame.style.gridTemplateColumns = "1fr";
       }
     }
-  } catch {}
+  } catch { }
   // Aside scaling (font-size multiplier)
   try {
     const left = document.querySelector(".aside-left");
@@ -1574,10 +1574,10 @@ export function applyPlotSettingsToDom() {
       const base = parseFloat(right.dataset.baseFontPx) || 16;
       right.style.fontSize = (base * (1 + rm)).toFixed(2) + "px";
     }
-  } catch {}
+  } catch { }
   try {
     window.dispatchEvent(new Event("resize"));
-  } catch {}
+  } catch { }
 }
 
 let plotResizeHooked = false;
@@ -1590,7 +1590,7 @@ function ensurePlotResizeHook() {
       () => {
         try {
           applyPlotSettingsToDom();
-        } catch {}
+        } catch { }
       },
       { passive: true },
     );
@@ -1599,11 +1599,11 @@ function ensurePlotResizeHook() {
       () => {
         try {
           applyPlotSettingsToDom();
-        } catch {}
+        } catch { }
       },
       { passive: true },
     );
-  } catch {}
+  } catch { }
 }
 
 function initPlotSettingsUI() {
@@ -1621,7 +1621,7 @@ function initPlotSettingsUI() {
             detail: { key, on: !!input.checked },
           }),
         );
-      } catch {}
+      } catch { }
     };
   }
   // multipliers
@@ -1644,40 +1644,40 @@ function initPlotSettingsUI() {
   // Apply immediately to reflect the current values
   try {
     applyPlotSettingsToDom();
-  } catch {}
+  } catch { }
 }
 
 function resetAllSettingsToDefaults() {
   // Contrast OFF, Legacy Colors OFF
   try {
     localStorage.removeItem(CONTRAST_KEY);
-  } catch {}
+  } catch { }
   try {
     localStorage.removeItem(LEGACY_COLORS_KEY);
-  } catch {}
+  } catch { }
   // Plot element toggles: remove keys so they default to ON
   try {
     for (const { key } of PLOT_TOGGLES) {
       localStorage.removeItem(PLOT_PREFIX + "toggle:" + key);
     }
-  } catch {}
+  } catch { }
   // Multipliers: set to 0
   try {
     localStorage.removeItem(PLOT_PREFIX + "left:mul");
-  } catch {}
+  } catch { }
   try {
     localStorage.removeItem(PLOT_PREFIX + "right:mul");
-  } catch {}
+  } catch { }
   // Apply to document/UI
   try {
     applyContrastToDocument(false);
-  } catch {}
+  } catch { }
   try {
     window.dispatchEvent(
       new CustomEvent("ui:legacyColors", { detail: { on: false } }),
     );
-  } catch {}
+  } catch { }
   try {
     applyPlotSettingsToDom();
-  } catch {}
+  } catch { }
 }

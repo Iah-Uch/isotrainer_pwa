@@ -5,6 +5,7 @@ export const state = {
   server: null,
   service: null,
   characteristic: null,
+  commandCharacteristic: null,
   // Charts.
   chart: null,
   sessionChart: null,
@@ -21,12 +22,18 @@ export const state = {
   pausedAtMs: null,
   accumulatedPauseOffset: 0,
   stageAccumulatedPauseOffset: 0,
-  waitingForFirstHR: false,
+  waitingForFirstSample: false,
   // Pre-start gate: true shows modal and defers timing.
   startPending: false,
   pulseAnimation: { handle: null, startTime: 0 },
   // Import flag.
   isImportedSession: false,
+  // Force calibration context for TeraForce dynamometers.
+  forceCalibration: {
+    zero: null,
+    samples: [],
+    multiplier: null,
+  },
   // Navigation intent gate (requires connect first).
   pendingIntent: null, // { type: 'manual' } | { type: 'edit', sessionIndex: number }
   // From which screen we opened the editor ('home' | 'plan').
