@@ -65,8 +65,9 @@ export const state = {
   flowStats: [],
   measurement: {
     active: false,
+    started: false,
     arm: null,
-    startMs: 0,
+    startMs: null,
     durationMs: 3000,
     peakN: 0,
     currentN: 0,
@@ -83,5 +84,5 @@ export const state = {
     stepId: null,
   },
   trendSmoothingEnabled: true,
-  trendSmoothingAlpha: 0.01,
+  trendSmoothingAlpha: 0.02,
 };

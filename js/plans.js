@@ -2342,15 +2342,15 @@ function getTrendSmoothingAlpha() {
     const raw = localStorage.getItem(PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY);
     if (raw == null) return state.trendSmoothingAlpha || 0.25;
     const num = parseFloat(raw);
-    const alpha = Number.isFinite(num) ? num : 0.01;
-    return Math.min(0.95, Math.max(0.01, alpha));
+    const alpha = Number.isFinite(num) ? num : 0.02;
+    return Math.min(0.95, Math.max(0.02, alpha));
   } catch {
-    return state.trendSmoothingAlpha || 0.01;
+    return state.trendSmoothingAlpha || 0.02;
   }
 }
 
 function setTrendSmoothingAlphaStorage(alpha) {
-  const clamped = Math.min(0.95, Math.max(0.01, Number(alpha) || 0.01));
+  const clamped = Math.min(0.95, Math.max(0.02, Number(alpha) || 0.02));
   try {
     localStorage.setItem(
       PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY,
@@ -2528,7 +2528,7 @@ function initPlotSettingsUI() {
     smoothingAlphaInput.value = String(getTrendSmoothingAlpha());
     smoothingAlphaInput.onchange = () => {
       const raw = parseFloat(smoothingAlphaInput.value);
-      const alpha = Math.min(0.95, Math.max(0.01, Number.isFinite(raw) ? raw : getTrendSmoothingAlpha()));
+      const alpha = Math.min(0.95, Math.max(0.02, Number.isFinite(raw) ? raw : getTrendSmoothingAlpha()));
       setTrendSmoothingAlphaStorage(alpha);
       smoothingAlphaInput.value = String(alpha);
       applyTrendSmoothingAlpha(true);

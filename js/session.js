@@ -20,6 +20,7 @@ import {
 
 const N_PER_KGF = 9.80665;
 const FLOW_MEASUREMENT_MS = 3000;
+const MEASUREMENT_START_THRESHOLD_KGF = 0.5;
 
 function ensureSessionUsesKgf(session) {
   if (!session || session.forceUnit === 'kgf') return;
@@ -1268,14 +1269,15 @@ function beginMeasurement(step) {
   const { arm } = step;
   const measurement = state.measurement;
   measurement.active = true;
+  measurement.started = false;
   measurement.complete = false;
   measurement.arm = arm;
-  measurement.startMs = performance.now();
+  measurement.startMs = null;
   measurement.durationMs = FLOW_MEASUREMENT_MS;
   measurement.peakN = 0;
   measurement.currentN = 0;
   measurement.forceElapsedMs = 0;
-  measurement.lastFrameMs = measurement.startMs;
+  measurement.lastFrameMs = 0;
   const title = document.getElementById('armMaxTitle');
   const subtitle = document.getElementById('armMaxSubtitle');
   const currentEl = document.getElementById('armMaxCurrent');
@@ -1289,15 +1291,14 @@ function beginMeasurement(step) {
   if (currentEl) currentEl.textContent = '0,0 kgf';
   if (peakEl) peakEl.textContent = '0,0 kgf';
   if (progressEl) progressEl.style.width = '0%';
-  if (countdownEl) countdownEl.textContent = '3,0s restantes';
+  if (countdownEl) countdownEl.textContent = 'Aguardando força acima de 0,5 kgf...';
   if (proceedBtn) proceedBtn.disabled = true;
   modal.classList.remove('hidden');
-  measurement.rafHandle = requestAnimationFrame(updateMeasurementProgress);
 }
 
 function updateMeasurementProgress(timestamp) {
   const measurement = state.measurement;
-  if (!measurement?.active) return;
+  if (!measurement?.active || !measurement.started || measurement.startMs == null) return;
   const elapsed = timestamp - measurement.startMs;
   measurement.forceElapsedMs = elapsed;
   measurement.lastFrameMs = timestamp;
@@ -1331,6 +1332,17 @@ export function processMeasurementSample(force) {
   const measurement = state.measurement;
   if (!measurement?.active) return;
   const absolute = Math.abs(force);
+  if (!measurement.started && absolute >= MEASUREMENT_START_THRESHOLD_KGF) {
+    measurement.started = true;
+    measurement.startMs = performance.now();
+    measurement.forceElapsedMs = 0;
+    measurement.lastFrameMs = measurement.startMs;
+    const countdownEl = document.getElementById('armMaxCountdown');
+    if (countdownEl) countdownEl.textContent = '3,0s restantes';
+    const progressEl = document.getElementById('armMaxProgress');
+    if (progressEl) progressEl.style.width = '0%';
+    measurement.rafHandle = requestAnimationFrame(updateMeasurementProgress);
+  }
   measurement.currentN = absolute;
   if (absolute > measurement.peakN) measurement.peakN = absolute;
   const currentEl = document.getElementById('armMaxCurrent');
@@ -1508,8 +1520,14 @@ function stopMeasurement() {
   const measurement = state.measurement;
   if (!measurement) return;
   measurement.active = false;
+  measurement.started = false;
   measurement.complete = false;
   measurement.arm = null;
+  measurement.startMs = null;
+  measurement.forceElapsedMs = 0;
+  measurement.lastFrameMs = 0;
+  measurement.currentN = 0;
+  measurement.peakN = 0;
   if (measurement.timerHandle) {
     clearInterval(measurement.timerHandle);
     measurement.timerHandle = null;

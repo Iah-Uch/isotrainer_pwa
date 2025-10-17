@@ -5,7 +5,7 @@ import { fmtMMSS } from "./utils.js";
 // Helper: map series objects to ECharts tuples.
 const toXY = (arr) => arr.map((p) => [p.x, p.y]);
 
-const DEFAULT_TREND_ALPHA = 0.01;
+const DEFAULT_TREND_ALPHA = 0.02;
 let trendSmoothingEnabled = state.trendSmoothingEnabled !== false;
 let trendSmoothingAlpha = Number(state.trendSmoothingAlpha);
 if (!Number.isFinite(trendSmoothingAlpha)) trendSmoothingAlpha = DEFAULT_TREND_ALPHA;
@@ -62,7 +62,7 @@ function applyTrendSmoothingSetting(enabled) {
 function applyTrendAlphaSetting(alpha) {
   const numeric = Number(alpha);
   if (!Number.isFinite(numeric)) return;
-  const clamped = Math.min(0.95, Math.max(0.01, numeric));
+  const clamped = Math.min(0.95, Math.max(0.02, numeric));
   if (Math.abs(clamped - trendSmoothingAlpha) < 0.0001) return;
   trendSmoothingAlpha = clamped;
   state.trendSmoothingAlpha = clamped;
