@@ -51,6 +51,8 @@ const OPTIONAL_SUPPORT_SERVICES = [
   "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
 ];
 
+const N_PER_KGF = 9.80665;
+
 let lastGattSnapshot = [];
 const DEV_SAMPLE_INTERVAL_MS = 900;
 let devSampleTimer = null;
@@ -536,7 +538,7 @@ function applyCalibration(rawSample) {
   const multiplier = deriveMultiplier();
   let force = (rawSample - cal.zero) * multiplier;
   if (!Number.isFinite(force)) force = 0;
-  return force;
+  return force / N_PER_KGF;
 }
 
 function decodeForceSamples(dataView) {

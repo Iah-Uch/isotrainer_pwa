@@ -20,6 +20,57 @@ import {
 const N_PER_KGF = 9.80665;
 const FLOW_MEASUREMENT_MS = 3000;
 
+function ensureSessionUsesKgf(session) {
+  if (!session || session.forceUnit === 'kgf') return;
+  const stages = Array.isArray(session.stages) ? session.stages : [];
+  if (!stages.length) {
+    session.forceUnit = 'kgf';
+    return;
+  }
+  const uppers = stages
+    .map((stage) => Number(stage?.upper))
+    .filter((value) => Number.isFinite(value));
+  const shouldConvert =
+    session.forceUnit === 'N' ||
+    (!session.forceUnit && uppers.length && Math.max(...uppers) > 200);
+  if (!shouldConvert) {
+    session.forceUnit = 'kgf';
+    return;
+  }
+  const toKgf = (value) => {
+    if (!Number.isFinite(value)) return value;
+    return Number((value / N_PER_KGF).toFixed(1));
+  };
+  stages.forEach((stage) => {
+    if (!stage || typeof stage !== 'object') return;
+    stage.lower = toKgf(Number(stage.lower));
+    stage.upper = toKgf(Number(stage.upper));
+  });
+  if (session.sessionBounds) {
+    const bounds = session.sessionBounds;
+    if (bounds) {
+      if (Number.isFinite(bounds.min)) bounds.min = toKgf(bounds.min);
+      if (Number.isFinite(bounds.max)) bounds.max = toKgf(bounds.max);
+    }
+  }
+  session.forceUnit = 'kgf';
+}
+
+function convertSeriesToKgfIfNeeded(series) {
+  if (!Array.isArray(series) || !series.length) return;
+  const forces = series
+    .map((pt) => Number(pt?.y))
+    .filter((value) => Number.isFinite(value));
+  if (!forces.length) return;
+  const maxForce = Math.max(...forces);
+  if (maxForce <= 200) return;
+  series.forEach((pt) => {
+    if (!pt || typeof pt !== 'object') return;
+    if (!Number.isFinite(pt.y)) return;
+    pt.y = Number((pt.y / N_PER_KGF).toFixed(2));
+  });
+}
+
 export function parseTrainingCsv(text) {
   if (!text || !text.trim()) throw new Error("O texto do CSV está vazio.");
   const lines = text
@@ -68,6 +119,7 @@ export function startTraining(session) {
     });
   } catch { }
   state.trainingSession = session;
+  ensureSessionUsesKgf(state.trainingSession);
   state.isImportedSession = false;
   state.stageIdx = 0;
   // Arm waiting state; gate actual start behind user Play.
@@ -98,7 +150,7 @@ export function startTraining(session) {
   const allHighs = session.stages.map((s) => s.upper);
   const minHr = Math.min(...allLows);
   const maxHr = Math.max(...allHighs);
-  const buffer = 10;
+  const buffer = 2;
   state.trainingSession.sessionBounds = {
     min: minHr - buffer,
     max: maxHr + buffer,
@@ -883,6 +935,8 @@ export function loadCompletedSessionFromExportCsv(text) {
   // Prepare session state without starting timers
   stopTraining();
   const session = { date, athlete, stages, totalDurationSec };
+  ensureSessionUsesKgf(session);
+  convertSeriesToKgfIfNeeded(series);
   state.trainingSession = session;
   state.stageIdx = 0;
   state.waitingForFirstSample = false;
@@ -894,7 +948,7 @@ export function loadCompletedSessionFromExportCsv(text) {
   state.stageAccumulatedPauseOffset = 0;
 
   // UI priming
-  const firstStage = stages[0];
+  const firstStage = session.stages[0];
   document.getElementById("sessionAthlete").textContent =
     session.athlete || "—";
   document.getElementById("sessionMeta").textContent = `${session.date || "—"}`;
@@ -910,11 +964,11 @@ export function loadCompletedSessionFromExportCsv(text) {
   resetSessionSeries();
   state.sessionSeries.push(...series.sort((a, b) => a.x - b.x));
 
-  const allLows = stages.map((s) => s.lower);
-  const allHighs = stages.map((s) => s.upper);
+  const allLows = session.stages.map((s) => s.lower);
+  const allHighs = session.stages.map((s) => s.upper);
   const minHr = Math.min(...allLows);
   const maxHr = Math.max(...allHighs);
-  const buffer = 10;
+  const buffer = 2;
   state.trainingSession.sessionBounds = {
     min: minHr - buffer,
     max: maxHr + buffer,
@@ -1049,6 +1103,8 @@ function importAllCompletedSessionsFromCsv(text) {
   let imported = 0;
   for (const s of sessions) {
     if (!s || !s.stages?.length) continue;
+    ensureSessionUsesKgf(s);
+    convertSeriesToKgfIfNeeded(s.series);
     if (!s.totalDurationSec) {
       s.totalDurationSec = s.stages.reduce(
         (a, st) => a + Math.max(0, Number(st.durationSec) || 0),
@@ -1123,11 +1179,6 @@ function computeStatsForSeries(series, stages) {
 }
 
 // ============= Fixed Plan Guided Flow ============= //
-
-function nToKgf(force) {
-  if (!Number.isFinite(force)) return 0;
-  return Math.max(0, force) / N_PER_KGF;
-}
 
 function getArmShortLabel(arm) {
   if (arm === 'direito') return 'Braço Direito';
@@ -1285,10 +1336,10 @@ export function processMeasurementSample(force) {
   if (absolute > measurement.peakN) measurement.peakN = absolute;
   const currentEl = document.getElementById('armMaxCurrent');
   const peakEl = document.getElementById('armMaxPeak');
-  if (currentEl)
-    currentEl.textContent = `${nToKgf(absolute).toFixed(1).replace('.', ',')} kgf`;
-  if (peakEl)
-    peakEl.textContent = `${nToKgf(measurement.peakN).toFixed(1).replace('.', ',')} kgf`;
+  const currentKgf = absolute;
+  const peakKgf = measurement.peakN;
+  if (currentEl) currentEl.textContent = `${currentKgf.toFixed(1).replace('.', ',')} kgf`;
+  if (peakEl) peakEl.textContent = `${peakKgf.toFixed(1).replace('.', ',')} kgf`;
 }
 
 function handleMeasurementCancel() {
@@ -1304,11 +1355,11 @@ function handleMeasurementProceed() {
     return;
   }
   if (measurement.arm === 'direito') {
-    state.maxDireitoN = peakN;
-    state.maxDireitoKgf = Number(nToKgf(peakN).toFixed(2));
+    state.maxDireitoKgf = Number(peakN.toFixed(2));
+    state.maxDireitoN = Math.round(peakN * N_PER_KGF);
   } else if (measurement.arm === 'esquerdo') {
-    state.maxEsquerdoN = peakN;
-    state.maxEsquerdoKgf = Number(nToKgf(peakN).toFixed(2));
+    state.maxEsquerdoKgf = Number(peakN.toFixed(2));
+    state.maxEsquerdoN = Math.round(peakN * N_PER_KGF);
   }
   stopMeasurement();
   const modal = document.getElementById('armMaxModal');
@@ -1337,11 +1388,15 @@ function buildFlowSession(step) {
   const plan = state.flowPlan;
   if (!plan) return null;
   const stages = Array.isArray(plan.stages) ? plan.stages : [];
-  const maxForceN = step.arm === 'direito' ? state.maxDireitoN : state.maxEsquerdoN;
-  if (!Number.isFinite(maxForceN) || maxForceN <= 0) return null;
+  const maxForceKgf = step.arm === 'direito' ? state.maxDireitoKgf : state.maxEsquerdoKgf;
+  if (!Number.isFinite(maxForceKgf) || maxForceKgf <= 0) return null;
   const mappedStages = stages.map((stage, index) => {
-    const lower = Math.round(Math.max(0, maxForceN * (Number(stage.lowerPct) || 0)));
-    const upper = Math.round(Math.max(lower + 1, maxForceN * (Number(stage.upperPct) || 0)));
+    const lower = Math.round(
+      Math.max(0, maxForceKgf * (Number(stage.lowerPct) || 0)),
+    );
+    const upper = Math.round(
+      Math.max(lower + 1, maxForceKgf * (Number(stage.upperPct) || 0)),
+    );
     return {
       index: index + 1,
       durationSec: Math.max(0, Number(stage.durationSec) || 0),
@@ -1362,6 +1417,7 @@ function buildFlowSession(step) {
     planIdx: step.id || null,
     flowStepId: step.id || null,
     flowArm: step.arm,
+    forceUnit: 'kgf',
   };
 }
 

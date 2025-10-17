@@ -445,10 +445,15 @@ export function resetSessionSeries() {
 
 export function setYAxis(lo, hi) {
   state.currentStageBoundsOriginal = { lo, hi };
+  const lower = Number(lo);
+  const upper = Number(hi);
+  if (!Number.isFinite(lower) || !Number.isFinite(upper)) return;
+  const span = Math.max(0.5, Math.abs(upper - lower));
+  const padding = Math.max(0.5, span * 0.25);
   if (state.chart)
     state.chart.setOption(
       {
-        yAxis: { min: lo - 10, max: hi + 10 },
+        yAxis: { min: lower - padding, max: upper + padding },
         series: [
           {
             markLine: {
