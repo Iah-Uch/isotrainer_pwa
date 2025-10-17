@@ -2268,6 +2268,10 @@ const PLOT_TOGGLES = [
   },
 ];
 
+const PLOT_SMOOTHING_KEY = "trendSmoothing";
+let lastTrendSmoothingApplied = null;
+const PLOT_SMOOTHING_ALPHA_KEY = "trendSmoothingAlpha";
+
 function getPlotToggle(key) {
   try {
     const v = localStorage.getItem(PLOT_PREFIX + "toggle:" + key);
@@ -2293,6 +2297,84 @@ function getAsideMul(which) {
 function setAsideMul(which, v) {
   try {
     localStorage.setItem(PLOT_PREFIX + which + ":mul", String(v));
+  } catch { }
+}
+
+function getTrendSmoothingEnabled() {
+  try {
+    const v = localStorage.getItem(PLOT_PREFIX + PLOT_SMOOTHING_KEY);
+    if (v == null) return true;
+    return v === "1";
+  } catch {
+    return true;
+  }
+}
+
+function setTrendSmoothingStorage(on) {
+  try {
+    localStorage.setItem(PLOT_PREFIX + PLOT_SMOOTHING_KEY, on ? "1" : "0");
+  } catch { }
+  state.trendSmoothingEnabled = !!on;
+}
+
+function applyTrendSmoothingSetting(force = false) {
+  const enabled = getTrendSmoothingEnabled();
+  const input = document.getElementById("toggleTrendSmoothing");
+  if (input) input.checked = enabled;
+  if (!force && lastTrendSmoothingApplied === enabled) return;
+  lastTrendSmoothingApplied = enabled;
+  state.trendSmoothingEnabled = enabled;
+  const alphaInput = document.getElementById("trendSmoothingAlpha");
+  const alphaLabel = document.getElementById("trendSmoothingAlphaValue");
+  if (alphaInput) alphaInput.disabled = !enabled;
+  if (alphaLabel) alphaLabel.classList.toggle("opacity-50", !enabled);
+  try {
+    window.dispatchEvent(
+      new CustomEvent("plot:trendSmoothing", {
+        detail: { enabled },
+      }),
+    );
+  } catch { }
+}
+
+function getTrendSmoothingAlpha() {
+  try {
+    const raw = localStorage.getItem(PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY);
+    if (raw == null) return state.trendSmoothingAlpha || 0.25;
+    const num = parseFloat(raw);
+    const alpha = Number.isFinite(num) ? num : 0.01;
+    return Math.min(0.95, Math.max(0.01, alpha));
+  } catch {
+    return state.trendSmoothingAlpha || 0.01;
+  }
+}
+
+function setTrendSmoothingAlphaStorage(alpha) {
+  const clamped = Math.min(0.95, Math.max(0.01, Number(alpha) || 0.01));
+  try {
+    localStorage.setItem(
+      PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY,
+      String(clamped),
+    );
+  } catch { }
+  state.trendSmoothingAlpha = clamped;
+}
+
+function applyTrendSmoothingAlpha(force = false) {
+  const alpha = getTrendSmoothingAlpha();
+  const input = document.getElementById("trendSmoothingAlpha");
+  if (input) input.value = String(alpha);
+  const label = document.getElementById("trendSmoothingAlphaValue");
+  if (label) label.textContent = alpha.toFixed(2);
+  if (!force && Math.abs((state.trendSmoothingAlpha || 0) - alpha) < 0.0001)
+    return;
+  state.trendSmoothingAlpha = alpha;
+  try {
+    window.dispatchEvent(
+      new CustomEvent("plot:trendSmoothingAlpha", {
+        detail: { alpha },
+      }),
+    );
   } catch { }
 }
 
@@ -2365,6 +2447,8 @@ export function applyPlotSettingsToDom() {
       right.style.fontSize = (base * (1 + rm)).toFixed(2) + "px";
     }
   } catch { }
+  applyTrendSmoothingSetting();
+  applyTrendSmoothingAlpha();
   try {
     window.dispatchEvent(new Event("resize"));
   } catch { }
@@ -2431,10 +2515,31 @@ function initPlotSettingsUI() {
       applyPlotSettingsToDom();
     };
   }
+  const smoothingInput = document.getElementById("toggleTrendSmoothing");
+  if (smoothingInput) {
+    smoothingInput.checked = getTrendSmoothingEnabled();
+    smoothingInput.onchange = () => {
+      setTrendSmoothingStorage(!!smoothingInput.checked);
+      applyTrendSmoothingSetting(true);
+    };
+  }
+  const smoothingAlphaInput = document.getElementById("trendSmoothingAlpha");
+  if (smoothingAlphaInput) {
+    smoothingAlphaInput.value = String(getTrendSmoothingAlpha());
+    smoothingAlphaInput.onchange = () => {
+      const raw = parseFloat(smoothingAlphaInput.value);
+      const alpha = Math.min(0.95, Math.max(0.01, Number.isFinite(raw) ? raw : getTrendSmoothingAlpha()));
+      setTrendSmoothingAlphaStorage(alpha);
+      smoothingAlphaInput.value = String(alpha);
+      applyTrendSmoothingAlpha(true);
+    };
+  }
   // Apply immediately to reflect the current values
   try {
     applyPlotSettingsToDom();
   } catch { }
+  applyTrendSmoothingSetting(true);
+  applyTrendSmoothingAlpha(true);
 }
 
 function resetAllSettingsToDefaults() {
@@ -2473,6 +2578,12 @@ function resetAllSettingsToDefaults() {
   try {
     localStorage.removeItem(FIXED_PLAN_PREF_KEY);
   } catch { }
+  try {
+    localStorage.removeItem(PLOT_PREFIX + PLOT_SMOOTHING_KEY);
+  } catch { }
+  try {
+    localStorage.removeItem(PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY);
+  } catch { }
   // Apply to document/UI
   try {
     applyContrastToDocument(false);
@@ -2497,4 +2608,9 @@ function resetAllSettingsToDefaults() {
   try {
     renderHome(loadStoredPlans());
   } catch { }
+  lastTrendSmoothingApplied = null;
+  state.trendSmoothingEnabled = true;
+  state.trendSmoothingAlpha = 0.25;
+  applyTrendSmoothingSetting(true);
+  applyTrendSmoothingAlpha(true);
 }

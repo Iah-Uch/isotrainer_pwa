@@ -8,6 +8,7 @@ import {
   setStageXAxis,
   syncChartScales,
   plotStageSliceByIndex,
+  refreshSessionSeries,
 } from './charts.js';
 import {
   applyPlotSettingsToDom,
@@ -476,9 +477,8 @@ export function animationLoop() {
   if (state.trainingSession) {
     if (state.sessionChart) {
       // Push latest session series to the ECharts line
-      const data = (state.sessionSeries || []).map((p) => [p.x, p.y]);
       try {
-        state.sessionChart.setOption({ series: [{ data }] }, false, true);
+        refreshSessionSeries();
       } catch { }
       // Rebuild stage bands to keep current-stage pulse/highlight in sync
       try {
@@ -976,8 +976,7 @@ export function loadCompletedSessionFromExportCsv(text) {
   syncChartScales();
   try {
     // Push series to chart now
-    const data = (state.sessionSeries || []).map((p) => [p.x, p.y]);
-    state.sessionChart?.setOption({ series: [{ data }] }, false, true);
+    refreshSessionSeries();
   } catch { }
 
   // Navigate to plot and show completion stats

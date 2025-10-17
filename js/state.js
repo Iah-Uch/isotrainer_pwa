@@ -82,4 +82,6 @@ export const state = {
     handle: null,
     stepId: null,
   },
+  trendSmoothingEnabled: true,
+  trendSmoothingAlpha: 0.01,
 };

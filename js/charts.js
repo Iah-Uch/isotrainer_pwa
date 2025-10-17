@@ -5,6 +5,83 @@ import { fmtMMSS } from "./utils.js";
 // Helper: map series objects to ECharts tuples.
 const toXY = (arr) => arr.map((p) => [p.x, p.y]);
 
+const DEFAULT_TREND_ALPHA = 0.01;
+let trendSmoothingEnabled = state.trendSmoothingEnabled !== false;
+let trendSmoothingAlpha = Number(state.trendSmoothingAlpha);
+if (!Number.isFinite(trendSmoothingAlpha)) trendSmoothingAlpha = DEFAULT_TREND_ALPHA;
+
+const toSmoothedXY = (arr, alpha) => {
+  let prev = null;
+  return (arr || []).map((p) => {
+    const rawX = p?.x;
+    const x = Number(rawX);
+    const raw = typeof p?.y === "number" ? p.y : null;
+    if (!Number.isFinite(x) || raw == null || !Number.isFinite(raw))
+      return [Number.isFinite(x) ? x : rawX ?? null, raw];
+    const next = prev == null ? raw : prev + alpha * (raw - prev);
+    prev = next;
+    return [x, next];
+  });
+};
+
+function getSessionSeriesData() {
+  return trendSmoothingEnabled
+    ? toSmoothedXY(state.sessionSeries, trendSmoothingAlpha)
+    : toXY(state.sessionSeries);
+}
+
+function refreshStageSeriesForSmoothing() {
+  if (state.trainingSession && state.stageIdx >= 0) {
+    try {
+      plotStageSliceByIndex(state.stageIdx);
+      return;
+    } catch { }
+  }
+  if (state.chart) {
+    const data = trendSmoothingEnabled
+      ? toSmoothedXY(state.series, trendSmoothingAlpha)
+      : toXY(state.series);
+    try {
+      state.chart.setOption({ series: [{ data }] }, false, true);
+    } catch { }
+  }
+}
+
+function applyTrendSmoothingSetting(enabled) {
+  const next = !!enabled;
+  if (trendSmoothingEnabled === next) return;
+  trendSmoothingEnabled = next;
+  state.trendSmoothingEnabled = next;
+  refreshStageSeriesForSmoothing();
+  try {
+    const data = getSessionSeriesData();
+    state.sessionChart?.setOption({ series: [{ data }] }, false, true);
+  } catch { }
+}
+
+function applyTrendAlphaSetting(alpha) {
+  const numeric = Number(alpha);
+  if (!Number.isFinite(numeric)) return;
+  const clamped = Math.min(0.95, Math.max(0.01, numeric));
+  if (Math.abs(clamped - trendSmoothingAlpha) < 0.0001) return;
+  trendSmoothingAlpha = clamped;
+  state.trendSmoothingAlpha = clamped;
+  refreshStageSeriesForSmoothing();
+  try {
+    const data = getSessionSeriesData();
+    state.sessionChart?.setOption({ series: [{ data }] }, false, true);
+  } catch { }
+}
+
+try {
+  window.addEventListener("plot:trendSmoothing", (event) => {
+    applyTrendSmoothingSetting(!!event?.detail?.enabled);
+  });
+  window.addEventListener("plot:trendSmoothingAlpha", (event) => {
+    applyTrendAlphaSetting(event?.detail?.alpha);
+  });
+} catch { }
+
 function getLineWidths() {
   try {
     const w = window.innerWidth || 0;
@@ -216,6 +293,9 @@ export function setupCharts() {
   // eslint-disable-next-line no-undef
   state.chart = echarts.init(el1, null, { renderer: "canvas" });
   const lw = getLineWidths();
+  const initialStageData = trendSmoothingEnabled
+    ? toSmoothedXY(state.series, trendSmoothingAlpha)
+    : toXY(state.series);
   state.chart.setOption({
     animation: false,
     grid: { left: 0, right: 36, top: 0, bottom: 0 },
@@ -224,7 +304,7 @@ export function setupCharts() {
     series: [
       {
         type: "line",
-        data: toXY(state.series),
+        data: initialStageData,
         smooth: 0.3,
         showSymbol: false,
         lineStyle: {
@@ -272,7 +352,7 @@ export function setupCharts() {
     series: [
       {
         type: "line",
-        data: toXY(state.sessionSeries),
+        data: getSessionSeriesData(),
         smooth: 0.3,
         showSymbol: false,
         lineStyle: {
@@ -437,7 +517,7 @@ export function resetSessionSeries() {
   state.sessionSeries.length = 0;
   if (state.sessionChart)
     state.sessionChart.setOption(
-      { series: [{ data: toXY(state.sessionSeries) }] },
+      { series: [{ data: getSessionSeriesData() }] },
       false,
       true,
     );
@@ -517,11 +597,10 @@ export function updateStageChart(force, tMs) {
   const pt = { x: Math.max(0, x), y: force };
   state.series.push(pt);
   if (state.chart) {
-    state.chart.setOption(
-      { series: [{ data: toXY(state.series) }] },
-      false,
-      true,
-    );
+    const data = trendSmoothingEnabled
+      ? toSmoothedXY(state.series, trendSmoothingAlpha)
+      : toXY(state.series);
+    state.chart.setOption({ series: [{ data }] }, false, true);
     const b = state.currentStageBoundsOriginal || {};
     const above = typeof b.hi === "number" && force > b.hi;
     const below = typeof b.lo === "number" && force < b.lo;
@@ -539,7 +618,10 @@ export function updateStageChart(force, tMs) {
       false,
       true,
     );
-    updateForceMarker(pt.x, pt.y);
+    const displayY = trendSmoothingEnabled
+      ? (data[data.length - 1]?.[1] ?? pt.y)
+      : pt.y;
+    if (Number.isFinite(displayY)) updateForceMarker(pt.x, displayY);
   }
 }
 
@@ -550,6 +632,17 @@ export function updateSessionChart(force, tMs) {
     (tMs - state.sessionStartMs - state.accumulatedPauseOffset) / 1000,
   );
   state.sessionSeries.push({ x: Math.max(0, totalElapsedSec), y: force });
+}
+
+export function refreshSessionSeries() {
+  if (!state.sessionChart) return;
+  try {
+    state.sessionChart.setOption(
+      { series: [{ data: getSessionSeriesData() }] },
+      false,
+      true,
+    );
+  } catch { }
 }
 
 // Plot only the points for a given stage index into the stage chart (forceChart).
@@ -573,12 +666,20 @@ export function plotStageSliceByIndex(index) {
   );
   state.series.length = 0;
   for (const p of slice) {
-    state.series.push({ x: Math.max(0, p.x - start), y: p.y });
+    const y = typeof p?.y === "number" ? p.y : null;
+    state.series.push({ x: Math.max(0, p.x - start), y });
   }
-  if (state.chart)
-    state.chart.setOption(
-      { series: [{ data: toXY(state.series) }] },
-      false,
-      true,
-    );
+  if (state.chart) {
+    const data = trendSmoothingEnabled
+      ? toSmoothedXY(state.series, trendSmoothingAlpha)
+      : toXY(state.series);
+    state.chart.setOption({ series: [{ data }] }, false, true);
+    const last = data[data.length - 1];
+    if (
+      last &&
+      Number.isFinite(last[0]) &&
+      Number.isFinite(last[1])
+    )
+      updateForceMarker(last[0], last[1]);
+  }
 }

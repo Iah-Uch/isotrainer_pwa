@@ -894,6 +894,19 @@
               <span>Gráfico: Estágio (linha)</span>
               <label class="switch"><input id="toggleStageChart" type="checkbox" /><span class="slider"></span></label>
             </label>
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+              <span>Gráfico: suavização de tendência</span>
+              <label class="switch"><input id="toggleTrendSmoothing" type="checkbox" /><span
+                  class="slider"></span></label>
+            </label>
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+              <span>Força da suavização</span>
+              <div class="flex items-center gap-2">
+                <input id="trendSmoothingAlpha" type="range" min="0.01" max="0.95" step="0.01" value="0.01"
+                  class="w-32" />
+                <span id="trendSmoothingAlphaValue" class="text-sm text-slate-300">0.01</span>
+              </div>
+            </label>
 
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
               <span>Lateral Dir.: Cronômetro do estágio</span>
