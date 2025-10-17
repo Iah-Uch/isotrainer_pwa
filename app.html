@@ -52,14 +52,22 @@
             <div class="flex items-center justify-between gap-3">
               <div>
                 <h2 class="text-2xl font-bold tracking-tight">Sessões</h2>
-                <p class="text-slate-400">
-                  Selecione uma sessão importada ou use o fluxo manual.
+                <p id="homeSubtitle" class="text-slate-400">
+                  Explore a biblioteca de mesociclos, importe periodizações ou use o fluxo manual.
                 </p>
               </div>
-              <div id="homeActions" class="flex items-center gap-2">
+              <div id="homeActions" class="flex flex-wrap items-center justify-end gap-2">
                 <button id="homeManualBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700"
                   title="Fluxo manual">
                   Fluxo manual
+                </button>
+                <button id="importPlansBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 hidden"
+                  title="Importar periodização">
+                  Importar periodização
+                </button>
+                <button id="homeImportSessionBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 hidden"
+                  title="Importar sessões concluídas">
+                  Importar sessões
                 </button>
                 <input id="importPlansInput" type="file" accept=".csv,text/csv" class="hidden" />
                 <input id="homeImportSessionInput" type="file" accept=".csv,text/csv" class="hidden" />
@@ -106,7 +114,10 @@
             </div>
 
             <div id="homeContentWrap" class="mt-6">
-              <div class="flex w-fit mx-auto rounded-xl overflow-hidden border border-white/10">
+              <div id="homeTabs" class="flex w-fit mx-auto rounded-xl overflow-hidden border border-white/10">
+                <button id="tabFixed" class="hidden px-4 py-2 bg-slate-800">
+                  Planos fixos
+                </button>
                 <button id="tabTodo" class="px-4 py-2 bg-slate-700">
                   A fazer
                 </button>
@@ -116,6 +127,16 @@
                 <button id="tabDone" class="px-4 py-2 bg-slate-800">
                   Concluído
                 </button>
+              </div>
+
+              <div id="panelFixed" class="mt-4 hidden">
+                <div id="fixedPlansWrap" class="text-left">
+                  <h3 class="text-lg font-semibold">Planos disponíveis</h3>
+                  <p class="text-slate-400 text-sm mt-1">
+                    Selecione um mesociclo para gerar estágios a partir da força máxima estimada do braço.
+                  </p>
+                  <div id="fixedPlansList" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
+                </div>
               </div>
 
               <!-- A FAZER: hoje e próximas -->
@@ -436,15 +457,15 @@
           <main id="plotStageCard" class="relative overflow-hidden h-full min-h-0">
             <div class="relative w-full h-full p-0 min-h-0">
               <div class="relative w-full h-full rounded-xl bg-slate-950/75 overflow-hidden">
-                <div id="forceMarker" class="absolute left-0 top-0 z-20 opacity-0 heart-pulse" style="
+                <div id="forceMarker" class="absolute left-0 top-0 z-20 opacity-0 force-pulse" style="
                       transform: translate(-50%, -50%);
                       --pulse-period: 1s;
                       pointer-events: none;
                     ">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-6 w-6 text-rose-500"
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-6 w-6 text-orange-400"
                     fill="currentColor" aria-hidden="true">
                     <path
-                      d="M12.001 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54l-.449.41z" />
+                      d="M434.8 54.1C446.7 62.7 451.1 78.3 445.7 91.9L367.3 288L512 288C525.5 288 537.5 296.4 542.1 309.1C546.7 321.8 542.8 336 532.5 344.6L244.5 584.6C233.2 594 217.1 594.5 205.2 585.9C193.3 577.3 188.9 561.7 194.3 548.1L272.7 352L128 352C114.5 352 102.5 343.6 97.9 330.9C93.3 318.2 97.2 304 107.5 295.4L395.5 55.4C406.8 46 422.9 45.5 434.8 54.1z" />
                   </svg>
                 </div>
                 <div id="forceChart" class="absolute inset-0 w-full h-full"></div>
@@ -615,6 +636,36 @@
     </div>
   </div>
 
+  <div id="fixedPlanModal" tabindex="-1"
+    class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true"
+    aria-labelledby="fixedPlanTitle">
+    <div
+      class="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 ring-1 ring-white/10 shadow-2xl flex flex-col gap-4 p-5">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 id="fixedPlanTitle" class="text-xl font-semibold">Plano fixo</h3>
+          <p id="fixedPlanSummary" class="mt-1 text-sm text-slate-300"></p>
+        </div>
+        <button id="fixedPlanCloseBtn" class="text-slate-300 hover:text-white text-2xl leading-none"
+          aria-label="Fechar">
+          ×
+        </button>
+      </div>
+      <div class="text-sm text-slate-400" id="fixedPlanMeta">—</div>
+      <div class="text-xs text-slate-500" id="fixedPlanMetaRest"></div>
+      <ul id="fixedPlanStageList" class="space-y-2"></ul>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+        <button id="fixedPlanCancelBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+          Cancelar
+        </button>
+        <button id="fixedPlanStartBtn"
+          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
+          Iniciar fluxo
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Plan screen floating FABs (outside container) -->
   <div id="planFabs" class="hidden">
     <button id="backToConnect"
@@ -768,20 +819,20 @@
         <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
           <div>
             <div class="font-medium">Modo de Alto Contraste</div>
-            <div class="text-sm text-slate-400">
-              Deixa os gráficos mais brilhantes para melhor visibilidade.
-            </div>
           </div>
           <label class="switch"><input id="contrastToggle" type="checkbox" /><span class="slider"></span></label>
         </label>
         <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
           <div>
             <div class="font-medium">Legacy Galileu Colors</div>
-            <div class="text-sm text-slate-400">
-              Colorir faixas por regra de força (limite inferior).
-            </div>
           </div>
           <label class="switch"><input id="legacyColorsToggle" type="checkbox" /><span class="slider"></span></label>
+        </label>
+        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+          <div>
+            <div class="font-medium">Planos fixos na Home</div>
+          </div>
+          <label class="switch"><input id="fixedPlanToggle" type="checkbox" /><span class="slider"></span></label>
         </label>
 
         <!-- Plot Screen Settings -->
@@ -868,6 +919,43 @@
           </div>
         </details>
 
+        <details class="rounded-xl bg-white/5 border border-white/10 p-3">
+          <summary class="font-medium cursor-pointer select-none">
+            Descansos entre etapas
+          </summary>
+          <div class="space-y-3 mt-3 text-sm">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+              <div>
+                <div class="font-medium text-slate-200">Duração do descanso (s)</div>
+                <div class="text-xs text-slate-400">Aplicado a cada descanso configurado.</div>
+              </div>
+              <input id="restIntervalInput" type="number" min="10" max="600" step="10"
+                class="w-24 rounded-md border border-white/10 bg-slate-900/60 px-2 py-1 text-right" />
+            </label>
+
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+              <div>
+                <div class="font-medium text-slate-200">Permitir pular descanso</div>
+                <div class="text-xs text-slate-400">Exibe o botão “Pular descanso” durante a contagem.</div>
+              </div>
+              <label class="switch"><input id="restSkipToggle" type="checkbox" /><span class="slider"></span></label>
+            </label>
+
+            <div class="rounded-lg bg-black/20 p-3">
+              <div class="font-medium text-slate-200">Descansos configurados</div>
+              <div class="text-xs text-slate-400 mt-1">
+                Reordene as séries (a primeira de cada braço inclui a medição de força máxima) e insira descansos nos
+                pontos desejados.
+              </div>
+              <ul id="restPositionsList" class="mt-2 space-y-2"></ul>
+              <button id="restAddBtn"
+                class="mt-2 w-full rounded-lg border border-dashed border-white/20 px-3 py-2 text-sm text-slate-300 hover:bg-white/5">
+                Adicionar descanso
+              </button>
+            </div>
+          </div>
+        </details>
+
         <div class="rounded-xl bg-white/5 border border-white/10 p-3">
           <div class="font-medium">Multiplicadores das Laterais</div>
           <div class="space-y-2 mt-2">
@@ -894,65 +982,73 @@
           </div>
         </div>
 
-        <div class="mt-3 flex justify-center">
+        <div class="mt-3 flex items-center justify-between gap-2">
           <button id="settingsResetAll" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white">
             Restaurar padrões
+          </button>
+          <div class="flex-1"></div>
+          <button id="settingsSaveBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">
+            Salvar
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Pre-Start Modal -->
-  <div id="preStartModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-    role="dialog" aria-modal="true" aria-labelledby="preStartTitle">
-    <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10">
-      <h3 id="preStartTitle" class="text-xl font-semibold">
-        Bem-vindo! Prepare-se para começar
-      </h3>
-      <p class="mt-2 text-sm text-slate-300">
-        Antes de iniciar, ajuste a intensidade para entrar no intervalo do 1º
-        estágio. Você pode começar mesmo fora do alvo, se preferir.
-      </p>
-      <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+  <!-- (pre-start flow removed) -->
+
+  <!-- Arm Maximum Measurement Modal -->
+  <div id="armMaxModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog"
+    aria-modal="true" aria-labelledby="armMaxTitle">
+    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10 space-y-4">
+      <div>
+        <h3 id="armMaxTitle" class="text-xl font-semibold">Medição de força máxima</h3>
+        <p id="armMaxSubtitle" class="text-sm text-slate-400 mt-1">
+          Mantenha o braço em posição e aplique força máxima por 3 segundos.
+        </p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-sm">
         <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">Alvo (E1)</div>
-          <div id="preStartStageRange" class="text-lg font-semibold">—</div>
+          <div class="text-slate-400 text-xs">Força atual</div>
+          <div id="armMaxCurrent" class="text-2xl font-semibold">0,0 kgf</div>
         </div>
         <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">Sua força</div>
-          <div id="preStartForceValue" class="text-lg font-semibold">—</div>
+          <div class="text-slate-400 text-xs">Máximo capturado</div>
+          <div id="armMaxPeak" class="text-2xl font-semibold">0,0 kgf</div>
         </div>
       </div>
-      <div class="mt-3">
-        <div class="relative h-3 rounded-full bg-slate-800" id="preStartBar" aria-hidden="true">
-          <div id="preStartTarget" class="absolute h-3 rounded-full bg-emerald-600/40" style="left: 0; width: 0"></div>
-          <div id="preStartThumb"
-            class="absolute -top-1 h-5 w-5 rounded-full border-2 border-white bg-current text-slate-400"
-            style="left: 0"></div>
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="text-slate-400 text-xs">Progresso da captura</div>
+        <div class="mt-2 h-2 rounded-full bg-slate-800">
+          <div id="armMaxProgress" class="h-2 rounded-full bg-emerald-500 transition-all" style="width: 0%"></div>
         </div>
-        <div class="flex items-center justify-between text-xs text-slate-400 mt-1">
-          <span id="preStartScaleMin">—</span>
-          <span id="preStartScaleMax">—</span>
-        </div>
+        <div id="armMaxCountdown" class="mt-2 text-sm text-slate-300">3,0s restantes</div>
       </div>
-      <div id="preStartGuidance" class="mt-3 text-sm text-slate-300 flex items-center gap-2" aria-live="polite">
-        <span id="preStartIcon" class="inline-flex h-5 w-5 items-center justify-center text-slate-400">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
-            aria-hidden="true">
-            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z" />
-          </svg>
-        </span>
-        <span id="preStartText">Aguardando leitura de força...</span>
-      </div>
-      <div class="mt-4 grid grid-cols-2 gap-2">
-        <button id="preStartBackBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2">
-          Voltar
+      <div class="flex items-center justify-end gap-2">
+        <button id="armMaxCancelBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+          Cancelar
         </button>
-        <button id="preStartGoBtn" class="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2">
-          Iniciar ▶
+        <button id="armMaxProceedBtn"
+          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-slate-700 disabled:text-slate-400"
+          disabled>
+          Prosseguir
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Rest Countdown Overlay -->
+  <div id="restOverlay" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" role="dialog"
+    aria-modal="true" aria-live="polite">
+    <div
+      class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10 space-y-4 text-center">
+      <div class="text-sm uppercase tracking-wide text-slate-400">Descanso</div>
+      <div id="restCountdown" class="text-4xl font-semibold">02:00</div>
+      <div id="restNextInfo" class="text-sm text-slate-400"></div>
+      <button id="restSkipBtn"
+        class="hidden w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-white disabled:bg-slate-600">
+        Pular descanso
+      </button>
     </div>
   </div>
 

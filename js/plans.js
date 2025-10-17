@@ -1,11 +1,300 @@
 // Module: Plans import, storage, rendering and interactions.
-import { parseTimeToSeconds, fmtMMSS, pad2 } from "./utils.js";
-import { state } from "./state.js";
+import { parseTimeToSeconds, fmtMMSS, pad2, clamp } from "./utils.js";
+import { state, DEV_BYPASS_CONNECT } from './state.js';
 import { loadPlanForEdit } from "./edit-plan.js";
-import { showScreen, loadCompletedSessionFromExportCsv } from "./session.js";
+const FIXED_PLAN_LIBRARY = [
+  {
+    id: 'mesociclo-incorporacao',
+    name: 'Mesociclo de Incorporação',
+    summary:
+      'Introduzir o usuário ao treino isométrico de preensão, priorizando tolerância e controle respiratório durante esforços leves e curtos.',
+    stages: [
+      {
+        label: 'Familiarização',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.15,
+        upperPct: 0.18,
+      },
+      {
+        label: 'Controle leve',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.18,
+        upperPct: 0.2,
+      },
+      {
+        label: 'Consistência inicial',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.18,
+        upperPct: 0.22,
+      },
+    ],
+  },
+  {
+    id: 'mesociclo-basico',
+    name: 'Mesociclo Básico',
+    summary:
+      'Aprimorar a capacidade de sustentar 60 s de isometria com estabilidade de força e respiração, desenvolvendo adaptação autonômica inicial.',
+    stages: [
+      {
+        label: 'Estabilidade leve',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.18,
+        upperPct: 0.22,
+      },
+      {
+        label: 'Controle respiratório',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.2,
+        upperPct: 0.24,
+      },
+      {
+        label: 'Sustentação moderada',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.22,
+        upperPct: 0.25,
+      },
+    ],
+  },
+  {
+    id: 'mesociclo-estabilizador',
+    name: 'Mesociclo Estabilizador',
+    summary:
+      'Consolidar o controle pressórico e respiratório, reduzindo a variabilidade da força e aprimorando o equilíbrio autonômico.',
+    stages: [
+      {
+        label: 'Controle sustentado',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.2,
+        upperPct: 0.25,
+      },
+      {
+        label: 'Estabilidade contínua',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.22,
+        upperPct: 0.26,
+      },
+      {
+        label: 'Refinamento técnico',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.23,
+        upperPct: 0.27,
+      },
+    ],
+  },
+  {
+    id: 'mesociclo-controle',
+    name: 'Mesociclo de Controle',
+    summary:
+      'Avaliar o progresso do controle pressórico e autonômico, ajustando a faixa de intensidade conforme a resposta do usuário.',
+    stages: [
+      {
+        label: 'Aquecimento leve',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.18,
+        upperPct: 0.22,
+      },
+      {
+        label: 'Avaliação controlada',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.22,
+        upperPct: 0.26,
+      },
+      {
+        label: 'Estabilidade máxima',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.25,
+        upperPct: 0.3,
+      },
+    ],
+  },
+  {
+    id: 'mesociclo-pre-otimizacao',
+    name: 'Mesociclo de Pré-Otimização',
+    summary:
+      'Atingir o melhor controle pressórico e respiratório com intensidades próximas ao limite superior seguro (30% da Fmax).',
+    stages: [
+      {
+        label: 'Pré-ativação',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.22,
+        upperPct: 0.26,
+      },
+      {
+        label: 'Sustentação máxima segura',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.26,
+        upperPct: 0.3,
+      },
+      {
+        label: 'Descompressão',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.2,
+        upperPct: 0.24,
+      },
+    ],
+  },
+  {
+    id: 'mesociclo-recuperativo',
+    name: 'Mesociclo Recuperativo',
+    summary:
+      'Favorecer a recuperação autonômica e a estabilidade hemodinâmica, mantendo estímulo leve e controlado.',
+    stages: [
+      {
+        label: 'Relaxamento ativo',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.15,
+        upperPct: 0.18,
+      },
+      {
+        label: 'Controle suave',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.16,
+        upperPct: 0.2,
+      },
+      {
+        label: 'Recuperação sustentada',
+        durationSec: 60,
+        restSec: 60,
+        lowerPct: 0.15,
+        upperPct: 0.18,
+      },
+    ],
+  },
+];
+import {
+  showScreen,
+  loadCompletedSessionFromExportCsv,
+  prepareFixedPlanFlow,
+} from "./session.js";
 
 const STORAGE_KEY = "isotrainer:plans";
 const STORAGE_DONE_KEY = "isotrainer:doneSessions";
+const REST_INTERVAL_KEY = "isotrainer:rest:interval";
+const REST_POSITIONS_KEY = "isotrainer:rest:positions";
+const REST_SKIP_KEY = "isotrainer:rest:skip";
+const FLOW_STEP_ORDER_KEY = "isotrainer:flow:order";
+const FIXED_PLAN_PREF_KEY = "isotrainer:home:fixedPlans";
+
+// Flow step mapping (1-based index).
+export const FLOW_TRAINING_STEPS = [
+  {
+    id: "R1",
+    arm: "direito",
+    label: "Braço Direito • Treino 1",
+    description: "Inclui medição de força máxima.",
+    captureMax: true,
+    suffix: " • Série 1",
+  },
+  {
+    id: "R2",
+    arm: "direito",
+    label: "Braço Direito • Treino 2",
+    description: "Segunda série do braço direito.",
+    captureMax: false,
+    suffix: " • Série 2",
+  },
+  {
+    id: "L1",
+    arm: "esquerdo",
+    label: "Braço Esquerdo • Treino 1",
+    description: "Inclui medição de força máxima.",
+    captureMax: true,
+    suffix: " • Série 1",
+  },
+  {
+    id: "L2",
+    arm: "esquerdo",
+    label: "Braço Esquerdo • Treino 2",
+    description: "Segunda série do braço esquerdo.",
+    captureMax: false,
+    suffix: " • Série 2",
+  },
+];
+
+export const FLOW_REST_SLOTS = [1, 2, 3];
+export const DEFAULT_FLOW_STEP_ORDER = FLOW_TRAINING_STEPS.map((step) => step.id);
+const FLOW_MEASUREMENT_SECONDS = 3;
+const DEFAULT_REST_POSITIONS = [1, 3];
+
+export function getFlowTrainingStepById(id) {
+  if (!id) return null;
+  return FLOW_TRAINING_STEPS.find((step) => step.id === id) || null;
+}
+
+export function sanitizeFlowStepOrder(input) {
+  const seen = new Set();
+  const order = [];
+  const source = Array.isArray(input) ? input : [];
+  source.forEach((value) => {
+    const id = String(value);
+    if (seen.has(id)) return;
+    const meta = getFlowTrainingStepById(id);
+    if (!meta) return;
+    seen.add(id);
+    order.push(id);
+  });
+  DEFAULT_FLOW_STEP_ORDER.forEach((id) => {
+    if (!seen.has(id)) order.push(id);
+  });
+  return order;
+}
+
+
+export function getFixedPlanLibrary() {
+  return FIXED_PLAN_LIBRARY.slice();
+}
+
+export function getFixedPlanById(id) {
+  return FIXED_PLAN_LIBRARY.find((plan) => plan.id === id) || null;
+}
+
+function sumPlanStageSeconds(plan) {
+  if (!plan || !Array.isArray(plan.stages)) return 0;
+  return plan.stages.reduce((total, stage) => {
+    const dur = Number(stage?.durationSec) || 0;
+    return total + Math.max(0, Math.round(dur));
+  }, 0);
+}
+
+function computeFixedPlanSessionSeconds(plan) {
+  const stageTotal = sumPlanStageSeconds(plan);
+  const restPositions = Array.isArray(state.restPositions)
+    ? state.restPositions
+    : [];
+  const uniqueRest = Array.from(
+    new Set(
+      restPositions
+        .map((slot) => normalizeRestSlot(slot))
+        .filter((slot) => slot !== null),
+    ),
+  );
+  const restInterval = clamp(Number(state.restIntervalSec) || 0, 0, 3600);
+  const restTotal = uniqueRest.length * restInterval;
+  const trainingRunsPerArm = 2;
+  const arms = 2;
+  const measurementTotal =
+    FLOW_TRAINING_STEPS.filter((step) => step.captureMax).length *
+    FLOW_MEASUREMENT_SECONDS;
+  return stageTotal * trainingRunsPerArm * arms + restTotal + measurementTotal;
+}
+
 
 export function loadStoredPlans() {
   try {
@@ -400,10 +689,13 @@ export function renderHome(plans) {
   const empty = document.getElementById("plansEmpty");
   const emptyState = document.getElementById("homeEmptyState");
   const contentWrap = document.getElementById("homeContentWrap");
+  const tabsWrap = document.getElementById("homeTabs");
   const doneList = document.getElementById("plansDoneList");
+  const tabFixedBtn = document.getElementById("tabFixed");
   const tabTodoBtn = document.getElementById("tabTodo");
   const tabOverdueBtn = document.getElementById("tabOverdue");
   const tabDoneBtn = document.getElementById("tabDone");
+  const panelFixed = document.getElementById("panelFixed");
   const panelTodo = document.getElementById("panelTodo");
   const panelOverdue = document.getElementById("panelOverdue");
   const panelDone = document.getElementById("panelDone");
@@ -417,145 +709,163 @@ export function renderHome(plans) {
   const overduePagerInfo = document.getElementById("overduePagerInfo");
   const src = Array.isArray(plans) ? plans.slice() : [];
   const dones = loadDoneSessions();
+  const showFixed = !!state.showFixedPlans;
   const hasPlans = src.length > 0;
+  const hasLibrary = showFixed
+    ? renderFixedPlans(getFixedPlanLibrary())
+    : (renderFixedPlans([]), false);
 
-  // Empty state rules:
-  // - Show the import dropzone whenever there are no plans (even if there are done sessions).
-  // - Show the main content (tabs/lists) only if there are plans or done sessions.
   const homeActions = document.getElementById("homeActions");
   const homeMenuWrap = document.getElementById("homeMenuWrap");
-  if (!hasPlans) {
+  if (!hasPlans && !showFixed) {
     if (emptyState) emptyState.classList.remove("hidden");
-    // Show quick actions (manual/import) when there are no plans yet
     if (homeActions) homeActions.classList.remove("hidden");
   } else {
     if (emptyState) emptyState.classList.add("hidden");
-    // Hide quick actions when plans exist (users can use the FAB menu)
     if (homeActions) homeActions.classList.add("hidden");
   }
-  // Do not force Home FAB visibility here; showScreen controls visibility per screen.
-  const hasAnyForContent = hasPlans || dones.length > 0;
+
+  const hasAnyForContent =
+    (showFixed ? hasLibrary : hasPlans) || dones.length > 0;
   if (contentWrap) contentWrap.classList.toggle("hidden", !hasAnyForContent);
+  const showTabs = (showFixed && hasLibrary) || (!showFixed && hasPlans) || dones.length > 0;
+  if (tabsWrap) tabsWrap.classList.toggle("hidden", !showTabs);
   if (!hasAnyForContent) {
     if (empty) empty.classList.add("hidden");
     return;
   }
-  // Remove done sessions from pending, preferring stable plan id.
-  // Fall back to index match only when id linkage is unavailable.
-  function isDone(s) {
-    if (!s) return false;
-    const sid = s.id;
-    const sidx = Number(s.idx);
-    return dones.some((r) => {
-      if (!r) return false;
-      // Prefer exact id match when available on both sides
-      if (sid && r.planId && r.planId === sid) return true;
-      // Fallback: allow index match only if either side lacks a stable id
+
+  function isDone(plan) {
+    if (!plan) return false;
+    const sid = plan.id;
+    const sidx = Number(plan.idx);
+    return dones.some((rec) => {
+      if (!rec) return false;
+      if (sid && rec.planId && rec.planId === sid) return true;
       if (
-        (!sid || !r.planId) &&
+        (!sid || !rec.planId) &&
         Number.isFinite(sidx) &&
-        Number(r.planIdx) === sidx
+        Number(rec.planIdx) === sidx
       )
         return true;
       return false;
     });
   }
-  const pendingAll = src.filter((s) => !isDone(s));
-  // Never show the small warning box here; it's for first-import guidance only.
-  if (empty) empty.classList.add("hidden");
 
-  // Date helpers
-  function parseDateKey(dstr) {
-    const s = String(dstr || "").trim();
-    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-    if (m) {
-      const DD = m[1].padStart(2, "0");
-      const MM = m[2].padStart(2, "0");
-      const YYYY = m[3].length === 2 ? "20" + m[3] : m[3];
+  const pendingAll = showFixed ? [] : src.filter((plan) => !isDone(plan));
+
+  const parseDateKey = (input) => {
+    const value = String(input || "").trim();
+    let match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (match) {
+      const DD = match[1].padStart(2, "0");
+      const MM = match[2].padStart(2, "0");
+      const YYYY = match[3].length === 2 ? "20" + match[3] : match[3];
       return Number(`${YYYY}${MM}${DD}`);
     }
-    m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (m) {
-      const YYYY = m[1];
-      const MM = m[2].padStart(2, "0");
-      const DD = m[3].padStart(2, "0");
+    match = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) {
+      const YYYY = match[1];
+      const MM = match[2].padStart(2, "0");
+      const DD = match[3].padStart(2, "0");
       return Number(`${YYYY}${MM}${DD}`);
     }
     return NaN;
-  }
-  const now = new Date();
-  const todayKey = Number(
-    String(now.getFullYear()) +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0"),
-  );
-  const isToday = (s) => parseDateKey(s?.date) === todayKey;
-  const isFutureOrToday = (s) => {
-    const k = parseDateKey(s?.date);
-    return Number.isFinite(k) && k >= todayKey;
   };
-  const isPast = (s) => {
-    const k = parseDateKey(s?.date);
-    return Number.isFinite(k) && k < todayKey;
+
+  const today = new Date();
+  const todayKey = Number(
+    String(today.getFullYear()) +
+      String(today.getMonth() + 1).padStart(2, "0") +
+      String(today.getDate()).padStart(2, "0"),
+  );
+  const isFutureOrToday = (plan) => {
+    const key = parseDateKey(plan?.date);
+    return Number.isFinite(key) && key >= todayKey;
+  };
+  const isPast = (plan) => {
+    const key = parseDateKey(plan?.date);
+    return Number.isFinite(key) && key < todayKey;
   };
 
   const todoItems = pendingAll.filter(isFutureOrToday);
   const overdueItems = pendingAll.filter(isPast);
+  const showPendingLists = !showFixed && hasPlans;
+
+  if (tabFixedBtn)
+    tabFixedBtn.classList.toggle("hidden", !(showFixed && hasLibrary));
+  if (tabTodoBtn) tabTodoBtn.classList.toggle("hidden", showFixed);
+  if (tabOverdueBtn) tabOverdueBtn.classList.toggle("hidden", showFixed);
+  if (panelFixed)
+    panelFixed.classList.toggle("hidden", !(showFixed && hasLibrary));
+
+  if (panelTodo) panelTodo.classList.toggle("hidden", !showPendingLists);
+  if (panelOverdue)
+    panelOverdue.classList.toggle("hidden", !showPendingLists);
 
   if (todayEl) {
     todayEl.innerHTML = "";
-    const today = getTodayPlan(todoItems);
-    if (today) {
-      // Resolve original index so clicking the Today card opens the correct session
-      const todayIdx = src.findIndex((s) =>
-        s?.id && today?.id ? s.id === today.id : s === today,
-      );
-      todayEl.appendChild(
-        makePlanCard(today, true, todayIdx >= 0 ? todayIdx : 0),
-      );
-    } else {
-      const div = document.createElement("div");
-      div.className = "text-slate-400 text-sm";
-      div.textContent = "Nenhum plano para hoje.";
-      todayEl.appendChild(div);
+    if (showPendingLists) {
+      const todayPlan = getTodayPlan(todoItems);
+      if (todayPlan) {
+        const idx = src.findIndex((plan) =>
+          plan?.id && todayPlan?.id
+            ? plan.id === todayPlan.id
+            : plan === todayPlan,
+        );
+        todayEl.appendChild(
+          makePlanCard(todayPlan, true, idx >= 0 ? idx : 0),
+        );
+      } else {
+        const div = document.createElement("div");
+        div.className = "text-slate-400 text-sm";
+        div.textContent = "Nenhum plano para hoje.";
+        todayEl.appendChild(div);
+      }
     }
   }
 
-  // A fazer (today and forward).
   if (todoListEl) {
     todoListEl.innerHTML = "";
-    todoTotalPages = Math.max(1, Math.ceil(todoItems.length / PAGE_SIZE));
-    todoPage = Math.min(Math.max(1, todoPage), todoTotalPages);
-    const start = (todoPage - 1) * PAGE_SIZE;
-    const pageItems = todoItems.slice(start, start + PAGE_SIZE);
-    pageItems.forEach((p) => {
-      const origIdx = src.findIndex((s) =>
-        s?.id && p?.id ? s.id === p.id : s === p,
-      );
-      todoListEl.appendChild(
-        makePlanCard(p, false, origIdx >= 0 ? origIdx : 0),
-      );
-    });
+    if (showPendingLists) {
+      todoTotalPages = Math.max(1, Math.ceil(todoItems.length / PAGE_SIZE));
+      todoPage = Math.min(Math.max(1, todoPage), todoTotalPages);
+      const start = (todoPage - 1) * PAGE_SIZE;
+      const pageItems = todoItems.slice(start, start + PAGE_SIZE);
+      pageItems.forEach((plan) => {
+        const idx = src.findIndex((candidate) =>
+          candidate?.id && plan?.id
+            ? candidate.id === plan.id
+            : candidate === plan,
+        );
+        todoListEl.appendChild(
+          makePlanCard(plan, false, idx >= 0 ? idx : 0),
+        );
+      });
+    }
   }
 
-  // Pendente (past, not completed).
   if (overdueListEl) {
     overdueListEl.innerHTML = "";
-    overdueTotalPages = Math.max(1, Math.ceil(overdueItems.length / PAGE_SIZE));
-    overduePage = Math.min(Math.max(1, overduePage), overdueTotalPages);
-    const startO = (overduePage - 1) * PAGE_SIZE;
-    const pageOverdue = overdueItems.slice(startO, startO + PAGE_SIZE);
-    pageOverdue.forEach((p) => {
-      const origIdx = src.findIndex((s) =>
-        s?.id && p?.id ? s.id === p.id : s === p,
-      );
-      overdueListEl.appendChild(
-        makePlanCard(p, false, origIdx >= 0 ? origIdx : 0),
-      );
-    });
+    if (showPendingLists) {
+      overdueTotalPages = Math.max(1, Math.ceil(overdueItems.length / PAGE_SIZE));
+      overduePage = Math.min(Math.max(1, overduePage), overdueTotalPages);
+      const startO = (overduePage - 1) * PAGE_SIZE;
+      const pageOverdue = overdueItems.slice(startO, startO + PAGE_SIZE);
+      pageOverdue.forEach((plan) => {
+        const idx = src.findIndex((candidate) =>
+          candidate?.id && plan?.id
+            ? candidate.id === plan.id
+            : candidate === plan,
+        );
+        overdueListEl.appendChild(
+          makePlanCard(plan, false, idx >= 0 ? idx : 0),
+        );
+      });
+    }
   }
 
-  // Concluído (done list).
+
   if (doneList) {
     doneList.innerHTML = "";
     if (!dones.length) {
@@ -574,52 +884,62 @@ export function renderHome(plans) {
     }
   }
 
-  // Todo pager controls.
   if (todoPager && todoPagerPrev && todoPagerNext && todoPagerInfo) {
-    todoPager.classList.toggle("hidden", todoItems.length <= PAGE_SIZE);
-    todoPagerPrev.disabled = todoPage <= 1;
-    todoPagerNext.disabled = todoPage >= todoTotalPages;
-    todoPagerInfo.textContent = `Página ${todoPage} de ${todoTotalPages}`;
+    if (!showPendingLists) todoPager.classList.add("hidden");
+    else todoPager.classList.toggle("hidden", todoItems.length <= PAGE_SIZE);
+    todoPagerPrev.disabled = !showPendingLists || todoPage <= 1;
+    todoPagerNext.disabled =
+      !showPendingLists || todoPage >= todoTotalPages;
+    todoPagerInfo.textContent = showPendingLists
+      ? `Página ${todoPage} de ${todoTotalPages}`
+      : "—";
     todoPagerPrev.onclick = () => {
-      if (todoPage > 1) {
+      if (showPendingLists && todoPage > 1) {
         todoPage -= 1;
         renderHome(loadStoredPlans());
       }
     };
     todoPagerNext.onclick = () => {
-      if (todoPage < todoTotalPages) {
+      if (showPendingLists && todoPage < todoTotalPages) {
         todoPage += 1;
         renderHome(loadStoredPlans());
       }
     };
   }
 
-  // Overdue pager controls.
   if (
     overduePager &&
     overduePagerPrev &&
     overduePagerNext &&
     overduePagerInfo
   ) {
-    overduePager.classList.toggle("hidden", overdueItems.length <= PAGE_SIZE);
-    overduePagerPrev.disabled = overduePage <= 1;
-    overduePagerNext.disabled = overduePage >= overdueTotalPages;
-    overduePagerInfo.textContent = `Página ${overduePage} de ${overdueTotalPages}`;
+    if (!showPendingLists) overduePager.classList.add("hidden");
+    else
+      overduePager.classList.toggle(
+        "hidden",
+        overdueItems.length <= PAGE_SIZE,
+      );
+    overduePagerPrev.disabled =
+      !showPendingLists || overduePage <= 1;
+    overduePagerNext.disabled =
+      !showPendingLists || overduePage >= overdueTotalPages;
+    overduePagerInfo.textContent = showPendingLists
+      ? `Página ${overduePage} de ${overdueTotalPages}`
+      : "—";
     overduePagerPrev.onclick = () => {
-      if (overduePage > 1) {
+      if (showPendingLists && overduePage > 1) {
         overduePage -= 1;
         renderHome(loadStoredPlans());
       }
     };
     overduePagerNext.onclick = () => {
-      if (overduePage < overdueTotalPages) {
+      if (showPendingLists && overduePage < overdueTotalPages) {
         overduePage += 1;
         renderHome(loadStoredPlans());
       }
     };
   }
 
-  // Done pager.
   const dp = document.getElementById("donePager");
   const dPrev = document.getElementById("donePagerPrev");
   const dNext = document.getElementById("donePagerNext");
@@ -643,61 +963,267 @@ export function renderHome(plans) {
     };
   }
 
-  // Tabs
   function activate(tab) {
-    if (
-      !tabTodoBtn ||
-      !tabOverdueBtn ||
-      !tabDoneBtn ||
-      !panelTodo ||
-      !panelOverdue ||
-      !panelDone
-    )
-      return;
-    if (!hasPlans && (tab === "todo" || tab === "overdue")) tab = "done";
+    const isFixed = tab === "fixed";
     const isTodo = tab === "todo";
     const isOverdue = tab === "overdue";
     const isDone = tab === "done";
-    tabTodoBtn.classList.toggle("bg-slate-700", isTodo);
-    tabTodoBtn.classList.toggle("bg-slate-800", !isTodo);
-    tabOverdueBtn.classList.toggle("bg-slate-700", isOverdue);
-    tabOverdueBtn.classList.toggle("bg-slate-800", !isOverdue);
-    tabDoneBtn.classList.toggle("bg-slate-700", isDone);
-    tabDoneBtn.classList.toggle("bg-slate-800", !isDone);
-    panelTodo.classList.toggle("hidden", !isTodo);
-    panelOverdue.classList.toggle("hidden", !isOverdue);
-    panelDone.classList.toggle("hidden", !isDone);
+    if (tabFixedBtn) {
+      tabFixedBtn.classList.toggle("bg-slate-700", isFixed);
+      tabFixedBtn.classList.toggle("bg-slate-800", !isFixed);
+    }
+    if (tabTodoBtn) {
+      tabTodoBtn.classList.toggle("bg-slate-700", isTodo);
+      tabTodoBtn.classList.toggle("bg-slate-800", !isTodo);
+    }
+    if (tabOverdueBtn) {
+      tabOverdueBtn.classList.toggle("bg-slate-700", isOverdue);
+      tabOverdueBtn.classList.toggle("bg-slate-800", !isOverdue);
+    }
+    if (tabDoneBtn) {
+      tabDoneBtn.classList.toggle("bg-slate-700", isDone);
+      tabDoneBtn.classList.toggle("bg-slate-800", !isDone);
+    }
+    if (panelFixed) panelFixed.classList.toggle("hidden", !isFixed);
+    if (panelTodo) panelTodo.classList.toggle("hidden", !isTodo);
+    if (panelOverdue) panelOverdue.classList.toggle("hidden", !isOverdue);
+    if (panelDone) panelDone.classList.toggle("hidden", !isDone);
+  }
+
+  if (tabFixedBtn) {
+    const fixedEnabled = showFixed && hasLibrary;
+    tabFixedBtn.disabled = !fixedEnabled;
+    tabFixedBtn.classList.toggle("opacity-50", !fixedEnabled);
+    tabFixedBtn.classList.toggle("cursor-not-allowed", !fixedEnabled);
+    tabFixedBtn.title = fixedEnabled ? "" : "Ative planos fixos nas configurações";
+    tabFixedBtn.onclick = () => {
+      if (fixedEnabled) activate("fixed");
+    };
   }
   if (tabTodoBtn) {
-    tabTodoBtn.disabled = !hasPlans;
-    tabTodoBtn.classList.toggle("opacity-50", !hasPlans);
-    tabTodoBtn.classList.toggle("cursor-not-allowed", !hasPlans);
-    tabTodoBtn.title = hasPlans
+    tabTodoBtn.disabled = !showPendingLists;
+    tabTodoBtn.classList.toggle("opacity-50", !showPendingLists);
+    tabTodoBtn.classList.toggle("cursor-not-allowed", !showPendingLists);
+    tabTodoBtn.title = showPendingLists
       ? ""
       : "Importe uma periodização para ver A fazer";
     tabTodoBtn.onclick = () => {
-      if (hasPlans) activate("todo");
+      if (showPendingLists) activate("todo");
     };
   }
   if (tabOverdueBtn) {
-    tabOverdueBtn.disabled = !hasPlans;
-    tabOverdueBtn.classList.toggle("opacity-50", !hasPlans);
-    tabOverdueBtn.classList.toggle("cursor-not-allowed", !hasPlans);
-    tabOverdueBtn.title = hasPlans
+    tabOverdueBtn.disabled = !showPendingLists;
+    tabOverdueBtn.classList.toggle("opacity-50", !showPendingLists);
+    tabOverdueBtn.classList.toggle("cursor-not-allowed", !showPendingLists);
+    tabOverdueBtn.title = showPendingLists
       ? ""
       : "Importe uma periodização para ver Pendente";
     tabOverdueBtn.onclick = () => {
-      if (hasPlans) activate("overdue");
+      if (showPendingLists) activate("overdue");
     };
   }
   if (tabDoneBtn) {
     tabDoneBtn.onclick = () => activate("done");
   }
-  // default tab
-  activate(hasPlans ? "todo" : "done");
+
+  let defaultTab = "done";
+  if (showFixed && hasLibrary) defaultTab = "fixed";
+  else if (showPendingLists) defaultTab = "todo";
+  activate(defaultTab);
 }
 
 let previewIndex = null;
+
+let activeFixedPlan = null;
+
+function openFixedPlanModal(plan) {
+  if (!plan) return;
+  const modal = document.getElementById("fixedPlanModal");
+  const titleEl = document.getElementById("fixedPlanTitle");
+  const summaryEl = document.getElementById("fixedPlanSummary");
+  const metaEl = document.getElementById("fixedPlanMeta");
+  const listEl = document.getElementById("fixedPlanStageList");
+  const startBtn = document.getElementById("fixedPlanStartBtn");
+  if (!modal || !titleEl || !metaEl || !listEl || !startBtn) {
+    prepareFixedPlanFlow(plan.id);
+    return;
+  }
+  activeFixedPlan = plan;
+  titleEl.textContent = plan.name || "Plano";
+  if (summaryEl) summaryEl.textContent = plan.summary || "";
+  const stages = Array.isArray(plan.stages) ? plan.stages : [];
+  const stageTotalSec = sumPlanStageSeconds(plan);
+  const sessionTotalSec = computeFixedPlanSessionSeconds(plan);
+  metaEl.textContent = `${stages.length} estágios • Sessão ≈ ${fmtMMSS(sessionTotalSec)}`;
+  const restCount = Array.isArray(state.restPositions)
+    ? new Set(
+        state.restPositions
+          .map((slot) => normalizeRestSlot(slot))
+          .filter((slot) => slot !== null),
+      ).size
+    : 0;
+  const restInterval = clamp(Number(state.restIntervalSec) || 0, 0, 3600);
+  const restDetails = document.getElementById("fixedPlanMetaRest");
+  if (restDetails) {
+    const restLabel = restCount
+      ? `${restCount} × ${fmtMMSS(restInterval)}`
+      : "Nenhum";
+    const perArmSeconds = stageTotalSec * 2 + FLOW_MEASUREMENT_SECONDS;
+    restDetails.textContent = `Por braço: ${fmtMMSS(perArmSeconds)} • Descansos: ${restLabel}`;
+  }
+  listEl.innerHTML = "";
+  stages.forEach((stage, index) => {
+    const item = document.createElement("li");
+    item.className = "rounded-lg border border-white/10 bg-white/5 px-3 py-2";
+    const lower = Math.round((Number(stage.lowerPct) || 0) * 100);
+    const upper = Math.round((Number(stage.upperPct) || 0) * 100);
+    item.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-medium">E${index + 1} • ${stage.label || "Estágio"}</div>
+        <div class="text-sm text-slate-300">${fmtMMSS(stage.durationSec || 0)}</div>
+      </div>
+      <div class="text-xs text-slate-400 mt-1">Alvo: ${lower}-${upper}% da força máxima</div>
+    `;
+    listEl.appendChild(item);
+  });
+  startBtn.disabled = !plan.id;
+  startBtn.setAttribute("data-plan-id", plan.id || "");
+  modal.classList.remove("hidden");
+  try {
+    startBtn.focus();
+  } catch { }
+}
+
+function closeFixedPlanModal() {
+  const modal = document.getElementById("fixedPlanModal");
+  if (modal) modal.classList.add("hidden");
+  activeFixedPlan = null;
+}
+
+function confirmFixedPlanModal() {
+  if (!activeFixedPlan || !activeFixedPlan.id) {
+    try {
+      console.warn('[nav] confirmFixedPlanModal called without active plan; using start button target directly');
+    } catch { }
+  }
+  const planId = activeFixedPlan?.id;
+  try {
+    console.log('[nav] confirmFixedPlanModal', { planId });
+  } catch { }
+  closeFixedPlanModal();
+  try {
+    state.editOrigin = 'home';
+    const resolvedId = planId;
+    // Queue the plan start if we are not already in flow mode.
+    if (state.flowActive) {
+      try {
+        console.log('[nav] fixed plan start bypassed: flow already active');
+      } catch { }
+    } else {
+      state.pendingIntent = {
+        type: 'startFixedPlan',
+        planId: resolvedId,
+      };
+      try {
+        console.log('[nav] pendingIntent set (fixed plan)', {
+          planId: resolvedId,
+        });
+      } catch { }
+    }
+    state.startReturnScreen = 'home';
+  } catch { }
+  activeFixedPlan = null;
+  if (window.showConnectScreen) window.showConnectScreen();
+  else showScreen('connect');
+  window.updateConnectUi?.();
+}
+
+function bindFixedPlanModal() {
+  const modal = document.getElementById("fixedPlanModal");
+  if (!modal || modal.dataset.bound) return;
+  modal.dataset.bound = "1";
+  const closeBtn = document.getElementById("fixedPlanCloseBtn");
+  const cancelBtn = document.getElementById("fixedPlanCancelBtn");
+  const startBtn = document.getElementById("fixedPlanStartBtn");
+  closeBtn?.addEventListener("click", () => closeFixedPlanModal());
+  cancelBtn?.addEventListener("click", () => closeFixedPlanModal());
+  startBtn?.addEventListener("click", () => confirmFixedPlanModal());
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeFixedPlanModal();
+  });
+  modal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeFixedPlanModal();
+  });
+}
+
+function renderFixedPlans(plans) {
+  const wrap = document.getElementById("fixedPlansWrap");
+  const list = document.getElementById("fixedPlansList");
+  if (!wrap || !list) return false;
+  const entries = Array.isArray(plans) ? plans : [];
+  const hasEntries = entries.length > 0;
+  wrap.classList.toggle("hidden", !hasEntries);
+  list.innerHTML = "";
+  if (!hasEntries) return false;
+
+  entries.forEach((plan) => {
+    if (!plan || !Array.isArray(plan.stages)) return;
+    const sessionTotalSec = computeFixedPlanSessionSeconds(plan);
+    const lowerValues = plan.stages
+      .map((stage) => Number(stage.lowerPct))
+      .filter((value) => Number.isFinite(value));
+    const upperValues = plan.stages
+      .map((stage) => Number(stage.upperPct))
+      .filter((value) => Number.isFinite(value));
+    const lowerPct = lowerValues.length ? Math.min(...lowerValues) : 0;
+    const upperPct = upperValues.length ? Math.max(...upperValues) : 1;
+    const card = document.createElement("div");
+    card.className =
+      "rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 flex flex-col gap-3";
+
+    const header = document.createElement("div");
+    header.className = "flex flex-col gap-2";
+    const titleRow = document.createElement("div");
+    titleRow.className = "flex items-start justify-between gap-3";
+    const title = document.createElement("div");
+    title.className = "text-lg font-semibold";
+    title.textContent = plan.name || "Plano";
+    titleRow.appendChild(title);
+    const meta = document.createElement("div");
+    meta.className = "text-xs text-slate-400";
+    meta.textContent = `Sessão ≈ ${fmtMMSS(sessionTotalSec)}`;
+    titleRow.appendChild(meta);
+    header.appendChild(titleRow);
+    if (plan.summary) {
+      const summary = document.createElement("p");
+      summary.className = "text-sm text-slate-400";
+      summary.textContent = plan.summary;
+      header.appendChild(summary);
+    }
+    const zoneRange = `${Math.round(lowerPct * 100)}-${Math.round(upperPct * 100)}`;
+    const zone = document.createElement("div");
+    zone.className = "text-xs text-slate-400";
+    zone.textContent = `Zona alvo: ${zoneRange}% da força máxima`;
+    header.appendChild(zone);
+    card.appendChild(header);
+
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Abrir ${plan.name || "plano"}`);
+    const open = () => openFixedPlanModal(plan);
+    card.addEventListener("click", open);
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        open();
+      }
+    });
+
+    list.appendChild(card);
+  });
+
+  return true;
+}
 
 function makePlanCard(session, isToday = false, index = 0) {
   const card = document.createElement("div");
@@ -842,6 +1368,9 @@ function closePreview() {
 
 function confirmPreview() {
   const idx = previewIndex;
+  try {
+    console.log('[nav] confirmPreview', { index: idx });
+  } catch { }
   closePreview();
   if (typeof idx !== "number") return;
   const plans = loadStoredPlans();
@@ -860,12 +1389,15 @@ function confirmPreview() {
     state.editOrigin = "home";
     state.pendingIntent = { type: "startEdited", session: sessionCopy };
     state.startReturnScreen = "home";
-    showScreen("connect");
     try {
-      const nextBtn = document.getElementById("goToPlanButton");
-      if (nextBtn)
-        nextBtn.disabled = !(state.device && state.device.gatt?.connected);
+      console.log('[nav] pendingIntent set (home preview)', {
+        type: 'startEdited',
+        origin: 'home',
+      });
     } catch { }
+    if (window.showConnectScreen) window.showConnectScreen();
+    else showScreen('connect');
+    window.updateConnectUi?.();
   } catch {
     // Fallback: open editor
     loadPlanForEdit(s, "home");
@@ -1124,6 +1656,21 @@ export function bindHomeNav() {
     reader.readAsText(f);
   });
   try {
+    hydrateFixedPlanPreference();
+  } catch { }
+  try {
+    hydrateRestSettingsFromStorage();
+  } catch { }
+  try {
+    initFixedPlanToggle();
+  } catch { }
+  try {
+    initRestSettingsUI();
+  } catch { }
+  try {
+    bindFixedPlanModal();
+  } catch { }
+  try {
     renderHome(loadStoredPlans());
   } catch { }
 
@@ -1299,6 +1846,334 @@ function resetApplication() {
   } catch { }
 }
 
+// ============= Rest Settings & Flow Preferences ============= //
+
+function loadRestIntervalFromStorage() {
+  try {
+    const raw = Number(localStorage.getItem(REST_INTERVAL_KEY));
+    if (Number.isFinite(raw)) return clamp(Math.round(raw), 10, 600);
+  } catch { }
+  return 120;
+}
+
+function loadFlowStepOrderFromStorage() {
+  try {
+    const raw = localStorage.getItem(FLOW_STEP_ORDER_KEY);
+    if (!raw) return DEFAULT_FLOW_STEP_ORDER.slice();
+    const arr = JSON.parse(raw);
+    return sanitizeFlowStepOrder(arr);
+  } catch { }
+  return DEFAULT_FLOW_STEP_ORDER.slice();
+}
+
+function mapLegacyRestSlot(value) {
+  const legacy = Number(value);
+  if (!Number.isFinite(legacy)) return null;
+  if (legacy === 2) return 1;
+  if (legacy === 4) return 2;
+  if (legacy === 6) return 3;
+  return null;
+}
+
+function normalizeRestSlot(value) {
+  const slot = Number(value);
+  if (!Number.isFinite(slot)) return null;
+  const normalized = Math.trunc(slot);
+  return FLOW_REST_SLOTS.includes(normalized) ? normalized : null;
+}
+
+function loadRestPositionsFromStorage() {
+  try {
+    const raw = localStorage.getItem(REST_POSITIONS_KEY);
+    if (raw === null) return DEFAULT_REST_POSITIONS.slice();
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return DEFAULT_REST_POSITIONS.slice();
+    const seen = new Set();
+    const slots = [];
+    for (const entry of arr) {
+      let slot = normalizeRestSlot(entry);
+      if (slot === null) slot = mapLegacyRestSlot(entry);
+      if (slot === null || seen.has(slot)) continue;
+      seen.add(slot);
+      slots.push(slot);
+    }
+    if (slots.length) return slots;
+    if (arr.length === 0) return [];
+  } catch { }
+  return DEFAULT_REST_POSITIONS.slice();
+}
+
+function loadRestSkipFromStorage() {
+  try {
+    return localStorage.getItem(REST_SKIP_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function hydrateRestSettingsFromStorage() {
+  state.restIntervalSec = loadRestIntervalFromStorage();
+  state.flowStepOrder = sanitizeFlowStepOrder(loadFlowStepOrderFromStorage());
+  state.restPositions = loadRestPositionsFromStorage();
+  state.restSkipEnabled = loadRestSkipFromStorage();
+}
+
+function loadFixedPlanPreference() {
+  try {
+    const raw = localStorage.getItem(FIXED_PLAN_PREF_KEY);
+    if (raw === "0") return false;
+    if (raw === "1") return true;
+  } catch { }
+  return true;
+}
+
+function persistFixedPlanPreference(on) {
+  state.showFixedPlans = !!on;
+  try {
+    localStorage.setItem(FIXED_PLAN_PREF_KEY, state.showFixedPlans ? "1" : "0");
+  } catch { }
+}
+
+export function hydrateFixedPlanPreference() {
+  state.showFixedPlans = loadFixedPlanPreference();
+}
+
+function persistRestInterval(value) {
+  state.restIntervalSec = clamp(Math.round(value), 10, 600);
+  try {
+    localStorage.setItem(REST_INTERVAL_KEY, String(state.restIntervalSec));
+  } catch { }
+}
+
+function persistFlowStepOrder(order) {
+  const sanitized = sanitizeFlowStepOrder(order);
+  state.flowStepOrder = sanitized;
+  try {
+    localStorage.setItem(FLOW_STEP_ORDER_KEY, JSON.stringify(sanitized));
+  } catch { }
+}
+
+function persistRestPositions(list) {
+  const seen = new Set();
+  const next = [];
+  if (Array.isArray(list)) {
+    list.forEach((entry) => {
+      let slot = normalizeRestSlot(entry);
+      if (slot === null) slot = mapLegacyRestSlot(entry);
+      if (slot === null || seen.has(slot)) return;
+      seen.add(slot);
+      next.push(slot);
+    });
+  }
+  next.sort((a, b) => a - b);
+  state.restPositions = next;
+  try {
+    localStorage.setItem(REST_POSITIONS_KEY, JSON.stringify(state.restPositions));
+  } catch { }
+}
+
+function persistRestSkip(flag) {
+  state.restSkipEnabled = !!flag;
+  try {
+    localStorage.setItem(REST_SKIP_KEY, state.restSkipEnabled ? "1" : "0");
+  } catch { }
+}
+
+function applyRestSkipPreference() {
+  const skipBtn = document.getElementById("restSkipBtn");
+  if (!skipBtn) return;
+  skipBtn.classList.toggle("hidden", !state.restSkipEnabled);
+  skipBtn.disabled = !state.restSkipEnabled;
+}
+
+function renderRestPositionsSettings() {
+  const list = document.getElementById("restPositionsList");
+  const addBtn = document.getElementById("restAddBtn");
+  if (!list) return;
+  list.innerHTML = "";
+  const stepOrder = sanitizeFlowStepOrder(state.flowStepOrder);
+  state.flowStepOrder = stepOrder;
+  const activeRest = Array.isArray(state.restPositions)
+    ? state.restPositions
+        .map((slot) => normalizeRestSlot(slot))
+        .filter((slot) => slot !== null)
+    : [];
+  const restSet = new Set(activeRest);
+
+  stepOrder.forEach((stepId, index) => {
+    const step = getFlowTrainingStepById(stepId);
+    if (!step) return;
+    const item = document.createElement("li");
+    item.className =
+      "rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm";
+    const subtitle = step.captureMax
+      ? "Inclui medição de força máxima antes da série."
+      : "Usa a última medição registrada para esta série.";
+    item.innerHTML = `
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="text-xs uppercase tracking-wide text-slate-400">Passo ${index + 1}</div>
+          <div class="font-medium text-slate-200">${step.label}</div>
+          <div class="text-xs text-slate-400 mt-1">${subtitle}</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" data-act="stepUp" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60" ${index > 0 ? "" : "disabled"} aria-label="Mover passo para cima">
+            &uarr;
+          </button>
+          <button type="button" data-act="stepDown" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60" ${index < stepOrder.length - 1 ? "" : "disabled"} aria-label="Mover passo para baixo">
+            &darr;
+          </button>
+        </div>
+      </div>
+    `;
+    list.appendChild(item);
+
+    if (index >= stepOrder.length - 1) return;
+
+    const slotId = index + 1;
+    const hasRest = restSet.has(slotId);
+    const restItem = document.createElement("li");
+    restItem.className =
+      "flex items-center justify-between gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm";
+    const buttonClass = hasRest
+      ? "bg-amber-500 text-black hover:bg-amber-400/80"
+      : "bg-slate-800 text-slate-200 hover:bg-slate-700";
+    restItem.innerHTML = `
+      <div>
+        <div class="font-medium text-amber-200">Descanso após este passo</div>
+        <div class="text-xs text-amber-200/80">${
+          hasRest
+            ? "Será exibida a contagem regressiva antes do próximo passo."
+            : "Ative para inserir um descanso aqui."
+        }</div>
+      </div>
+      <button type="button" data-act="toggleRest" data-slot="${slotId}" class="px-3 py-1 rounded-lg ${buttonClass}">
+        ${hasRest ? "Remover" : "Adicionar"}
+      </button>
+    `;
+    list.appendChild(restItem);
+  });
+
+  if (addBtn) {
+    const maxSlot = Math.max(0, stepOrder.length - 1);
+    const disabled = FLOW_REST_SLOTS.every(
+      (slot) => slot > maxSlot || restSet.has(slot),
+    );
+    addBtn.disabled = disabled;
+    addBtn.classList.toggle("opacity-40", disabled);
+    addBtn.classList.toggle("cursor-not-allowed", disabled);
+    addBtn.textContent = disabled
+      ? "Todos os descansos foram adicionados"
+      : "Adicionar próximo descanso disponível";
+  }
+  applyRestSkipPreference();
+}
+
+export function initRestSettingsUI() {
+  const intervalInput = document.getElementById("restIntervalInput");
+  if (intervalInput) {
+    intervalInput.value = String(state.restIntervalSec);
+    intervalInput.onchange = () => {
+      const next = clamp(Math.round(Number(intervalInput.value) || 0), 10, 600);
+      persistRestInterval(next);
+      intervalInput.value = String(state.restIntervalSec);
+      renderHome(loadStoredPlans());
+    };
+  }
+
+  const skipToggle = document.getElementById("restSkipToggle");
+  if (skipToggle) {
+    skipToggle.checked = !!state.restSkipEnabled;
+    skipToggle.onchange = () => {
+      persistRestSkip(!!skipToggle.checked);
+      applyRestSkipPreference();
+    };
+  }
+
+  const list = document.getElementById("restPositionsList");
+  if (list && !list.dataset.bound) {
+    list.dataset.bound = "1";
+    list.addEventListener("click", (event) => {
+      const stepBtn = event.target.closest("button[data-act][data-step-id]");
+      if (stepBtn) {
+        event.preventDefault();
+        const { act } = stepBtn.dataset;
+        const stepId = stepBtn.dataset.stepId;
+        if (!stepId || (act !== "stepUp" && act !== "stepDown")) return;
+        const order = sanitizeFlowStepOrder(state.flowStepOrder);
+        const idx = order.indexOf(stepId);
+        if (idx === -1) return;
+        const direction = act === "stepUp" ? -1 : 1;
+        const target = idx + direction;
+        if (target < 0 || target >= order.length) return;
+        const swapped = order.slice();
+        const tmp = swapped[target];
+        swapped[target] = swapped[idx];
+        swapped[idx] = tmp;
+        persistFlowStepOrder(swapped);
+        renderRestPositionsSettings();
+        renderHome(loadStoredPlans());
+        return;
+      }
+
+      const restBtn = event.target.closest("button[data-act][data-slot]");
+      if (!restBtn) return;
+      event.preventDefault();
+      if (restBtn.dataset.act !== "toggleRest") return;
+      const slot = normalizeRestSlot(restBtn.dataset.slot);
+      if (slot === null) return;
+      const current = Array.isArray(state.restPositions)
+        ? state.restPositions.slice()
+        : [];
+      const set = new Set(
+        current
+          .map((value) => normalizeRestSlot(value))
+          .filter((value) => value !== null),
+      );
+      if (set.has(slot)) set.delete(slot);
+      else set.add(slot);
+      persistRestPositions(Array.from(set));
+      renderRestPositionsSettings();
+      renderHome(loadStoredPlans());
+    });
+  }
+
+  const addBtn = document.getElementById("restAddBtn");
+  if (addBtn) {
+    addBtn.onclick = (event) => {
+      event.preventDefault();
+      const order = sanitizeFlowStepOrder(state.flowStepOrder);
+      state.flowStepOrder = order;
+      const restSet = new Set(
+        state.restPositions
+          .map((value) => normalizeRestSlot(value))
+          .filter((value) => value !== null),
+      );
+      const maxSlot = Math.max(0, order.length - 1);
+      const available = FLOW_REST_SLOTS.filter(
+        (slot) => slot <= maxSlot && !restSet.has(slot),
+      );
+      if (!available.length) return;
+      restSet.add(available[0]);
+      persistRestPositions(Array.from(restSet));
+      renderRestPositionsSettings();
+      renderHome(loadStoredPlans());
+    };
+  }
+
+  renderRestPositionsSettings();
+}
+
+function initFixedPlanToggle() {
+  const toggle = document.getElementById("fixedPlanToggle");
+  if (!toggle) return;
+  toggle.checked = !!state.showFixedPlans;
+  toggle.onchange = () => {
+    persistFixedPlanPreference(!!toggle.checked);
+    renderHome(loadStoredPlans());
+  };
+}
+
 // ============= Settings (Contrast Mode & Colors) ============= //
 const CONTRAST_KEY = "isotrainer:ui:contrast";
 const LEGACY_COLORS_KEY = "isotrainer:ui:legacy-galileu-colors";
@@ -1328,6 +2203,7 @@ export function openSettings() {
   const toggle = document.getElementById("contrastToggle");
   const legacyToggle = document.getElementById("legacyColorsToggle");
   const resetBtn = document.getElementById("settingsResetAll");
+  const saveBtn = document.getElementById("settingsSaveBtn");
   if (!modal || !toggle) return;
   try {
     toggle.checked = isContrastOn();
@@ -1342,6 +2218,12 @@ export function openSettings() {
   // Initialize plot element toggles and multipliers
   try {
     initPlotSettingsUI();
+  } catch { }
+  try {
+    initFixedPlanToggle();
+  } catch { }
+  try {
+    initRestSettingsUI();
   } catch { }
   try {
     ensurePlotResizeHook();
@@ -1360,6 +2242,10 @@ export function openSettings() {
     },
     { once: true },
   );
+  if (saveBtn)
+    saveBtn.onclick = () => {
+      close();
+    };
   toggle.onchange = () => {
     const on = !!toggle.checked;
     try {
@@ -1398,6 +2284,17 @@ export function openSettings() {
       } catch { }
       try {
         initPlotSettingsUI();
+      } catch { }
+      try {
+        hydrateFixedPlanPreference();
+        initFixedPlanToggle();
+      } catch { }
+      try {
+        hydrateRestSettingsFromStorage();
+        initRestSettingsUI();
+      } catch { }
+      try {
+        renderHome(loadStoredPlans());
       } catch { }
     };
 }
@@ -1668,6 +2565,21 @@ function resetAllSettingsToDefaults() {
   try {
     localStorage.removeItem(PLOT_PREFIX + "right:mul");
   } catch { }
+  try {
+    localStorage.removeItem(REST_INTERVAL_KEY);
+  } catch { }
+  try {
+    localStorage.removeItem(REST_POSITIONS_KEY);
+  } catch { }
+  try {
+    localStorage.removeItem(REST_SKIP_KEY);
+  } catch { }
+  try {
+    localStorage.removeItem(FLOW_STEP_ORDER_KEY);
+  } catch { }
+  try {
+    localStorage.removeItem(FIXED_PLAN_PREF_KEY);
+  } catch { }
   // Apply to document/UI
   try {
     applyContrastToDocument(false);
@@ -1679,5 +2591,17 @@ function resetAllSettingsToDefaults() {
   } catch { }
   try {
     applyPlotSettingsToDom();
+  } catch { }
+  try {
+    hydrateRestSettingsFromStorage();
+    initRestSettingsUI();
+    state.flowStepOrder = DEFAULT_FLOW_STEP_ORDER.slice();
+  } catch { }
+  try {
+    hydrateFixedPlanPreference();
+    initFixedPlanToggle();
+  } catch { }
+  try {
+    renderHome(loadStoredPlans());
   } catch { }
 }

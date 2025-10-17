@@ -53,6 +53,11 @@ body {
   will-change: transform, filter;
 }
 
+.force-pulse {
+  animation: beat var(--pulse-period, 1s) ease-in-out infinite;
+  will-change: transform, filter;
+}
+
 /* Light scaling for plot force marker icon. */
 #forceMarker svg {
   width: clamp(1rem, 2vw, 1.75rem);

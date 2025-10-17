@@ -1,5 +1,5 @@
 // Module: App bootstrap and UI wiring.
-import { state } from "./state.js";
+import { state } from './state.js';
 import { setupCharts } from "./charts.js";
 import {
   parseTrainingCsv,
@@ -13,21 +13,103 @@ import {
   setPlayPauseVisual,
   exportSessionCsv,
   loadCompletedSessionFromExportCsv,
-  stopTraining,
+  prepareFixedPlanFlow,
 } from "./session.js";
 import { loadPlanForEdit } from "./edit-plan.js";
 import {
   connectToDevice,
   disconnectFromDevice,
   checkBluetoothSupport,
+  ensureDevMockConnection,
 } from "./ble.js";
 import {
   bindHomeNav,
-  loadStoredPlans,
   isContrastOn,
   applyContrastToDocument,
   applyPlotSettingsToDom,
 } from "./plans.js";
+
+const DEBUG_NAV = true;
+const logNav = (...args) => {
+  if (!DEBUG_NAV) return;
+  try {
+    console.log('[nav]', ...args);
+  } catch { }
+};
+
+function isPhysicalDeviceConnected() {
+  return !!(state.device && state.device.gatt?.connected);
+}
+
+function hasEffectiveConnection() {
+  if (state.device?.__mock) return true;
+  return isPhysicalDeviceConnected();
+}
+
+function updateConnectUi() {
+  const statusEl = document.getElementById('status');
+  const connectBtn = document.getElementById('connectButton');
+  const disconnectBtn = document.getElementById('disconnectButton');
+  const goBtn = document.getElementById('goToPlanButton');
+  const effective = hasEffectiveConnection();
+  const physical = isPhysicalDeviceConnected();
+  const isMock = Boolean(state.device?.__mock);
+  if (statusEl) {
+    if (effective) {
+      if (isMock || !physical) {
+        statusEl.textContent = 'Conectado (modo simulação)';
+      } else {
+        statusEl.textContent = `Conectado a ${state.device?.name || 'TeraForce'}`;
+      }
+    } else {
+      statusEl.textContent = 'Desconectado';
+    }
+  }
+  if (connectBtn) connectBtn.disabled = isPhysicalDeviceConnected();
+  if (disconnectBtn)
+    disconnectBtn.disabled = !Boolean(state.device?.__mock || isPhysicalDeviceConnected());
+  if (goBtn) {
+    goBtn.disabled = !effective;
+    goBtn.setAttribute('aria-disabled', effective ? 'false' : 'true');
+  }
+}
+
+function launchPreparedTraining() {
+  const intent = state.pendingIntent;
+  if (intent && intent.type === 'startEdited' && intent.session) {
+    logNav('Launching edited session');
+    state.pendingIntent = null;
+    state.startReturnScreen = null;
+    startTraining(intent.session);
+    return true;
+  }
+  if (intent && intent.type === 'startFixedPlan' && intent.planId) {
+    logNav('Launching fixed plan', intent.planId);
+    state.pendingIntent = null;
+    state.startReturnScreen = null;
+    prepareFixedPlanFlow(intent.planId);
+    return true;
+  }
+  return false;
+}
+
+function tryLaunchPreparedTraining() {
+  if (!state.pendingIntent) {
+    logNav('No pending intent to launch');
+    return false;
+  }
+  if (!hasEffectiveConnection()) {
+    logNav('Pending intent blocked: device not connected');
+    return false;
+  }
+  logNav('Launching intent now');
+  return launchPreparedTraining();
+}
+
+if (typeof window !== 'undefined') {
+  window.updateConnectUi = updateConnectUi;
+  window.showConnectScreen = switchToConnect;
+}
 
 // Boot: initialize charts and early UI preferences.
 window.addEventListener("load", async () => {
@@ -38,13 +120,19 @@ window.addEventListener("load", async () => {
   } catch { }
   await checkBluetoothSupport();
   try {
+    ensureDevMockConnection();
+  } catch { }
+  try {
     bindHomeNav();
   } catch { }
   try {
-    showScreen("home");
+    showScreen('home');
   } catch { }
   try {
     applyPlotSettingsToDom();
+  } catch { }
+  try {
+    updateConnectUi();
   } catch { }
 });
 
@@ -74,18 +162,38 @@ document.getElementById("connectBackBtn")?.addEventListener("click", () => {
   showScreen("home");
 });
 document.getElementById("goToPlanButton").addEventListener("click", () => {
-  const intent = state.pendingIntent;
-  if (intent && intent.type === "startEdited" && intent.session) {
-    state.pendingIntent = null;
-    startTraining(intent.session);
+  logNav('Go button pressed', {
+    hasIntent: Boolean(state.pendingIntent),
+    startReturn: state.startReturnScreen,
+    effectiveConnection: hasEffectiveConnection(),
+  });
+  const hadIntent = Boolean(state.pendingIntent);
+  if (tryLaunchPreparedTraining()) return;
+  if (hadIntent) {
+    // Still waiting on a connection; keep user on Connect and refresh UI state.
+    updateConnectUi();
+    const status = document.getElementById('status');
+    if (status && !hasEffectiveConnection())
+      status.textContent = 'Conecte um dinamômetro TeraForce para iniciar a sessão.';
     return;
   }
-  showScreen("home");
+  const dest = state.startReturnScreen;
+  state.startReturnScreen = null;
+  if (dest === 'editPlan') {
+    showScreen('editPlan');
+    return;
+  }
+  if (dest === 'plan') {
+    showScreen('plan');
+    return;
+  }
+  showScreen('home');
 });
 document
   .getElementById("backToConnect")
   .addEventListener("click", () => showScreen("home"));
 document.getElementById("loadCsvBtn").addEventListener("click", () => {
+  logNav('loadCsvBtn clicked');
   const text = document.getElementById("csvInput").value;
   const err = document.getElementById("csvError");
   err.classList.add("hidden");
@@ -127,10 +235,8 @@ importInput?.addEventListener("change", (e) => {
 });
 
 function switchToConnect() {
-  document.getElementById("status").textContent = "Desconectado";
-  document.getElementById("connectButton").disabled = false;
-  document.getElementById("disconnectButton").disabled = true;
-  document.getElementById("goToPlanButton").disabled = true;
+  logNav('Switching to connect screen');
+  updateConnectUi();
   showScreen("connect");
 }
 
@@ -184,13 +290,20 @@ playPauseBtn.addEventListener("click", () => {
 window.addEventListener("session:tick", () => tick());
 
 // Handle BLE disconnect from other modules.
-window.addEventListener("ble:disconnected", () => switchToConnect());
+window.addEventListener("ble:disconnected", () => {
+  logNav('BLE disconnected');
+  switchToConnect();
+});
+window.addEventListener('ble:connected', () => {
+  logNav('BLE connected event');
+  updateConnectUi();
+});
 
 // Start a session from CSV text (used by QR and button flows).
 export function startTrainingFromCsvText(text) {
   const err = document.getElementById("csvError");
   err.classList.add("hidden");
-  if (!(state.device && state.device.gatt?.connected)) {
+  if (!hasEffectiveConnection()) {
     err.textContent = "Conecte um dispositivo primeiro.";
     err.classList.remove("hidden");
     return;
@@ -203,40 +316,6 @@ export function startTrainingFromCsvText(text) {
     err.classList.remove("hidden");
   }
 }
-
-// Pre-start modal wiring.
-const preStartModal = document.getElementById("preStartModal");
-const preStartGoBtn = document.getElementById("preStartGoBtn");
-const preStartBackBtn = document.getElementById("preStartBackBtn");
-preStartGoBtn?.addEventListener("click", () => {
-  // Allow session to begin on next Force notification.
-  state.startPending = false;
-  preStartModal?.classList.add("hidden");
-});
-preStartBackBtn?.addEventListener("click", () => {
-  // Cancel prepared session and return to the Plan screen.
-  preStartModal?.classList.add("hidden");
-  stopTraining();
-  try {
-    const dest = state.startReturnScreen;
-    state.startReturnScreen = null;
-    if (dest === "editPlan") {
-      showScreen("editPlan");
-      return;
-    }
-    if (dest === "plan") {
-      showScreen("plan");
-      return;
-    }
-    showScreen("home");
-  } catch {
-    showScreen("home");
-  }
-});
-// Dismiss modal on backdrop click.
-preStartModal?.addEventListener("click", (e) => {
-  if (e.target === preStartModal) preStartModal.classList.add("hidden");
-});
 
 // Completion screen actions.
 document.getElementById("completeBackBtn")?.addEventListener("click", () => {

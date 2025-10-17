@@ -1,7 +1,7 @@
 // Module: Plan editor (stage adjustments and start flow).
 import { fmtMMSS, parseTimeToSeconds } from "./utils.js";
 import { startTraining, showScreen } from "./session.js";
-import { state } from "./state.js";
+import { state, DEV_BYPASS_CONNECT } from './state.js';
 
 let originalSession = null;
 let working = null; // Mutable copy.
@@ -244,6 +244,9 @@ function updateAdjTimeButtons() {
 }
 
 export function loadPlanForEdit(session, origin = null) {
+  try {
+    console.log('[nav] loadPlanForEdit', { origin });
+  } catch { }
   originalSession = deepCopySession(session);
   working = deepCopySession(session);
   state.editOrigin = origin || state.editOrigin || "plan";
@@ -254,6 +257,9 @@ export function loadPlanForEdit(session, origin = null) {
 }
 
 export function startWithEditedPlan() {
+  try {
+    console.log('[nav] startWithEditedPlan clicked');
+  } catch { }
   if (!validate()) return;
   // Ensure indices are sequential.
   working.stages.forEach((s, idx) => {
@@ -269,12 +275,15 @@ export function startWithEditedPlan() {
     sessionCopy.planIdx = sessionCopy.idx;
   state.pendingIntent = { type: "startEdited", session: sessionCopy };
   state.startReturnScreen = "editPlan";
-  showScreen("connect");
   try {
-    const nextBtn = document.getElementById("goToPlanButton");
-    if (nextBtn)
-      nextBtn.disabled = !(state.device && state.device.gatt?.connected);
+    console.log('[nav] pendingIntent set (edit plan)', {
+      type: 'startEdited',
+      origin: 'editPlan',
+    });
   } catch { }
+  if (window.showConnectScreen) window.showConnectScreen();
+  else showScreen('connect');
+  window.updateConnectUi?.();
 }
 
 export function backToPlan() {

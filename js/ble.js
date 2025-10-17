@@ -1,8 +1,12 @@
 // Module: Web Bluetooth connection and streaming for TeraForce dynamometers.
-import { state } from "./state.js";
+import { state, DEV_OPTIONS } from './state.js';
 import { now } from "./utils.js";
 import { updateStageChart, updateSessionChart } from "./charts.js";
-import { updateStageUI, updateLiveStageInTargetPct } from "./session.js";
+import {
+  updateStageUI,
+  updateLiveStageInTargetPct,
+  processMeasurementSample,
+} from './session.js';
 
 // Known service/characteristic pairs observed on TeraForce firmwares.
 // We request all candidates so Chrome grants access whichever the device exposes.
@@ -48,8 +52,29 @@ const OPTIONAL_SUPPORT_SERVICES = [
 ];
 
 let lastGattSnapshot = [];
+const DEV_SAMPLE_INTERVAL_MS = 900;
+let devSampleTimer = null;
+let devSamplePhase = 0;
+
+function devBypassEnabled() {
+  return !!DEV_OPTIONS?.bypassConnectScreen;
+}
+
+export function ensureDevMockConnection() {
+  if (!devBypassEnabled()) return;
+  simulateDevConnection(true);
+}
 
 export async function checkBluetoothSupport() {
+  if (devBypassEnabled()) {
+    simulateDevConnection(true);
+    const status = document.getElementById('status');
+    if (status)
+      status.textContent = 'Modo desenvolvedor: conexão simulada, hardware opcional.';
+    const connectBtn = document.getElementById('connectButton');
+    if (connectBtn) connectBtn.disabled = false;
+    return true;
+  }
   if (!navigator.bluetooth) {
     document.getElementById("status").textContent =
       "Web Bluetooth indisponível. Use HTTPS/localhost e conceda permissões.";
@@ -73,6 +98,10 @@ export async function checkBluetoothSupport() {
 }
 
 export async function connectToDevice() {
+  if (devBypassEnabled()) {
+    simulateDevConnection();
+    return;
+  }
   if (!(await checkBluetoothSupport())) return;
   try {
     document.getElementById("status").textContent =
@@ -151,6 +180,9 @@ export async function connectToDevice() {
     document.getElementById("goToPlanButton").disabled = false;
     addDisconnectListener();
     try {
+      window.updateConnectUi?.();
+    } catch { }
+    try {
       window.dispatchEvent(new CustomEvent("ble:connected"));
     } catch { }
   } catch (err) {
@@ -166,15 +198,128 @@ function restoreButtons() {
   document.getElementById("goToPlanButton").disabled = true;
   state.commandCharacteristic = null;
   resetForceCalibration();
+  try {
+    window.updateConnectUi?.();
+  } catch { }
 }
 
 export function disconnectFromDevice() {
+  if (devBypassEnabled()) {
+    simulateDevDisconnect();
+    return;
+  }
   if (state.device && state.device.gatt.connected) {
     stopStreaming().catch(() => { });
     state.device.gatt.disconnect();
   }
   state.commandCharacteristic = null;
   resetForceCalibration();
+}
+
+function simulateDevConnection(initial = false) {
+  if (!devBypassEnabled()) return;
+  if (state.device?.__mock && state.device?.gatt?.connected) {
+    startDevSampleLoop();
+    if (!initial) {
+      try {
+        window.dispatchEvent(new CustomEvent('ble:connected'));
+      } catch { }
+    }
+    return;
+  }
+
+  const mockGatt = {
+    connected: true,
+    disconnect: () => simulateDevDisconnect(),
+    connect: async () => mockGatt,
+  };
+
+  state.device = {
+    name: 'TeraForce (Simulado)',
+    gatt: mockGatt,
+    __mock: true,
+    addEventListener() { },
+    removeEventListener() { },
+  };
+  state.server = mockGatt;
+  state.service = null;
+  state.characteristic = null;
+  state.commandCharacteristic = null;
+  state.forceCalibration.zero = 0;
+  state.forceCalibration.samples = [];
+  state.forceCalibration.multiplier = 1;
+
+  const status = document.getElementById('status');
+  if (status) status.textContent = 'Conectado (modo simulação)';
+  const connectBtn = document.getElementById('connectButton');
+  if (connectBtn) connectBtn.disabled = true;
+  const disconnectBtn = document.getElementById('disconnectButton');
+  if (disconnectBtn) disconnectBtn.disabled = false;
+  const goBtn = document.getElementById('goToPlanButton');
+  if (goBtn) goBtn.disabled = false;
+
+  startDevSampleLoop();
+  try {
+    window.updateConnectUi?.();
+  } catch { }
+  if (!initial) {
+    try {
+      window.dispatchEvent(new CustomEvent('ble:connected'));
+    } catch { }
+  }
+}
+
+function simulateDevDisconnect() {
+  if (!state.device?.__mock) return;
+  stopDevSampleLoop();
+  devSamplePhase = 0;
+  if (state.device?.gatt) state.device.gatt.connected = false;
+  state.device = null;
+  state.server = null;
+  state.service = null;
+  state.characteristic = null;
+  state.commandCharacteristic = null;
+  state.forceCalibration.zero = 0;
+  state.forceCalibration.samples = [];
+  state.forceCalibration.multiplier = 1;
+
+  const status = document.getElementById('status');
+  if (status) status.textContent = 'Desconectado (modo simulação)';
+  const connectBtn = document.getElementById('connectButton');
+  if (connectBtn) connectBtn.disabled = false;
+  const disconnectBtn = document.getElementById('disconnectButton');
+  if (disconnectBtn) disconnectBtn.disabled = true;
+  try {
+    window.updateConnectUi?.();
+  } catch { }
+  try {
+    window.dispatchEvent(new CustomEvent('ble:disconnected'));
+  } catch { }
+}
+
+function startDevSampleLoop() {
+  if (devSampleTimer) return;
+  emitDevSample();
+  devSampleTimer = setInterval(() => emitDevSample(), DEV_SAMPLE_INTERVAL_MS);
+}
+
+function stopDevSampleLoop() {
+  if (devSampleTimer) {
+    clearInterval(devSampleTimer);
+    devSampleTimer = null;
+  }
+}
+
+function emitDevSample() {
+  if (!state.device?.__mock) return;
+  devSamplePhase += 0.4;
+  const base = 180 + Math.sin(devSamplePhase) * 60;
+  const noise = (Math.random() - 0.5) * 15;
+  const sample = Math.max(0, base + noise);
+  const buffer = new ArrayBuffer(2);
+  const view = new DataView(buffer);
+  view.setInt16(0, Math.round(sample), false);
+  handleForceMeasurement(view);
 }
 
 function handleDisconnect() {
@@ -186,10 +331,10 @@ function handleDisconnect() {
 }
 
 function addDisconnectListener() {
-  if (state.device)
-    state.device.addEventListener("gattserverdisconnected", handleDisconnect, {
-      once: true,
-    });
+  if (!state.device || typeof state.device.addEventListener !== 'function') return;
+  state.device.addEventListener("gattserverdisconnected", handleDisconnect, {
+    once: true,
+  });
 }
 
 async function resolveMeasurementCharacteristic(server) {
@@ -318,7 +463,11 @@ function handleForceMeasurement(value) {
   for (const force of samples) {
     if (!Number.isFinite(force)) continue;
 
-    if (state.waitingForFirstSample && !state.startPending && Math.abs(force) > 0.1) {
+    try {
+      processMeasurementSample(force);
+    } catch { }
+
+    if (state.waitingForFirstSample && Math.abs(force) > 0.1) {
       state.waitingForFirstSample = false;
       state.sessionStartMs = now();
       state.stageStartMs = now();
@@ -347,100 +496,6 @@ function handleForceMeasurement(value) {
       updateLiveStageInTargetPct();
     } catch { }
 
-    try {
-      updatePreStartGuidance(force);
-    } catch { }
-  }
-}
-
-function updatePreStartGuidance(force) {
-  if (
-    !(
-      state.startPending &&
-      state.trainingSession &&
-      state.trainingSession.stages?.length
-    )
-  )
-    return;
-
-  const first = state.trainingSession.stages[0];
-  const forceEl = document.getElementById("preStartForceValue");
-  const guideText = document.getElementById("preStartText");
-  const guideWrap = document.getElementById("preStartGuidance");
-  const iconEl = document.getElementById("preStartIcon");
-  const rangeEl = document.getElementById("preStartStageRange");
-  const targetEl = document.getElementById("preStartTarget");
-  const thumbEl = document.getElementById("preStartThumb");
-  const scaleMinEl = document.getElementById("preStartScaleMin");
-  const scaleMaxEl = document.getElementById("preStartScaleMax");
-
-  if (forceEl) forceEl.textContent = formatForce(force, { withUnit: true });
-  if (rangeEl) rangeEl.textContent = `${first.lower}/${first.upper} N`;
-
-  let scaleMin = state.trainingSession?.sessionBounds?.min ?? first.lower - 20;
-  let scaleMax = state.trainingSession?.sessionBounds?.max ?? first.upper + 20;
-  if (!Number.isFinite(scaleMin)) scaleMin = first.lower - 20;
-  if (!Number.isFinite(scaleMax)) scaleMax = first.upper + 20;
-  if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
-  const span = Math.max(1, scaleMax - scaleMin);
-  if (scaleMinEl)
-    scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} N`;
-  if (scaleMaxEl)
-    scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} N`;
-  if (targetEl) {
-    const leftPct = Math.max(
-      0,
-      Math.min(100, ((first.lower - scaleMin) / span) * 100),
-    );
-    const rightPct = Math.max(
-      0,
-      Math.min(100, ((first.upper - scaleMin) / span) * 100),
-    );
-    targetEl.style.left = `${leftPct}%`;
-    targetEl.style.width = `${Math.max(0, rightPct - leftPct)}%`;
-  }
-  if (thumbEl) {
-    const p = Math.max(0, Math.min(100, ((force - scaleMin) / span) * 100));
-    thumbEl.style.left = `calc(${p}% - 10px)`;
-  }
-  if (guideText && iconEl && guideWrap && thumbEl) {
-    let msg = "Aguardando leitura de força...";
-    let colorClass = "text-slate-300";
-    let iconSvg = "";
-    if (Number.isFinite(force)) {
-      if (force < first.lower) {
-        msg = "Aumente a força para entrar no alvo.";
-        colorClass = "text-amber-400";
-        iconSvg =
-          '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>';
-      } else if (force > first.upper) {
-        msg = "Reduza a força para permanecer no alvo.";
-        colorClass = "text-amber-400";
-        iconSvg =
-          '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.59-5.58L4 12l8 8 8-8z"/></svg>';
-      } else {
-        msg = "Pronto! Você pode iniciar a série.";
-        colorClass = "text-emerald-400";
-        iconSvg =
-          '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5L4 14.2l5 5 12-12-1.5-1.5z"/></svg>';
-      }
-    }
-    guideText.textContent = msg;
-    iconEl.innerHTML = iconSvg;
-    guideWrap.classList.remove(
-      "text-slate-300",
-      "text-amber-400",
-      "text-emerald-400",
-      "text-rose-400",
-    );
-    guideWrap.classList.add(colorClass);
-    thumbEl.classList.remove(
-      "text-slate-400",
-      "text-amber-400",
-      "text-emerald-400",
-    );
-    if (colorClass === "text-emerald-400") thumbEl.classList.add("text-emerald-400");
-    else thumbEl.classList.add("text-amber-400");
   }
 }
 

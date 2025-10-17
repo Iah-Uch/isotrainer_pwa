@@ -1,4 +1,12 @@
 // Module: Central app state shared across modules.
+
+// Toggle manually when developing without hardware.
+export const DEV_OPTIONS = {
+  bypassConnectScreen: false,
+};
+
+export const DEV_BYPASS_CONNECT = !!DEV_OPTIONS.bypassConnectScreen;
+
 export const state = {
   // BLE.
   device: null,
@@ -23,8 +31,6 @@ export const state = {
   accumulatedPauseOffset: 0,
   stageAccumulatedPauseOffset: 0,
   waitingForFirstSample: false,
-  // Pre-start gate: true shows modal and defers timing.
-  startPending: false,
   pulseAnimation: { handle: null, startTime: 0 },
   // Import flag.
   isImportedSession: false,
@@ -40,4 +46,40 @@ export const state = {
   editOrigin: null,
   // Where to return if user cancels from pre-start modal.
   startReturnScreen: null, // 'editPlan' | 'plan' | 'home'
+  // Guided flow context (fixed plans + measurements).
+  currentStepIndex: 0, // Sequence cursor for flow steps (0-based)
+  maxDireitoKgf: null,
+  maxEsquerdoKgf: null,
+  maxDireitoN: null,
+  maxEsquerdoN: null,
+  flowSequence: [],
+  flowStepOrder: ["R1", "R2", "L1", "L2"],
+  pendingTrainingStep: null,
+  restIntervalSec: 120,
+  restPositions: [1, 3],
+  restSkipEnabled: false,
+  showFixedPlans: true,
+  flowActive: false,
+  flowPlan: null,
+  flowArm: null,
+  flowStats: [],
+  measurement: {
+    active: false,
+    arm: null,
+    startMs: 0,
+    durationMs: 3000,
+    peakN: 0,
+    currentN: 0,
+    timerHandle: null,
+    rafHandle: null,
+    complete: false,
+    forceElapsedMs: 0,
+    lastFrameMs: 0,
+  },
+  restTimer: {
+    active: false,
+    endMs: 0,
+    handle: null,
+    stepId: null,
+  },
 };

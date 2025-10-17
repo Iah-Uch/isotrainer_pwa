@@ -1,6 +1,6 @@
 // Module: Session lifecycle, UI updates, metrics and CSV import/export.
-import { state } from "./state.js";
-import { now, fmtMMSS, parseTimeToSeconds } from "./utils.js";
+import { state, DEV_BYPASS_CONNECT } from './state.js';
+import { now, fmtMMSS, parseTimeToSeconds, clamp } from './utils.js';
 import {
   resetStageSeries,
   resetSessionSeries,
@@ -8,9 +8,17 @@ import {
   setStageXAxis,
   syncChartScales,
   plotStageSliceByIndex,
-} from "./charts.js";
-import { applyPlotSettingsToDom } from "./plans.js";
-import { saveCompletedSession } from "./plans.js";
+} from './charts.js';
+import {
+  applyPlotSettingsToDom,
+  saveCompletedSession,
+  getFixedPlanById,
+  FLOW_TRAINING_STEPS,
+  sanitizeFlowStepOrder,
+} from './plans.js';
+
+const N_PER_KGF = 9.80665;
+const FLOW_MEASUREMENT_MS = 3000;
 
 export function parseTrainingCsv(text) {
   if (!text || !text.trim()) throw new Error("O texto do CSV está vazio.");
@@ -53,12 +61,17 @@ export function parseTrainingCsv(text) {
 
 export function startTraining(session) {
   stopTraining();
+  try {
+    console.log('[nav] startTraining', {
+      stageCount: session?.stages?.length,
+      origin: state.editOrigin,
+    });
+  } catch { }
   state.trainingSession = session;
   state.isImportedSession = false;
   state.stageIdx = 0;
   // Arm waiting state; gate actual start behind user Play.
   state.waitingForFirstSample = true;
-  state.startPending = true;
 
   // Prime UI (normal mode).
   document.getElementById("sessionAthlete").textContent =
@@ -113,51 +126,7 @@ export function startTraining(session) {
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
 
-  // Show pre-start modal so the user explicitly starts.
-  const pre = document.getElementById("preStartModal");
-  if (pre) {
-    try {
-      const range = `${firstStage.lower}/${firstStage.upper} N`;
-      const rangeEl = document.getElementById("preStartStageRange");
-      const forceEl = document.getElementById("preStartForceValue");
-      const guideEl = document.getElementById("preStartText");
-      const scaleMinEl = document.getElementById("preStartScaleMin");
-      const scaleMaxEl = document.getElementById("preStartScaleMax");
-      const targetEl = document.getElementById("preStartTarget");
-      // Determine scale from overall session bounds; else pad ±20.
-      let scaleMin =
-        state.trainingSession?.sessionBounds?.min ?? firstStage.lower - 20;
-      let scaleMax =
-        state.trainingSession?.sessionBounds?.max ?? firstStage.upper + 20;
-      if (!Number.isFinite(scaleMin)) scaleMin = firstStage.lower - 20;
-      if (!Number.isFinite(scaleMax)) scaleMax = firstStage.upper + 20;
-      if (scaleMax <= scaleMin) scaleMax = scaleMin + 40;
-      // Update scale labels.
-      if (scaleMinEl)
-        scaleMinEl.textContent = `${Math.max(0, Math.round(scaleMin))} N`;
-      if (scaleMaxEl)
-        scaleMaxEl.textContent = `${Math.max(0, Math.round(scaleMax))} N`;
-      // Position the target segment.
-      if (targetEl) {
-        const rangeSpan = Math.max(1, scaleMax - scaleMin);
-        const leftPct = Math.max(
-          0,
-          Math.min(100, ((firstStage.lower - scaleMin) / rangeSpan) * 100),
-        );
-        const rightPct = Math.max(
-          0,
-          Math.min(100, ((firstStage.upper - scaleMin) / rangeSpan) * 100),
-        );
-        const widthPct = Math.max(0, rightPct - leftPct);
-        targetEl.style.left = `${leftPct}%`;
-        targetEl.style.width = `${widthPct}%`;
-      }
-      if (rangeEl) rangeEl.textContent = range;
-      if (forceEl) forceEl.textContent = "—";
-      if (guideEl) guideEl.textContent = "Aguardando leitura de força...";
-    } catch { }
-    pre.classList.remove("hidden");
-  }
+  // No pre-start gating; begin session as soon as data arrives.
 }
 
 export function updateStageUI() {
@@ -349,6 +318,7 @@ export function nextStage() {
       `Concluída • ${state.trainingSession.stages.length} estágios`;
     const stats = computeSessionStats();
     showCompletion(stats);
+    if (state.flowActive) handleFlowStepCompletion(stats);
   }
 }
 export function prevStage() {
@@ -517,6 +487,8 @@ export function computeSessionStats() {
 }
 
 function showCompletion(stats) {
+  const flowStep = state.flowActive ? state.pendingTrainingStep : null;
+  const hasMoreFlowSteps = flowStep ? flowHasNextStep() : false;
   const set = (id, v) => {
     const el = document.getElementById(id);
     if (el) el.textContent = String(v);
@@ -531,7 +503,15 @@ function showCompletion(stats) {
   const exportBtn = document.getElementById("completeExportBtn");
   const actions = document.getElementById("completeActions");
   const planBtn = document.getElementById("completePlanBtn");
-  if (state.isImportedSession) {
+  if (hasMoreFlowSteps) {
+    if (modal) modal.classList.add("hidden");
+    if (fab) fab.classList.add("hidden");
+    if (exportBtn) exportBtn.classList.add("hidden");
+    if (actions) {
+      actions.classList.remove("grid", "grid-cols-3", "gap-2");
+      actions.classList.remove("flex", "justify-center");
+    }
+  } else if (state.isImportedSession) {
     if (modal) modal.classList.add("hidden");
     if (fab) fab.classList.remove("hidden");
     if (exportBtn) exportBtn.classList.add("hidden");
@@ -551,7 +531,10 @@ function showCompletion(stats) {
   // Show 'Carregar novo plano' only for Manual (origin = 'plan')
   try {
     if (planBtn)
-      planBtn.classList.toggle("hidden", state.editOrigin !== "plan");
+      planBtn.classList.toggle(
+        "hidden",
+        state.editOrigin !== "plan" || !!flowStep,
+      );
   } catch { }
   // Close controls modal; control FAB visibility based on view/live mode
   const controls = document.getElementById("controlsModal");
@@ -559,7 +542,7 @@ function showCompletion(stats) {
   const fabToggle = document.getElementById("fabToggle");
   const fabMenu = document.getElementById("fabMenu");
   // Hide FAB only in view mode (imported). Keep visible otherwise.
-  if (state.isImportedSession) {
+  if (state.isImportedSession || hasMoreFlowSteps) {
     if (fabToggle) fabToggle.classList.add("hidden");
     if (fabMenu) fabMenu.classList.add("hidden");
   } else {
@@ -591,7 +574,16 @@ function showCompletion(stats) {
       };
       // Tag manual flow sessions with a clear prefix in the title
       try {
-        if (state.editOrigin === "plan") record.title = `Manual • ${baseTitle}`;
+        if (state.editOrigin === "plan")
+          record.title = `Manual • ${baseTitle}`;
+        else if (flowStep && state.flowPlan) {
+          const stepLabel = flowStep?.suffix
+            ? `${state.flowPlan.name || "Plano"}${flowStep.suffix}`
+            : `${state.flowPlan.name || "Plano"}`;
+          record.title = `Plano fixo • ${stepLabel}`;
+          record.planId = state.flowPlan.id || record.planId;
+          record.planIdx = flowStep.id || record.planIdx;
+        }
       } catch { }
       saveCompletedSession(record);
       // Notify Home to refresh Done tab immediately
@@ -1130,19 +1122,398 @@ function computeStatsForSeries(series, stages) {
   };
 }
 
+// ============= Fixed Plan Guided Flow ============= //
+
+function nToKgf(force) {
+  if (!Number.isFinite(force)) return 0;
+  return Math.max(0, force) / N_PER_KGF;
+}
+
+function getArmShortLabel(arm) {
+  if (arm === 'direito') return 'Braço Direito';
+  if (arm === 'esquerdo') return 'Braço Esquerdo';
+  return 'Braço';
+}
+
+function getActiveRestSlots() {
+  const raw = Array.isArray(state.restPositions) ? state.restPositions : [];
+  const set = new Set();
+  raw.forEach((value) => {
+    const slot = Number(value);
+    if (Number.isFinite(slot)) set.add(Math.trunc(slot));
+  });
+  return set;
+}
+
+function flowHasNextStep() {
+  if (!state.flowActive) return false;
+  const seq = Array.isArray(state.flowSequence) ? state.flowSequence : [];
+  return state.currentStepIndex < seq.length - 1;
+}
+
+function hasArmMax(arm) {
+  if (arm === 'direito')
+    return Number.isFinite(state.maxDireitoN) && state.maxDireitoN > 0;
+  if (arm === 'esquerdo')
+    return Number.isFinite(state.maxEsquerdoN) && state.maxEsquerdoN > 0;
+  return false;
+}
+
+function ensureFlowSequence() {
+  const order = sanitizeFlowStepOrder(state.flowStepOrder);
+  const mapped = order
+    .map((id) => FLOW_TRAINING_STEPS.find((step) => step.id === id))
+    .filter(Boolean);
+  if (mapped.length) return mapped;
+  return FLOW_TRAINING_STEPS.slice();
+}
+
+export function prepareFixedPlanFlow(planId) {
+  const plan = getFixedPlanById(planId);
+  if (!plan) {
+    alert('Plano fixo não encontrado.');
+    return;
+  }
+  if (!DEV_BYPASS_CONNECT && !(state.device?.gatt?.connected)) {
+    alert('Conecte um dinamômetro TeraForce para iniciar o plano.');
+    return;
+  }
+  stopMeasurement();
+  stopRestTimer();
+  state.flowPlan = plan;
+  state.flowActive = true;
+  state.flowSequence = ensureFlowSequence();
+  state.currentStepIndex = 0;
+  state.flowStats = [];
+  state.pendingTrainingStep = null;
+  state.flowArm = null;
+  showScreen('plot');
+  startFlowStep();
+}
+
+function startFlowStep() {
+  if (!state.flowActive) return;
+  const seq = Array.isArray(state.flowSequence) ? state.flowSequence : [];
+  const step = seq[state.currentStepIndex];
+  if (!step) {
+    finishFlow();
+    return;
+  }
+  state.pendingTrainingStep = step;
+  state.flowArm = step.arm;
+  if (step.captureMax || !hasArmMax(step.arm)) {
+    beginMeasurement(step);
+  } else {
+    beginFlowTraining(step);
+  }
+}
+
+function beginMeasurement(step) {
+  const modal = document.getElementById('armMaxModal');
+  if (!modal) {
+    beginFlowTraining(step);
+    return;
+  }
+  stopMeasurement();
+  const { arm } = step;
+  const measurement = state.measurement;
+  measurement.active = true;
+  measurement.complete = false;
+  measurement.arm = arm;
+  measurement.startMs = performance.now();
+  measurement.durationMs = FLOW_MEASUREMENT_MS;
+  measurement.peakN = 0;
+  measurement.currentN = 0;
+  measurement.forceElapsedMs = 0;
+  measurement.lastFrameMs = measurement.startMs;
+  const title = document.getElementById('armMaxTitle');
+  const subtitle = document.getElementById('armMaxSubtitle');
+  const currentEl = document.getElementById('armMaxCurrent');
+  const peakEl = document.getElementById('armMaxPeak');
+  const progressEl = document.getElementById('armMaxProgress');
+  const countdownEl = document.getElementById('armMaxCountdown');
+  const proceedBtn = document.getElementById('armMaxProceedBtn');
+  if (title) title.textContent = `Medição de força máxima (${getArmShortLabel(arm)})`;
+  if (subtitle)
+    subtitle.textContent = 'Mantenha o braço estável e aplique força máxima por 3 segundos.';
+  if (currentEl) currentEl.textContent = '0,0 kgf';
+  if (peakEl) peakEl.textContent = '0,0 kgf';
+  if (progressEl) progressEl.style.width = '0%';
+  if (countdownEl) countdownEl.textContent = '3,0s restantes';
+  if (proceedBtn) proceedBtn.disabled = true;
+  modal.classList.remove('hidden');
+  measurement.rafHandle = requestAnimationFrame(updateMeasurementProgress);
+}
+
+function updateMeasurementProgress(timestamp) {
+  const measurement = state.measurement;
+  if (!measurement?.active) return;
+  const elapsed = timestamp - measurement.startMs;
+  measurement.forceElapsedMs = elapsed;
+  measurement.lastFrameMs = timestamp;
+  const remainingMs = Math.max(0, measurement.durationMs - elapsed);
+  const progress = clamp((elapsed / measurement.durationMs) * 100, 0, 100);
+  const progressEl = document.getElementById('armMaxProgress');
+  if (progressEl) progressEl.style.width = `${progress.toFixed(1)}%`;
+  const countdownEl = document.getElementById('armMaxCountdown');
+  if (countdownEl) {
+    const seconds = remainingMs / 1000;
+    const label = seconds <= 0 ? 'Tempo concluído' : `${seconds.toFixed(1).replace('.', ',')}s restantes`;
+    countdownEl.textContent = label;
+  }
+  if (remainingMs <= 0 && !measurement.complete) finalizeMeasurement();
+  if (!measurement.complete) {
+    measurement.rafHandle = requestAnimationFrame(updateMeasurementProgress);
+  }
+}
+
+function finalizeMeasurement() {
+  const measurement = state.measurement;
+  if (!measurement) return;
+  measurement.complete = true;
+  const countdownEl = document.getElementById('armMaxCountdown');
+  if (countdownEl) countdownEl.textContent = 'Pronto para prosseguir';
+  const proceedBtn = document.getElementById('armMaxProceedBtn');
+  if (proceedBtn) proceedBtn.disabled = false;
+}
+
+export function processMeasurementSample(force) {
+  const measurement = state.measurement;
+  if (!measurement?.active) return;
+  const absolute = Math.abs(force);
+  measurement.currentN = absolute;
+  if (absolute > measurement.peakN) measurement.peakN = absolute;
+  const currentEl = document.getElementById('armMaxCurrent');
+  const peakEl = document.getElementById('armMaxPeak');
+  if (currentEl)
+    currentEl.textContent = `${nToKgf(absolute).toFixed(1).replace('.', ',')} kgf`;
+  if (peakEl)
+    peakEl.textContent = `${nToKgf(measurement.peakN).toFixed(1).replace('.', ',')} kgf`;
+}
+
+function handleMeasurementCancel() {
+  cancelFlow();
+}
+
+function handleMeasurementProceed() {
+  const measurement = state.measurement;
+  if (!measurement?.complete) return;
+  const peakN = measurement.peakN;
+  if (!Number.isFinite(peakN) || peakN <= 0) {
+    alert('Não foi possível capturar a força máxima. Tente novamente.');
+    return;
+  }
+  if (measurement.arm === 'direito') {
+    state.maxDireitoN = peakN;
+    state.maxDireitoKgf = Number(nToKgf(peakN).toFixed(2));
+  } else if (measurement.arm === 'esquerdo') {
+    state.maxEsquerdoN = peakN;
+    state.maxEsquerdoKgf = Number(nToKgf(peakN).toFixed(2));
+  }
+  stopMeasurement();
+  const modal = document.getElementById('armMaxModal');
+  modal?.classList.add('hidden');
+  const step = state.pendingTrainingStep;
+  if (step) {
+    beginFlowTraining(step);
+  } else {
+    finishFlow();
+  }
+}
+
+function beginFlowTraining(step) {
+  const session = buildFlowSession(step);
+  if (!session) {
+    alert('Não foi possível montar a sessão. Verifique as medições de força.');
+    finishFlow();
+    return;
+  }
+  state.editOrigin = 'fixedPlan';
+  state.startReturnScreen = 'home';
+  startTraining(session);
+}
+
+function buildFlowSession(step) {
+  const plan = state.flowPlan;
+  if (!plan) return null;
+  const stages = Array.isArray(plan.stages) ? plan.stages : [];
+  const maxForceN = step.arm === 'direito' ? state.maxDireitoN : state.maxEsquerdoN;
+  if (!Number.isFinite(maxForceN) || maxForceN <= 0) return null;
+  const mappedStages = stages.map((stage, index) => {
+    const lower = Math.round(Math.max(0, maxForceN * (Number(stage.lowerPct) || 0)));
+    const upper = Math.round(Math.max(lower + 1, maxForceN * (Number(stage.upperPct) || 0)));
+    return {
+      index: index + 1,
+      durationSec: Math.max(0, Number(stage.durationSec) || 0),
+      lower,
+      upper,
+    };
+  });
+  const totalDurationSec = mappedStages.reduce((acc, st) => acc + st.durationSec, 0);
+  const sessionDate = new Date().toLocaleDateString('pt-BR');
+  const athleteLabel = `${plan.name || 'Plano fixo'}${step.suffix || ''}`;
+  return {
+    id: `flow_${plan.id || 'plan'}_${step.id}_${Date.now()}`,
+    date: sessionDate,
+    athlete: athleteLabel,
+    stages: mappedStages,
+    totalDurationSec,
+    planId: plan.id || null,
+    planIdx: step.id || null,
+    flowStepId: step.id || null,
+    flowArm: step.arm,
+  };
+}
+
+function handleFlowStepCompletion(stats) {
+  const sequence = Array.isArray(state.flowSequence) ? state.flowSequence : [];
+  const step = sequence[state.currentStepIndex];
+  if (step) {
+    try {
+      state.flowStats.push({ stepId: step.id, stats });
+    } catch { }
+  }
+  stopTraining();
+  state.pendingTrainingStep = null;
+  const completedIndex = state.currentStepIndex;
+  state.currentStepIndex += 1;
+  if (state.currentStepIndex >= sequence.length) {
+    finishFlow();
+    return;
+  }
+  if (shouldRestAfterStep(completedIndex)) {
+    startRestPeriod();
+  } else {
+    startFlowStep();
+  }
+}
+
+function shouldRestAfterStep(index) {
+  const slots = getActiveRestSlots();
+  const slotId = index + 1;
+  const maxSlot = Math.max(0, (state.flowSequence?.length || 0) - 1);
+  if (slotId > maxSlot) return false;
+  return slots.has(slotId);
+}
+
+function startRestPeriod() {
+  const overlay = document.getElementById('restOverlay');
+  const countdownEl = document.getElementById('restCountdown');
+  const infoEl = document.getElementById('restNextInfo');
+  const skipBtn = document.getElementById('restSkipBtn');
+  const nextStep = state.flowSequence?.[state.currentStepIndex];
+  const restSeconds = clamp(Number(state.restIntervalSec) || 0, 10, 600);
+  if (!restSeconds || !nextStep) {
+    startFlowStep();
+    return;
+  }
+  if (skipBtn) {
+    skipBtn.classList.toggle('hidden', !state.restSkipEnabled);
+    skipBtn.disabled = !state.restSkipEnabled;
+  }
+  if (infoEl)
+    infoEl.textContent = `Próximo: ${nextStep.label || getArmShortLabel(nextStep.arm)}`;
+  if (countdownEl) countdownEl.textContent = fmtMMSS(restSeconds);
+  overlay?.classList.remove('hidden');
+  stopRestTimer();
+  const endMs = now() + restSeconds * 1000;
+  state.restTimer.active = true;
+  state.restTimer.endMs = endMs;
+  state.restTimer.stepId = nextStep.id || null;
+  state.restTimer.handle = setInterval(updateRestCountdown, 250);
+  updateRestCountdown();
+}
+
+function updateRestCountdown() {
+  if (!state.restTimer?.active) return;
+  const countdownEl = document.getElementById('restCountdown');
+  const remainingMs = Math.max(0, state.restTimer.endMs - now());
+  const seconds = Math.ceil(remainingMs / 1000);
+  if (countdownEl) countdownEl.textContent = fmtMMSS(seconds);
+  if (remainingMs <= 0) finishRestPeriod(false);
+}
+
+function finishRestPeriod(skipped) {
+  stopRestTimer();
+  const overlay = document.getElementById('restOverlay');
+  overlay?.classList.add('hidden');
+  if (skipped) state.restTimer.stepId = null;
+  startFlowStep();
+}
+
+function stopRestTimer() {
+  if (state.restTimer?.handle) {
+    clearInterval(state.restTimer.handle);
+  }
+  state.restTimer.handle = null;
+  state.restTimer.active = false;
+}
+
+function stopMeasurement() {
+  const measurement = state.measurement;
+  if (!measurement) return;
+  measurement.active = false;
+  measurement.complete = false;
+  measurement.arm = null;
+  if (measurement.timerHandle) {
+    clearInterval(measurement.timerHandle);
+    measurement.timerHandle = null;
+  }
+  if (measurement.rafHandle) {
+    cancelAnimationFrame(measurement.rafHandle);
+    measurement.rafHandle = null;
+  }
+}
+
+function finishFlow() {
+  stopMeasurement();
+  stopRestTimer();
+  state.flowActive = false;
+  state.flowSequence = [];
+  state.currentStepIndex = 0;
+  state.pendingTrainingStep = null;
+  state.flowPlan = null;
+  state.flowArm = null;
+}
+
+function cancelFlow() {
+  stopMeasurement();
+  stopRestTimer();
+  const modal = document.getElementById('armMaxModal');
+  modal?.classList.add('hidden');
+  finishFlow();
+  stopTraining();
+  showScreen('home');
+}
+
+function ensureFlowUiBindings() {
+  const cancelBtn = document.getElementById('armMaxCancelBtn');
+  const proceedBtn = document.getElementById('armMaxProceedBtn');
+  const skipBtn = document.getElementById('restSkipBtn');
+  cancelBtn?.addEventListener('click', handleMeasurementCancel);
+  proceedBtn?.addEventListener('click', handleMeasurementProceed);
+  skipBtn?.addEventListener('click', () => finishRestPeriod(true));
+}
+
+if (typeof document !== 'undefined') {
+  ensureFlowUiBindings();
+}
+
 // Handle stage selection from session plot clicks
-window.addEventListener("session:stageSelected", (e) => {
-  if (!state.trainingSession || !state.isImportedSession) return;
-  const idx = Math.max(
-    0,
-    Math.min(e?.detail?.index ?? 0, state.trainingSession.stages.length - 1),
-  );
-  state.stageIdx = idx;
-  updateStageUI();
-  try {
-    plotStageSliceByIndex(idx);
-  } catch { }
-  try {
-    syncChartScales();
-  } catch { }
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('session:stageSelected', (e) => {
+    if (!state.trainingSession || !state.isImportedSession) return;
+    const idx = Math.max(
+      0,
+      Math.min(e?.detail?.index ?? 0, state.trainingSession.stages.length - 1),
+    );
+    state.stageIdx = idx;
+    updateStageUI();
+    try {
+      plotStageSliceByIndex(idx);
+    } catch { }
+    try {
+      syncChartScales();
+    } catch { }
+  });
+}
