@@ -112,6 +112,35 @@ if (typeof window !== 'undefined') {
   window.showConnectScreen = switchToConnect;
 }
 
+function loadPersistedAutoForwardSettings() {
+  // Measurement
+  const persistedMeasurement = localStorage.getItem("isotrainer:autoForwardMeasurement");
+  if (persistedMeasurement !== null) {
+    state.autoForwardMeasurement = persistedMeasurement === "true";
+  }
+  const measurementToggle = document.getElementById("autoForwardMeasurementToggle");
+  if (measurementToggle) {
+    measurementToggle.checked = !!state.autoForwardMeasurement;
+    measurementToggle.addEventListener("change", function () {
+      state.autoForwardMeasurement = !!measurementToggle.checked;
+      localStorage.setItem("isotrainer:autoForwardMeasurement", state.autoForwardMeasurement ? "true" : "false");
+    });
+  }
+  // Prestart
+  const persistedPrestart = localStorage.getItem("isotrainer:autoForwardPrestart");
+  if (persistedPrestart !== null) {
+    state.autoForwardPrestart = persistedPrestart === "true";
+  }
+  const prestartToggle = document.getElementById("autoForwardPrestartToggle");
+  if (prestartToggle) {
+    prestartToggle.checked = !!state.autoForwardPrestart;
+    prestartToggle.addEventListener("change", function () {
+      state.autoForwardPrestart = !!prestartToggle.checked;
+      localStorage.setItem("isotrainer:autoForwardPrestart", state.autoForwardPrestart ? "true" : "false");
+    });
+  }
+}
+
 // Boot: initialize charts and early UI preferences.
 window.addEventListener("load", async () => {
   setupCharts();
@@ -134,6 +163,10 @@ window.addEventListener("load", async () => {
   } catch { }
   try {
     updateConnectUi();
+  } catch { }
+  // Load auto-forward settings after DOM is ready
+  try {
+    loadPersistedAutoForwardSettings();
   } catch { }
 });
 
@@ -351,13 +384,13 @@ document.getElementById("completeRestoreFab")?.addEventListener("click", () => {
   if (fab) fab.classList.add("hidden");
 });
 
-  // Do not auto-navigate on connect; user advances with Next on Connect.
+// Do not auto-navigate on connect; user advances with Next on Connect.
 
-  // Expose state and smoothing functions for settings menu persistence
-  window.state = state;
-  try {
-    const { applyTrendSmoothingSetting, refreshStageSeriesForSmoothing, plotStageSliceByIndex } = await import('./charts.js');
-    window.applyTrendSmoothingSetting = applyTrendSmoothingSetting;
-    window.refreshStageSeriesForSmoothing = refreshStageSeriesForSmoothing;
-    window.plotStageSliceByIndex = plotStageSliceByIndex;
-  } catch {}
+// Expose state and smoothing functions for settings menu persistence
+window.state = state;
+try {
+  const { applyTrendSmoothingSetting, refreshStageSeriesForSmoothing, plotStageSliceByIndex } = await import('./charts.js');
+  window.applyTrendSmoothingSetting = applyTrendSmoothingSetting;
+  window.refreshStageSeriesForSmoothing = refreshStageSeriesForSmoothing;
+  window.plotStageSliceByIndex = plotStageSliceByIndex;
+} catch { }

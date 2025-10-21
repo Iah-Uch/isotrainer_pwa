@@ -1,5 +1,6 @@
 // Module: Session lifecycle, UI updates, metrics and CSV import/export.
 import { state, DEV_BYPASS_CONNECT } from './state.js';
+import './session-prestart.js';
 import { now, fmtMMSS, parseTimeToSeconds, clamp } from './utils.js';
 import {
   resetStageSeries,
@@ -185,7 +186,17 @@ export function startTraining(session) {
   state.pulseAnimation.startTime = performance.now();
   state.pulseAnimation.handle = requestAnimationFrame(animationLoop);
 
-  // No pre-start gating; begin session as soon as data arrives.
+  // Show prestart modal before starting session
+  if (window.showPreStartModal) {
+    window.onPreStartProceed = () => {
+      state.waitingForFirstSample = false;
+      // Start session as normal (data will arrive and tick will proceed)
+    };
+    window.showPreStartModal(session.stages[0]);
+  } else {
+    // Fallback: begin session as soon as data arrives.
+    state.waitingForFirstSample = false;
+  }
 }
 
 export function updateStageUI() {
@@ -698,19 +709,19 @@ function captureFlowStepRecord(snapshot) {
   if (!Array.isArray(state.flowStepRecords)) state.flowStepRecords = [];
   const stages = Array.isArray(snapshot.stages)
     ? snapshot.stages.map((stage) => ({
-        index: Number.isFinite(Number(stage?.index))
-          ? Number(stage.index)
-          : undefined,
-        durationSec: Math.max(0, Number(stage?.durationSec) || 0),
-        lower: Number(stage?.lower) || 0,
-        upper: Number(stage?.upper) || 0,
-      }))
+      index: Number.isFinite(Number(stage?.index))
+        ? Number(stage.index)
+        : undefined,
+      durationSec: Math.max(0, Number(stage?.durationSec) || 0),
+      lower: Number(stage?.lower) || 0,
+      upper: Number(stage?.upper) || 0,
+    }))
     : [];
   const series = Array.isArray(snapshot.series)
     ? snapshot.series.map((point) => ({
-        x: Number(point?.x) || 0,
-        y: typeof point?.y === "number" ? point.y : null,
-      }))
+      x: Number(point?.x) || 0,
+      y: typeof point?.y === "number" ? point.y : null,
+    }))
     : [];
   const inferredSamples = series.filter((p) => typeof p.y === "number").length;
   const stats = snapshot.stats
@@ -1005,7 +1016,7 @@ function selectViewSeriesGroup(index) {
       set("statMax", `${stats.max} N`);
       set("statMin", `${stats.min} N`);
       set("statInTarget", `${stats.inTargetPct}%`);
-    } catch (e) {}
+    } catch (e) { }
     return;
   }
 
@@ -1252,12 +1263,12 @@ function buildExportCsvFromState(
   // Summary row
   rows.push([
     "summary",
-      session.date,
-      session.athlete,
-      "",
-      session.totalDurationSec,
-      "",
-      "",
+    session.date,
+    session.athlete,
+    "",
+    session.totalDurationSec,
+    "",
+    "",
     stats.avg,
     stats.min,
     stats.max,
@@ -1862,14 +1873,68 @@ function updateMeasurementProgress(timestamp) {
   }
 }
 
+let measurementAutoForwardTimer = null;
+
+function getOrCreateArmMaxCountdownSide() {
+  let side = document.getElementById('armMaxCountdownSide');
+  const proceedBtn = document.getElementById('armMaxProceedBtn');
+  if (!side && proceedBtn) {
+    side = document.createElement('span');
+    side.id = 'armMaxCountdownSide';
+    side.className = 'ml-2 text-xs text-slate-300';
+    proceedBtn.appendChild(side);
+  }
+  return side;
+}
+
 function finalizeMeasurement() {
   const measurement = state.measurement;
   if (!measurement) return;
   measurement.complete = true;
   const countdownEl = document.getElementById('armMaxCountdown');
-  if (countdownEl) countdownEl.textContent = 'Pronto para prosseguir';
   const proceedBtn = document.getElementById('armMaxProceedBtn');
-  if (proceedBtn) proceedBtn.disabled = false;
+  const sideCountdown = getOrCreateArmMaxCountdownSide();
+  // Make the progress bar green
+  const progressEl = document.getElementById('armMaxProgress');
+  if (progressEl) {
+    progressEl.style.background = 'rgb(0 171 76)'; // olive green
+  }
+  if (state.autoForwardMeasurement) {
+    if (proceedBtn) proceedBtn.disabled = true;
+    let ms = 3000;
+    if (countdownEl) {
+      countdownEl.textContent = 'Avançando em 3,0s...';
+      countdownEl.classList.remove('hidden');
+    }
+    if (sideCountdown) {
+      sideCountdown.textContent = '3,0s';
+      sideCountdown.style.display = '';
+    }
+    if (measurementAutoForwardTimer) clearInterval(measurementAutoForwardTimer);
+    measurementAutoForwardTimer = setInterval(() => {
+      ms -= 100;
+      const txt = `${(ms / 1000).toFixed(1).replace('.', ',')}s`;
+      if (countdownEl) {
+        countdownEl.textContent = `Avançando em ${txt}...`;
+      }
+      if (sideCountdown) {
+        sideCountdown.textContent = txt;
+        sideCountdown.style.display = '';
+      }
+      if (ms <= 0) {
+        clearInterval(measurementAutoForwardTimer);
+        measurementAutoForwardTimer = null;
+        if (proceedBtn) proceedBtn.disabled = false;
+        if (sideCountdown) sideCountdown.textContent = '';
+        // Auto-proceed
+        handleMeasurementProceed();
+      }
+    }, 100);
+  } else {
+    if (countdownEl) countdownEl.textContent = 'Pronto para prosseguir';
+    if (proceedBtn) proceedBtn.disabled = false;
+    if (sideCountdown) sideCountdown.textContent = '';
+  }
 }
 
 export function processMeasurementSample(force) {
@@ -1884,7 +1949,10 @@ export function processMeasurementSample(force) {
     const countdownEl = document.getElementById('armMaxCountdown');
     if (countdownEl) countdownEl.textContent = '3,0s restantes';
     const progressEl = document.getElementById('armMaxProgress');
-    if (progressEl) progressEl.style.width = '0%';
+    if (progressEl) {
+      progressEl.style.width = '0%';
+      progressEl.style.background = ''; // reset to default (amber)
+    }
     measurement.rafHandle = requestAnimationFrame(updateMeasurementProgress);
   }
   measurement.currentN = absolute;

@@ -670,8 +670,8 @@ export function renderHome(plans) {
   const today = new Date();
   const todayKey = Number(
     String(today.getFullYear()) +
-      String(today.getMonth() + 1).padStart(2, "0") +
-      String(today.getDate()).padStart(2, "0"),
+    String(today.getMonth() + 1).padStart(2, "0") +
+    String(today.getDate()).padStart(2, "0"),
   );
   const isFutureOrToday = (plan) => {
     const key = parseDateKey(plan?.date);
@@ -963,10 +963,10 @@ function openFixedPlanModal(plan) {
   metaEl.textContent = `${stages.length} estágios • Sessão ≈ ${fmtMMSS(sessionTotalSec)}`;
   const restCount = Array.isArray(state.restPositions)
     ? new Set(
-        state.restPositions
-          .map((slot) => normalizeRestSlot(slot))
-          .filter((slot) => slot !== null),
-      ).size
+      state.restPositions
+        .map((slot) => normalizeRestSlot(slot))
+        .filter((slot) => slot !== null),
+    ).size
     : 0;
   const restInterval = clamp(Number(state.restIntervalSec) || 0, 0, 3600);
   const restDetails = document.getElementById("fixedPlanMetaRest");
@@ -1939,8 +1939,8 @@ function renderRestPositionsSettings() {
   state.flowStepOrder = stepOrder;
   const activeRest = Array.isArray(state.restPositions)
     ? state.restPositions
-        .map((slot) => normalizeRestSlot(slot))
-        .filter((slot) => slot !== null)
+      .map((slot) => normalizeRestSlot(slot))
+      .filter((slot) => slot !== null)
     : [];
   const restSet = new Set(activeRest);
 
@@ -1985,11 +1985,10 @@ function renderRestPositionsSettings() {
     restItem.innerHTML = `
       <div>
         <div class="font-medium text-amber-200">Descanso após este passo</div>
-        <div class="text-xs text-amber-200/80">${
-          hasRest
-            ? "Será exibida a contagem regressiva antes do próximo passo."
-            : "Ative para inserir um descanso aqui."
-        }</div>
+        <div class="text-xs text-amber-200/80">${hasRest
+        ? "Será exibida a contagem regressiva antes do próximo passo."
+        : "Ative para inserir um descanso aqui."
+      }</div>
       </div>
       <button type="button" data-act="toggleRest" data-slot="${slotId}" class="px-3 py-1 rounded-lg ${buttonClass}">
         ${hasRest ? "Remover" : "Adicionar"}

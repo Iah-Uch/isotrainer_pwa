@@ -534,7 +534,16 @@ function handleForceMeasurement(value) {
     if (!Number.isFinite(force)) continue;
 
     try {
-      processMeasurementSample(force);
+      // Route force sample to prestart modal if active, else to measurement
+      if (
+        typeof window.onPreStartForceSample === 'function' &&
+        document.getElementById('preStartModal') &&
+        !document.getElementById('preStartModal').classList.contains('hidden')
+      ) {
+        window.onPreStartForceSample(force);
+      } else {
+        processMeasurementSample(force);
+      }
     } catch { }
 
     if (state.waitingForFirstSample && Math.abs(force) > 0.1) {
