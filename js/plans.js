@@ -1355,10 +1355,10 @@ function openDonePreview(index) {
     d.innerHTML = `<div class="text-slate-400 text-xs">${label}</div><div class="font-semibold">${val}</div>`;
     return d;
   };
-  stats.appendChild(mk("Força média", `${rec?.stats?.avg ?? 0} N`));
-  stats.appendChild(mk("Força máx", `${rec?.stats?.max ?? 0} N`));
-  stats.appendChild(mk("Força mín", `${rec?.stats?.min ?? 0} N`));
-  stats.appendChild(mk("No alvo", `${rec?.stats?.inTargetPct ?? 0}%`));
+  stats.appendChild(mk("Força média", `${(rec?.stats?.avg ?? 0).toFixed(1)} kgf`));
+  stats.appendChild(mk("Força máx", `${(rec?.stats?.max ?? 0).toFixed(1)} kgf`));
+  stats.appendChild(mk("Força mín", `${(rec?.stats?.min ?? 0).toFixed(1)} kgf`));
+  stats.appendChild(mk("No alvo", `${(rec?.stats?.inTargetPct ?? 0).toFixed(1)}%`));
   wrap.appendChild(titleText);
   wrap.appendChild(meta);
   wrap.appendChild(stats);

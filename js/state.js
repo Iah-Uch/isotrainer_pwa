@@ -2,7 +2,7 @@
 
 // Toggle manually when developing without hardware.
 export const DEV_OPTIONS = {
-  bypassConnectScreen: false,
+  bypassConnectScreen: true,
 };
 
 export const DEV_BYPASS_CONNECT = !!DEV_OPTIONS.bypassConnectScreen;

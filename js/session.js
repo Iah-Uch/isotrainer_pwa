@@ -566,10 +566,10 @@ function showCompletion(stats) {
     const el = document.getElementById(id);
     if (el) el.textContent = String(v);
   };
-  set("statAvg", `${stats.avg} N`);
-  set("statMax", `${stats.max} N`);
-  set("statMin", `${stats.min} N`);
-  set("statInTarget", `${stats.inTargetPct}%`);
+  set("statAvg", `${stats.avg.toFixed(1)} kgf`);
+  set("statMax", `${stats.max.toFixed(1)} kgf`);
+  set("statMin", `${stats.min.toFixed(1)} kgf`);
+  set("statInTarget", `${stats.inTargetPct.toFixed(1)}%`);
   // Completion UI behavior (imported sessions keep modal hidden for interaction)
   const modal = document.getElementById("completeScreen");
   const fab = document.getElementById("completeRestoreFab");
@@ -1012,10 +1012,10 @@ function selectViewSeriesGroup(index) {
         const el = document.getElementById(id);
         if (el) el.textContent = String(v);
       };
-      set("statAvg", `${stats.avg} N`);
-      set("statMax", `${stats.max} N`);
-      set("statMin", `${stats.min} N`);
-      set("statInTarget", `${stats.inTargetPct}%`);
+      set("statAvg", `${stats.avg.toFixed(1)} kgf`);
+      set("statMax", `${stats.max.toFixed(1)} kgf`);
+      set("statMin", `${stats.min.toFixed(1)} kgf`);
+      set("statInTarget", `${stats.inTargetPct.toFixed(1)}%`);
     } catch (e) { }
     return;
   }
@@ -1082,10 +1082,10 @@ function selectViewSeriesGroup(index) {
       const el = document.getElementById(id);
       if (el) el.textContent = String(v);
     };
-    set("statAvg", `${stats.avg} N`);
-    set("statMax", `${stats.max} N`);
-    set("statMin", `${stats.min} N`);
-    set("statInTarget", `${stats.inTargetPct}%`);
+    set("statAvg", `${stats.avg.toFixed(1)} kgf`);
+    set("statMax", `${stats.max.toFixed(1)} kgf`);
+    set("statMin", `${stats.min.toFixed(1)} kgf`);
+    set("statInTarget", `${stats.inTargetPct.toFixed(1)}%`);
   } catch (e) {
     // fail silently
   }
@@ -2296,10 +2296,10 @@ if (typeof window !== 'undefined') {
             const el = document.getElementById(id);
             if (el) el.textContent = String(v);
           };
-          set("statAvg", `${stats.avg} N`);
-          set("statMax", `${stats.max} N`);
-          set("statMin", `${stats.min} N`);
-          set("statInTarget", `${stats.inTargetPct}%`);
+          set("statAvg", `${stats.avg.toFixed(1)} kgf`);
+          set("statMax", `${stats.max.toFixed(1)} kgf`);
+          set("statMin", `${stats.min.toFixed(1)} kgf`);
+          set("statInTarget", `${stats.inTargetPct.toFixed(1)}%`);
         }
       }
     } else {

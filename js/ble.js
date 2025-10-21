@@ -700,6 +700,6 @@ async function stopStreaming() {
 
 function formatForce(value, { withUnit = false } = {}) {
   if (!Number.isFinite(value)) return "—";
-  const rounded = Math.round(value); // nearest integer, no decimals
-  return withUnit ? `${rounded} N` : String(rounded);
+  const rounded = value.toFixed(1); // one decimal place
+  return withUnit ? `${rounded} kgf` : String(rounded);
 }
