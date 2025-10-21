@@ -123,6 +123,11 @@ export function startTraining(session) {
   state.trainingSession = session;
   ensureSessionUsesKgf(state.trainingSession);
   state.isImportedSession = false;
+  state.viewSeriesGroups = [];
+  state.viewSeriesActiveGroup = 0;
+  try {
+    renderViewSeriesFab();
+  } catch { }
   state.stageIdx = 0;
   // Arm waiting state; gate actual start behind user Play.
   state.waitingForFirstSample = true;
@@ -491,10 +496,13 @@ export function animationLoop() {
 }
 
 // Compute simple session stats from sessionSeries
-export function computeSessionStats() {
-  const points = state.sessionSeries || [];
-  if (!points.length || !state.trainingSession) {
-    return { avg: 0, min: 0, max: 0, inTargetPct: 0 };
+export function computeSessionStats(
+  session = state.trainingSession,
+  points = state.sessionSeries,
+) {
+  const data = Array.isArray(points) ? points : [];
+  if (!data.length || !session || !Array.isArray(session.stages)) {
+    return { avg: 0, min: 0, max: 0, inTargetPct: 0, samples: 0 };
   }
   let sum = 0,
     count = 0,
@@ -505,7 +513,7 @@ export function computeSessionStats() {
   // We map x (sec from start) to stage bounds using cumulative durations
   const stageOffsets = [];
   let acc = 0;
-  for (const s of state.trainingSession.stages) {
+  for (const s of session.stages) {
     stageOffsets.push({
       start: acc,
       end: acc + s.durationSec,
@@ -515,7 +523,7 @@ export function computeSessionStats() {
     acc += s.durationSec;
   }
 
-  for (const p of points) {
+  for (const p of data) {
     if (p && typeof p.y === "number") {
       const force = p.y;
       sum += force;
@@ -536,6 +544,7 @@ export function computeSessionStats() {
     min: isFinite(min) ? min : 0,
     max: isFinite(max) ? max : 0,
     inTargetPct,
+    samples: count,
   };
 }
 
@@ -606,23 +615,30 @@ function showCompletion(stats) {
   // Persist completed session locally for Home tabs (only for real trainings)
   try {
     if (!state.isImportedSession) {
-      const csv = buildExportCsvFromState();
-      const baseTitle = `${state.trainingSession?.date || "Sessão"} • ${Number(state.trainingSession?.stages?.length || 0)} estágios`;
+      const sessionData = state.trainingSession;
+      if (!sessionData) return;
+      const seriesPoints = Array.isArray(state.sessionSeries)
+        ? state.sessionSeries
+        : [];
+      const csv = buildExportCsvFromState(sessionData, seriesPoints);
+      const stageSnapshot = Array.isArray(sessionData.stages)
+        ? sessionData.stages.map((stage) => ({ ...stage }))
+        : [];
+      const baseTitle = `${sessionData.date || "Sessão"} • ${Number(stageSnapshot.length)} estágios`;
       const record = {
-        date: state.trainingSession?.date || "",
-        athlete: state.trainingSession?.athlete || "",
-        totalDurationSec: state.trainingSession?.totalDurationSec || 0,
-        stagesCount: state.trainingSession?.stages?.length || 0,
-        stats,
+        date: sessionData.date || "",
+        athlete: sessionData.athlete || "",
+        totalDurationSec: sessionData.totalDurationSec || 0,
+        stagesCount: stageSnapshot.length,
+        stats: { ...stats },
         isImported: false,
         csv,
         completedAt: new Date().toISOString(),
-        planId:
-          state.trainingSession?.planId || state.trainingSession?.id || null,
-        planIdx: Number.isFinite(Number(state.trainingSession?.planIdx))
-          ? Number(state.trainingSession?.planIdx)
-          : Number.isFinite(Number(state.trainingSession?.idx))
-            ? Number(state.trainingSession?.idx)
+        planId: sessionData.planId || sessionData.id || null,
+        planIdx: Number.isFinite(Number(sessionData.planIdx))
+          ? Number(sessionData.planIdx)
+          : Number.isFinite(Number(sessionData.idx))
+            ? Number(sessionData.idx)
             : null,
       };
       // Tag manual flow sessions with a clear prefix in the title
@@ -638,13 +654,491 @@ function showCompletion(stats) {
           record.planIdx = flowStep.id || record.planIdx;
         }
       } catch { }
-      saveCompletedSession(record);
-      // Notify Home to refresh Done tab immediately
-      try {
-        window.dispatchEvent(new CustomEvent("sessions:updated"));
-      } catch { }
+      const stepTitle = record.title || baseTitle;
+      const stepStats = { ...stats };
+      if (state.flowActive) {
+        captureFlowStepRecord({
+          title: stepTitle,
+          stats: stepStats,
+          stages: stageSnapshot,
+          series: seriesPoints.map((p) => ({ x: p?.x ?? 0, y: p?.y ?? null })),
+          totalDurationSec: record.totalDurationSec,
+          stagesCount: stageSnapshot.length,
+          date: record.date,
+          athlete: record.athlete,
+          planId: record.planId,
+          planIdx: record.planIdx,
+          csv,
+          completedAt: record.completedAt,
+          flowStepId: flowStep?.id || null,
+        });
+      } else {
+        record.stages = stageSnapshot;
+        record.steps = [
+          {
+            title: stepTitle,
+            stats: stepStats,
+            stageCount: stageSnapshot.length,
+            totalDurationSec: record.totalDurationSec,
+            stages: stageSnapshot,
+            flowStepId: null,
+          },
+        ];
+        saveCompletedSession(record);
+        try {
+          window.dispatchEvent(new CustomEvent("sessions:updated"));
+        } catch { }
+      }
     }
   } catch { }
+}
+
+function captureFlowStepRecord(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return;
+  if (!Array.isArray(state.flowStepRecords)) state.flowStepRecords = [];
+  const stages = Array.isArray(snapshot.stages)
+    ? snapshot.stages.map((stage) => ({
+        index: Number.isFinite(Number(stage?.index))
+          ? Number(stage.index)
+          : undefined,
+        durationSec: Math.max(0, Number(stage?.durationSec) || 0),
+        lower: Number(stage?.lower) || 0,
+        upper: Number(stage?.upper) || 0,
+      }))
+    : [];
+  const series = Array.isArray(snapshot.series)
+    ? snapshot.series.map((point) => ({
+        x: Number(point?.x) || 0,
+        y: typeof point?.y === "number" ? point.y : null,
+      }))
+    : [];
+  const inferredSamples = series.filter((p) => typeof p.y === "number").length;
+  const stats = snapshot.stats
+    ? { ...snapshot.stats }
+    : { avg: 0, min: 0, max: 0, inTargetPct: 0, samples: inferredSamples };
+  if (!Number.isFinite(Number(stats.samples))) stats.samples = inferredSamples;
+  const durationFromStages = stages.reduce(
+    (sum, st) => sum + (Number.isFinite(Number(st.durationSec)) ? Number(st.durationSec) : 0),
+    0,
+  );
+  const totalDurationSec = Math.max(
+    0,
+    Number.isFinite(Number(snapshot.totalDurationSec))
+      ? Number(snapshot.totalDurationSec)
+      : durationFromStages,
+  );
+  state.flowStepRecords.push({
+    title: snapshot.title || `Série ${state.flowStepRecords.length + 1}`,
+    stats,
+    stages,
+    series,
+    totalDurationSec: totalDurationSec || durationFromStages,
+    stagesCount: Number.isFinite(Number(snapshot.stagesCount))
+      ? Number(snapshot.stagesCount)
+      : stages.length,
+    date: snapshot.date || "",
+    athlete: snapshot.athlete || "",
+    planId: snapshot.planId || null,
+    planIdx: snapshot.planIdx ?? null,
+    csv: typeof snapshot.csv === "string" ? snapshot.csv : "",
+    completedAt: snapshot.completedAt || new Date().toISOString(),
+    flowStepId: snapshot.flowStepId || null,
+  });
+}
+
+function finalizeFlowSession() {
+  const steps = Array.isArray(state.flowStepRecords) ? state.flowStepRecords.slice() : [];
+  if (!steps.length) return;
+  const plan = state.flowPlan;
+  const aggregatedStagesRaw = [];
+  const combinedSeries = [];
+  const stepsForRecord = [];
+  let timeOffset = 0;
+  let stageCursor = 1;
+  let totalDurationSec = 0;
+
+  for (const step of steps) {
+    const stageList = Array.isArray(step.stages) ? step.stages : [];
+    for (const stage of stageList) {
+      aggregatedStagesRaw.push({
+        durationSec: Math.max(0, Number(stage?.durationSec) || 0),
+        lower: Number(stage?.lower) || 0,
+        upper: Number(stage?.upper) || 0,
+      });
+    }
+    const stageDuration = stageList.reduce(
+      (sum, st) => sum + (Number.isFinite(Number(st?.durationSec)) ? Number(st.durationSec) : 0),
+      0,
+    );
+    const declaredDuration = Number.isFinite(Number(step.totalDurationSec))
+      ? Number(step.totalDurationSec)
+      : 0;
+    const stepDurationSec = declaredDuration > 0 ? declaredDuration : stageDuration;
+    const seriesList = Array.isArray(step.series) ? step.series : [];
+    for (const point of seriesList) {
+      const x = Number(point?.x) || 0;
+      const y = typeof point?.y === "number" ? point.y : null;
+      combinedSeries.push({ x: x + timeOffset, y });
+    }
+    const startStageIndex = stageCursor;
+    const endStageIndex = stageCursor + Math.max(0, stageList.length) - 1;
+    stepsForRecord.push({
+      title: step.title || `Série ${stepsForRecord.length + 1}`,
+      stats: step.stats ? { ...step.stats } : { avg: 0, min: 0, max: 0, inTargetPct: 0, samples: 0 },
+      stageCount: stageList.length,
+      totalDurationSec: stepDurationSec || stageDuration,
+      stages: stageList.map((stage) => ({ ...stage })),
+      flowStepId: step.flowStepId || null,
+      startStageIndex: stageList.length ? startStageIndex : null,
+      endStageIndex: stageList.length ? endStageIndex : null,
+    });
+    stageCursor += Math.max(0, stageList.length);
+    totalDurationSec += stepDurationSec || stageDuration;
+    timeOffset += stepDurationSec || stageDuration;
+  }
+
+  if (!totalDurationSec) {
+    totalDurationSec = aggregatedStagesRaw.reduce(
+      (sum, st) => sum + (Number.isFinite(Number(st.durationSec)) ? Number(st.durationSec) : 0),
+      0,
+    );
+  }
+
+  const sessionStages = aggregatedStagesRaw.map((stage, idx) => ({
+    index: idx + 1,
+    durationSec: stage.durationSec,
+    lower: stage.lower,
+    upper: stage.upper,
+  }));
+
+  const session = {
+    date: steps[0]?.date || new Date().toLocaleDateString("pt-BR"),
+    athlete: plan?.name || steps[0]?.athlete || "",
+    stages: sessionStages,
+    totalDurationSec: totalDurationSec,
+  };
+  if (!session.totalDurationSec) {
+    session.totalDurationSec = sessionStages.reduce(
+      (sum, st) => sum + (Number.isFinite(Number(st.durationSec)) ? Number(st.durationSec) : 0),
+      0,
+    );
+  }
+
+  const stats = computeSessionStats(session, combinedSeries);
+  const csv = buildExportCsvFromState(session, combinedSeries);
+  const title = plan
+    ? `Plano fixo • ${plan.name || "Plano"}`
+    : steps[0]?.title || `${session.date || "Sessão"} • ${sessionStages.length} estágios`;
+
+  const completionIso =
+    steps[steps.length - 1]?.completedAt || new Date().toISOString();
+
+  const aggregatedRecord = {
+    date: session.date,
+    athlete: session.athlete,
+    totalDurationSec: session.totalDurationSec,
+    stagesCount: sessionStages.length,
+    stats,
+    isImported: false,
+    csv,
+    completedAt: completionIso,
+    planId: plan?.id || steps[0]?.planId || null,
+    planIdx: steps[0]?.planIdx ?? null,
+    title,
+    steps: stepsForRecord,
+    stages: sessionStages.map((stage) => ({ ...stage })),
+    isFlowAggregate: true,
+  };
+
+  saveCompletedSession(aggregatedRecord);
+  try {
+    window.dispatchEvent(new CustomEvent("sessions:updated"));
+  } catch { }
+  state.flowStepRecords = [];
+  state.flowStats = [];
+}
+
+let viewFabInitialized = false;
+
+function getViewSeriesFabElements() {
+  return {
+    toggle: document.getElementById('viewSeriesFabToggle'),
+    menu: document.getElementById('viewSeriesFabMenu'),
+  };
+}
+
+function initViewSeriesFabControls() {
+  if (viewFabInitialized) return;
+  const { toggle, menu } = getViewSeriesFabElements();
+  if (!toggle || !menu) return;
+  viewFabInitialized = true;
+  toggle.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleViewSeriesFabMenu();
+  });
+  document.addEventListener('click', (event) => {
+    const elements = getViewSeriesFabElements();
+    if (!elements.toggle || !elements.menu) return;
+    if (event.target === elements.toggle || elements.toggle.contains(event.target)) return;
+    if (event.target === elements.menu || elements.menu.contains(event.target)) return;
+    closeViewSeriesFabMenu();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeViewSeriesFabMenu();
+  });
+}
+
+function openViewSeriesFabMenu() {
+  const { toggle, menu } = getViewSeriesFabElements();
+  if (!toggle || !menu) return;
+  menu.classList.remove('hidden');
+  toggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeViewSeriesFabMenu() {
+  const { toggle, menu } = getViewSeriesFabElements();
+  if (!toggle || !menu) return;
+  menu.classList.add('hidden');
+  toggle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleViewSeriesFabMenu() {
+  const { menu } = getViewSeriesFabElements();
+  if (!menu) return;
+  if (menu.classList.contains('hidden')) openViewSeriesFabMenu();
+  else closeViewSeriesFabMenu();
+}
+
+function renderViewSeriesFab() {
+  const { toggle, menu } = getViewSeriesFabElements();
+  if (!toggle || !menu) return;
+  initViewSeriesFabControls();
+  const groups = Array.isArray(state.viewSeriesGroups) ? state.viewSeriesGroups : [];
+  const plotScreen = document.getElementById('plotScreen');
+  if (groups.length === 0) {
+    toggle.classList.add('hidden');
+    closeViewSeriesFabMenu();
+    menu.innerHTML = '';
+    plotScreen?.classList.remove('has-view-fab');
+    return;
+  }
+  plotScreen?.classList.add('has-view-fab');
+  toggle.classList.remove('hidden');
+  closeViewSeriesFabMenu();
+  menu.innerHTML = '';
+
+  // Add "Full Session" option
+  const fullBtn = document.createElement('button');
+  fullBtn.className = 'fab-item flex items-center justify-between gap-2';
+  fullBtn.setAttribute('role', 'menuitem');
+  fullBtn.dataset.groupIndex = 'full';
+  const fullLabel = document.createElement('span');
+  fullLabel.textContent = 'Sessão Completa';
+  fullBtn.appendChild(fullLabel);
+  if (state.viewSeriesActiveGroup === -1) fullBtn.classList.add('fab-item-active');
+  fullBtn.addEventListener('click', () => {
+    selectViewSeriesGroup('full');
+  });
+  menu.appendChild(fullBtn);
+
+  groups.forEach((group, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'fab-item flex items-center justify-between gap-2';
+    btn.setAttribute('role', 'menuitem');
+    btn.dataset.groupIndex = String(idx);
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = group?.label || `Série ${idx + 1}`;
+    btn.appendChild(labelSpan);
+    const start = Number(group?.startStageIndex);
+    const end = Number(group?.endStageIndex);
+    if (Number.isFinite(start) && Number.isFinite(end)) {
+      const meta = document.createElement('span');
+      meta.className = 'text-xs text-slate-300';
+      meta.textContent = start === end ? `E${start}` : `E${start}-E${end}`;
+      btn.appendChild(meta);
+    }
+    if (idx === state.viewSeriesActiveGroup) btn.classList.add('fab-item-active');
+    btn.addEventListener('click', () => {
+      selectViewSeriesGroup(idx);
+    });
+    menu.appendChild(btn);
+  });
+}
+
+function selectViewSeriesGroup(index) {
+  const groups = Array.isArray(state.viewSeriesGroups) ? state.viewSeriesGroups : [];
+  // "Full Session" option
+  if (index === 'full') {
+    state.viewSeriesActiveGroup = -1;
+    closeViewSeriesFabMenu();
+    renderViewSeriesFab();
+
+    // Show full session in sessionHrChart
+    try {
+      const session = state.trainingSession;
+      if (!session || !Array.isArray(session.stages) || !state.sessionChart) return;
+      // Use all sessionSeries points
+      const data = (state.sessionSeries || []).map(pt => [pt.x, pt.y]);
+      state.sessionChart.setOption(
+        { series: [{ data }] },
+        false,
+        true
+      );
+      state.sessionChart.setOption(
+        {
+          xAxis: { min: 0, max: session.totalDurationSec },
+        },
+        false,
+        true
+      );
+      // Update highlight for full session
+      if (typeof syncChartScales === "function") {
+        syncChartScales();
+      }
+      // Update asides for full session
+      const stats = computeSessionStats(session, state.sessionSeries);
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(v);
+      };
+      set("statAvg", `${stats.avg} N`);
+      set("statMax", `${stats.max} N`);
+      set("statMin", `${stats.min} N`);
+      set("statInTarget", `${stats.inTargetPct}%`);
+    } catch (e) {}
+    return;
+  }
+
+  if (!groups.length) return;
+  const clamped = Math.max(0, Math.min(index, groups.length - 1));
+  state.viewSeriesActiveGroup = clamped;
+  const group = groups[clamped];
+  const start = Number(group?.startStageIndex);
+  closeViewSeriesFabMenu();
+  if (Number.isFinite(start)) focusSessionStage(start - 1);
+  else focusSessionStage(0);
+  renderViewSeriesFab();
+
+  // --- Filter sessionSeries for the selected group and update sessionHrChart ---
+  try {
+    const session = state.trainingSession;
+    if (!session || !Array.isArray(session.stages) || !state.sessionChart) return;
+    const stages = session.stages;
+    const groupStart = Number(group?.startStageIndex) - 1;
+    const groupEnd = Number(group?.endStageIndex) - 1;
+    if (!Number.isFinite(groupStart) || !Number.isFinite(groupEnd)) return;
+    // Compute time range for the group
+    let startTime = 0;
+    for (let i = 0; i < groupStart; i++) startTime += stages[i].durationSec;
+    let endTime = startTime;
+    for (let i = groupStart; i <= groupEnd; i++) endTime += stages[i].durationSec;
+    // Filter sessionSeries for this time range
+    const filtered = (state.sessionSeries || []).filter(
+      (p) => typeof p?.x === "number" && p.x >= startTime && p.x <= endTime
+    );
+    // Update sessionHrChart with filtered data
+    state.sessionChart.setOption(
+      { series: [{ data: filtered.map(pt => [pt.x - startTime, pt.y]) }] },
+      false,
+      true
+    );
+    // Optionally, update axes
+    state.sessionChart.setOption(
+      {
+        xAxis: { min: 0, max: endTime - startTime },
+      },
+      false,
+      true
+    );
+    // Update highlight for group
+    if (typeof syncChartScales === "function") {
+      syncChartScales(groupStart, groupEnd, 0, endTime - startTime);
+    }
+
+    // --- Update asides (summary/statistics panels) for the selected group ---
+    // Compute stats for the selected group
+    const groupStages = stages.slice(groupStart, groupEnd + 1);
+    // Create a temporary session object for the group
+    const groupSession = {
+      ...session,
+      stages: groupStages,
+      totalDurationSec: groupStages.reduce((a, s) => a + s.durationSec, 0),
+    };
+    // Compute stats for the filtered data
+    const stats = computeSessionStats(groupSession, filtered);
+    // Update aside DOM elements (statAvg, statMax, statMin, statInTarget)
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(v);
+    };
+    set("statAvg", `${stats.avg} N`);
+    set("statMax", `${stats.max} N`);
+    set("statMin", `${stats.min} N`);
+    set("statInTarget", `${stats.inTargetPct}%`);
+  } catch (e) {
+    // fail silently
+  }
+}
+
+function focusSessionStage(index) {
+  const session = state.trainingSession;
+  if (!session || !Array.isArray(session.stages) || !session.stages.length) return;
+  const stages = session.stages;
+  let target = Number.isFinite(Number(index)) ? Number(index) : 0;
+  if (target < 0) target = 0;
+  if (target >= stages.length) target = stages.length - 1;
+  state.stageIdx = target;
+  const stage = stages[target];
+  const labelEl = document.getElementById('stageLabel');
+  if (labelEl)
+    labelEl.textContent = `E${stage?.index || target + 1}/${stages.length} • ${fmtMMSS(
+      Number(stage?.durationSec) || 0,
+    )}`;
+  const rangeEl = document.getElementById('stageRange');
+  if (rangeEl)
+    rangeEl.textContent = `${stage?.lower ?? '—'}/${stage?.upper ?? '—'}`;
+  const elapsedEl = document.getElementById('stageElapsed');
+  if (elapsedEl) elapsedEl.textContent = fmtMMSS(Number(stage?.durationSec) || 0);
+  const totalEl = document.getElementById('totalRemaining');
+  if (totalEl)
+    totalEl.textContent = fmtMMSS(Number(session?.totalDurationSec) || 0);
+  const pctEls = [
+    document.getElementById('stageInTargetPct'),
+    document.getElementById('stageInTargetPctMobile'),
+  ].filter(Boolean);
+  for (const el of pctEls) el.textContent = '—';
+  try {
+    plotStageSliceByIndex(target);
+  } catch { }
+}
+
+function hydrateViewSeriesGroups(session, stepsMeta) {
+  if (!session || !Array.isArray(session.stages)) {
+    state.viewSeriesGroups = [];
+    state.viewSeriesActiveGroup = -1;
+    renderViewSeriesFab();
+    return;
+  }
+  const groups = [];
+  if (Array.isArray(stepsMeta) && stepsMeta.length) {
+    let cursor = 1;
+    stepsMeta.forEach((step, idx) => {
+      const declaredCount = Number(step?.stageCount);
+      const stageList = Array.isArray(step?.stages) ? step.stages : [];
+      const count = Number.isFinite(declaredCount) && declaredCount > 0 ? declaredCount : stageList.length;
+      const start = cursor;
+      const end = count > 0 ? cursor + count - 1 : cursor;
+      groups.push({
+        label: step?.title || `Série ${idx + 1}`,
+        startStageIndex: start,
+        endStageIndex: Math.max(start, end),
+      });
+      cursor = Math.max(end + 1, cursor + 1);
+    });
+  }
+  state.viewSeriesGroups = groups;
+  state.viewSeriesActiveGroup = groups.length ? 0 : -1;
+  renderViewSeriesFab();
 }
 
 function formatNumber(n, digits = 0) {
@@ -652,9 +1146,12 @@ function formatNumber(n, digits = 0) {
   return digits ? n.toFixed(digits) : String(n);
 }
 
-function computePerStageStats() {
-  if (!state.trainingSession) return [];
-  const stages = state.trainingSession.stages || [];
+function computePerStageStats(
+  session = state.trainingSession,
+  points = state.sessionSeries,
+) {
+  if (!session || !Array.isArray(session.stages)) return [];
+  const stages = session.stages || [];
   const offsets = [];
   let acc = 0;
   for (const s of stages) {
@@ -677,7 +1174,7 @@ function computePerStageStats() {
     count: 0,
     inTarget: 0,
   }));
-  const pts = state.sessionSeries || [];
+  const pts = Array.isArray(points) ? points : [];
   for (const p of pts) {
     if (!p || typeof p.y !== "number") continue;
     const x = p.x;
@@ -724,11 +1221,13 @@ export function exportSessionCsv() {
   URL.revokeObjectURL(url);
 }
 
-function buildExportCsvFromState() {
-  if (!state.trainingSession) return;
-  const session = state.trainingSession;
-  const stats = computeSessionStats();
-  const perStages = computePerStageStats();
+function buildExportCsvFromState(
+  session = state.trainingSession,
+  points = state.sessionSeries,
+) {
+  if (!session || !Array.isArray(session.stages)) return;
+  const stats = computeSessionStats(session, points);
+  const perStages = computePerStageStats(session, points);
 
   // Single, normalized table with a 'type' discriminator
   const header = [
@@ -753,12 +1252,12 @@ function buildExportCsvFromState() {
   // Summary row
   rows.push([
     "summary",
-    session.date,
-    session.athlete,
-    "",
-    session.totalDurationSec,
-    "",
-    "",
+      session.date,
+      session.athlete,
+      "",
+      session.totalDurationSec,
+      "",
+      "",
     stats.avg,
     stats.min,
     stats.max,
@@ -802,7 +1301,8 @@ function buildExportCsvFromState() {
     });
     acc += s.durationSec;
   }
-  for (const p of state.sessionSeries || []) {
+  const seriesPoints = Array.isArray(points) ? points : [];
+  for (const p of seriesPoints) {
     const t = typeof p.x === "number" ? p.x : 0;
     const force = typeof p.y === "number" ? p.y : "";
     let idx = offsets.findIndex((r) => t >= r.start && t <= r.end);
@@ -839,7 +1339,7 @@ function buildExportCsvFromState() {
 }
 
 // Load a previously exported session CSV and render it as a finished session
-export function loadCompletedSessionFromExportCsv(text) {
+export function loadCompletedSessionFromExportCsv(text, stepsMeta = null) {
   if (!text || !text.trim()) throw new Error("O CSV está vazio.");
   const lines = text
     .trim()
@@ -942,6 +1442,15 @@ export function loadCompletedSessionFromExportCsv(text) {
   state.stageIdx = 0;
   state.waitingForFirstSample = false;
   state.isImportedSession = true;
+  // Viewing mode: set smoothing based on setting and update both charts
+  if (typeof window !== "undefined") {
+    if (typeof trendSmoothingEnabled !== "undefined") {
+      trendSmoothingEnabled = state.viewingModeSmoothingEnabled;
+    }
+    if (typeof applyTrendSmoothingSetting === "function") {
+      applyTrendSmoothingSetting(state.viewingModeSmoothingEnabled);
+    }
+  }
   state.sessionStartMs = null;
   state.stageStartMs = null;
   state.paused = true;
@@ -949,16 +1458,9 @@ export function loadCompletedSessionFromExportCsv(text) {
   state.stageAccumulatedPauseOffset = 0;
 
   // UI priming
-  const firstStage = session.stages[0];
   document.getElementById("sessionAthlete").textContent =
     session.athlete || "—";
   document.getElementById("sessionMeta").textContent = `${session.date || "—"}`;
-  document.getElementById("stageLabel").textContent =
-    `Concluída • ${stages.length} estágios`;
-  document.getElementById("stageRange").textContent =
-    `${firstStage?.lower ?? "—"}/${firstStage?.upper ?? "—"}`;
-  document.getElementById("stageElapsed").textContent = "00:00";
-  document.getElementById("totalRemaining").textContent = "00:00";
 
   // Series + chart scales
   resetStageSeries();
@@ -980,6 +1482,48 @@ export function loadCompletedSessionFromExportCsv(text) {
     refreshSessionSeries();
   } catch { }
 
+  hydrateViewSeriesGroups(session, stepsMeta);
+  const groups = Array.isArray(state.viewSeriesGroups)
+    ? state.viewSeriesGroups
+    : [];
+  const initialStage = groups.length
+    ? Math.max(0, Number(groups[0]?.startStageIndex || 1) - 1)
+    : 0;
+  focusSessionStage(initialStage);
+
+  // --- Filter sessionSeries for the initial group and update sessionHrChart ---
+  try {
+    if (groups.length && state.sessionChart) {
+      const group = groups[0];
+      const stages = session.stages;
+      const groupStart = Number(group?.startStageIndex) - 1;
+      const groupEnd = Number(group?.endStageIndex) - 1;
+      if (Number.isFinite(groupStart) && Number.isFinite(groupEnd)) {
+        let startTime = 0;
+        for (let i = 0; i < groupStart; i++) startTime += stages[i].durationSec;
+        let endTime = startTime;
+        for (let i = groupStart; i <= groupEnd; i++) endTime += stages[i].durationSec;
+        const filtered = (state.sessionSeries || []).filter(
+          (p) => typeof p?.x === "number" && p.x >= startTime && p.x <= endTime
+        );
+        state.sessionChart.setOption(
+          { series: [{ data: filtered.map(pt => [pt.x - startTime, pt.y]) }] },
+          false,
+          true
+        );
+        state.sessionChart.setOption(
+          {
+            xAxis: { min: 0, max: endTime - startTime },
+          },
+          false,
+          true
+        );
+      }
+    }
+  } catch (e) {
+    // fail silently
+  }
+
   // Navigate to plot and show completion stats
   showScreen("plot");
   setTimeout(() => {
@@ -988,9 +1532,6 @@ export function loadCompletedSessionFromExportCsv(text) {
       state.sessionChart?.resize();
     } catch { }
   }, 10);
-  try {
-    plotStageSliceByIndex(0);
-  } catch { }
   const stats = computeSessionStats();
   showCompletion(stats);
 
@@ -1236,6 +1777,9 @@ export function prepareFixedPlanFlow(planId) {
   state.flowSequence = ensureFlowSequence();
   state.currentStepIndex = 0;
   state.flowStats = [];
+  state.flowStepRecords = [];
+  state.viewSeriesGroups = [];
+  state.viewSeriesActiveGroup = 0;
   state.pendingTrainingStep = null;
   state.flowArm = null;
   showScreen('plot');
@@ -1445,6 +1989,7 @@ function handleFlowStepCompletion(stats) {
   const completedIndex = state.currentStepIndex;
   state.currentStepIndex += 1;
   if (state.currentStepIndex >= sequence.length) {
+    finalizeFlowSession();
     finishFlow();
     return;
   }
@@ -1547,16 +2092,50 @@ function finishFlow() {
   state.pendingTrainingStep = null;
   state.flowPlan = null;
   state.flowArm = null;
+  state.flowStats = [];
+  state.flowStepRecords = [];
+  state.viewSeriesGroups = [];
+  state.viewSeriesActiveGroup = 0;
+  try {
+    renderViewSeriesFab();
+  } catch { }
 }
 
 function cancelFlow() {
+  cancelActiveSession({ navigateHome: true });
+}
+
+export function cancelActiveSession({ navigateHome = false } = {}) {
   stopMeasurement();
   stopRestTimer();
   const modal = document.getElementById('armMaxModal');
   modal?.classList.add('hidden');
-  finishFlow();
+  const restOverlay = document.getElementById('restOverlay');
+  restOverlay?.classList.add('hidden');
+  if (state.flowActive) finishFlow();
+  else {
+    state.pendingTrainingStep = null;
+    state.flowPlan = null;
+    state.flowArm = null;
+    state.flowSequence = [];
+    state.currentStepIndex = 0;
+  }
   stopTraining();
-  showScreen('home');
+  state.pendingIntent = null;
+  state.startReturnScreen = null;
+  state.editOrigin = null;
+  const controls = document.getElementById('controlsModal');
+  controls?.classList.add('hidden');
+  const fabMenu = document.getElementById('fabMenu');
+  fabMenu?.classList.add('hidden');
+  const fabToggle = document.getElementById('fabToggle');
+  fabToggle?.classList.remove('hidden');
+  state.viewSeriesGroups = [];
+  state.viewSeriesActiveGroup = 0;
+  try {
+    renderViewSeriesFab();
+  } catch { }
+  if (navigateHome) showScreen('home');
 }
 
 function ensureFlowUiBindings() {
@@ -1576,10 +2155,25 @@ if (typeof document !== 'undefined') {
 if (typeof window !== 'undefined') {
   window.addEventListener('session:stageSelected', (e) => {
     if (!state.trainingSession || !state.isImportedSession) return;
-    const idx = Math.max(
-      0,
-      Math.min(e?.detail?.index ?? 0, state.trainingSession.stages.length - 1),
-    );
+    let idx;
+    const stages = state.trainingSession.stages || [];
+    if (state.viewSeriesActiveGroup !== -1) {
+      // Map index from event (relative to group) to global stage index
+      const groups = Array.isArray(state.viewSeriesGroups) ? state.viewSeriesGroups : [];
+      const group = groups[state.viewSeriesActiveGroup];
+      if (group) {
+        const groupStart = Number(group?.startStageIndex) - 1;
+        const groupEnd = Number(group?.endStageIndex) - 1;
+        const relIdx = e?.detail?.index ?? 0;
+        idx = Math.max(groupStart, Math.min(groupStart + relIdx, groupEnd));
+      }
+    } else {
+      // Full session: use index from event, clamped to all stages
+      idx = Math.max(
+        0,
+        Math.min(e?.detail?.index ?? 0, stages.length - 1)
+      );
+    }
     state.stageIdx = idx;
     updateStageUI();
     try {
@@ -1588,5 +2182,63 @@ if (typeof window !== 'undefined') {
     try {
       syncChartScales();
     } catch { }
+
+    // --- Re-apply group filtering to sessionHrChart and asides if a group is selected ---
+    if (state.viewSeriesActiveGroup !== -1) {
+      const groups = Array.isArray(state.viewSeriesGroups) ? state.viewSeriesGroups : [];
+      const group = groups[state.viewSeriesActiveGroup];
+      if (group) {
+        const session = state.trainingSession;
+        const stages = session.stages;
+        const groupStart = Number(group?.startStageIndex) - 1;
+        const groupEnd = Number(group?.endStageIndex) - 1;
+        if (Number.isFinite(groupStart) && Number.isFinite(groupEnd) && state.sessionChart) {
+          let startTime = 0;
+          for (let i = 0; i < groupStart; i++) startTime += stages[i].durationSec;
+          let endTime = startTime;
+          for (let i = groupStart; i <= groupEnd; i++) endTime += stages[i].durationSec;
+          const filtered = (state.sessionSeries || []).filter(
+            (p) => typeof p?.x === "number" && p.x >= startTime && p.x <= endTime
+          );
+          state.sessionChart.setOption(
+            { series: [{ data: filtered.map(pt => [pt.x - startTime, pt.y]) }] },
+            false,
+            true
+          );
+          state.sessionChart.setOption(
+            {
+              xAxis: { min: 0, max: endTime - startTime },
+            },
+            false,
+            true
+          );
+          // Update highlight for group
+          if (typeof syncChartScales === "function") {
+            syncChartScales(groupStart, groupEnd, 0, endTime - startTime);
+          }
+          // Update asides for the group
+          const groupStages = stages.slice(groupStart, groupEnd + 1);
+          const groupSession = {
+            ...session,
+            stages: groupStages,
+            totalDurationSec: groupStages.reduce((a, s) => a + s.durationSec, 0),
+          };
+          const stats = computeSessionStats(groupSession, filtered);
+          const set = (id, v) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(v);
+          };
+          set("statAvg", `${stats.avg} N`);
+          set("statMax", `${stats.max} N`);
+          set("statMin", `${stats.min} N`);
+          set("statInTarget", `${stats.inTargetPct}%`);
+        }
+      }
+    } else {
+      // Full session: update highlight
+      if (typeof syncChartScales === "function") {
+        syncChartScales();
+      }
+    }
   });
 }

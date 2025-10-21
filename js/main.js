@@ -14,6 +14,7 @@ import {
   exportSessionCsv,
   loadCompletedSessionFromExportCsv,
   prepareFixedPlanFlow,
+  cancelActiveSession,
 } from "./session.js";
 import { loadPlanForEdit } from "./edit-plan.js";
 import {
@@ -141,6 +142,7 @@ document.getElementById("connectButton").addEventListener("click", async () => {
   if (await checkBluetoothSupport()) await connectToDevice();
 });
 document.getElementById("disconnectButton").addEventListener("click", () => {
+  cancelActiveSession();
   disconnectFromDevice();
   switchToConnect();
 });
@@ -213,7 +215,10 @@ document
   .addEventListener("click", () => prevStage());
 document
   .getElementById("backButton")
-  .addEventListener("click", () => showScreen("home"));
+  .addEventListener("click", () => {
+    cancelActiveSession();
+    showScreen("home");
+  });
 
 // Import a finished session (CSV) from Home.
 const importBtn = document.getElementById("homeImportSessionBtn");
@@ -292,6 +297,7 @@ window.addEventListener("session:tick", () => tick());
 // Handle BLE disconnect from other modules.
 window.addEventListener("ble:disconnected", () => {
   logNav('BLE disconnected');
+  cancelActiveSession();
   switchToConnect();
 });
 window.addEventListener('ble:connected', () => {
@@ -319,9 +325,11 @@ export function startTrainingFromCsvText(text) {
 
 // Completion screen actions.
 document.getElementById("completeBackBtn")?.addEventListener("click", () => {
+  cancelActiveSession();
   showScreen("home");
 });
 document.getElementById("completePlanBtn")?.addEventListener("click", () => {
+  cancelActiveSession();
   showScreen("plan");
 });
 document.getElementById("completeExportBtn")?.addEventListener("click", () => {
@@ -343,4 +351,13 @@ document.getElementById("completeRestoreFab")?.addEventListener("click", () => {
   if (fab) fab.classList.add("hidden");
 });
 
-// Do not auto-navigate on connect; user advances with Next on Connect.
+  // Do not auto-navigate on connect; user advances with Next on Connect.
+
+  // Expose state and smoothing functions for settings menu persistence
+  window.state = state;
+  try {
+    const { applyTrendSmoothingSetting, refreshStageSeriesForSmoothing, plotStageSliceByIndex } = await import('./charts.js');
+    window.applyTrendSmoothingSetting = applyTrendSmoothingSetting;
+    window.refreshStageSeriesForSmoothing = refreshStageSeriesForSmoothing;
+    window.plotStageSliceByIndex = plotStageSliceByIndex;
+  } catch {}

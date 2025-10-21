@@ -572,6 +572,7 @@ let overduePage = 1; // Pendente
 let overdueTotalPages = 1;
 let donePage = 1; // Concluído
 let doneTotalPages = 1;
+let activeHomeTab = "fixed";
 
 export function renderHome(plans) {
   const root = document.getElementById("homeScreen");
@@ -861,6 +862,7 @@ export function renderHome(plans) {
     const isTodo = tab === "todo";
     const isOverdue = tab === "overdue";
     const isDone = tab === "done";
+    activeHomeTab = tab;
     if (tabFixedBtn) {
       tabFixedBtn.classList.toggle("bg-slate-700", isFixed);
       tabFixedBtn.classList.toggle("bg-slate-800", !isFixed);
@@ -919,10 +921,21 @@ export function renderHome(plans) {
     tabDoneBtn.onclick = () => activate("done");
   }
 
-  let defaultTab = "done";
-  if (showFixed && hasLibrary) defaultTab = "fixed";
-  else if (showPendingLists) defaultTab = "todo";
-  activate(defaultTab);
+  const availableTabs = {
+    fixed: showFixed && hasLibrary,
+    todo: showPendingLists,
+    overdue: showPendingLists,
+    done: dones.length > 0,
+  };
+  let desiredTab = activeHomeTab;
+  if (!availableTabs[desiredTab]) {
+    if (availableTabs.fixed) desiredTab = "fixed";
+    else if (availableTabs.done) desiredTab = "done";
+    else if (availableTabs.todo) desiredTab = "todo";
+    else if (availableTabs.overdue) desiredTab = "overdue";
+    else desiredTab = "done";
+  }
+  activate(desiredTab);
 }
 
 let previewIndex = null;
@@ -1157,18 +1170,27 @@ function makeDoneCard(rec, index = 0) {
   const sub = document.createElement("div");
   sub.className = "text-slate-400 text-sm";
   const parts = [];
+  const seriesCount = Array.isArray(rec.steps) ? rec.steps.length : 0;
+  if (seriesCount > 0)
+    parts.push(`${seriesCount} ${seriesCount === 1 ? "série" : "séries"}`);
   parts.push(`${rec.stagesCount} estágios`);
   parts.push(`${fmtMMSS(rec.totalDurationSec)}`);
-  if (rec?.stats?.avg != null) parts.push(`Média ${rec.stats.avg} N`);
   // Append completion time if available
   try {
     if (rec?.completedAt) {
       const d = new Date(rec.completedAt);
       if (!isNaN(d.getTime())) {
-        const hh = pad2(d.getHours());
-        const mm = pad2(d.getMinutes());
-        parts.push(`Finalizada ${hh}:${mm}`);
+        const full = d.toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        parts.push(`Finalizada ${full}`);
       }
+    } else if (rec?.date) {
+      parts.push(`Finalizada ${rec.date}`);
     }
   } catch { }
   sub.textContent = parts.join(" • ");
@@ -1340,6 +1362,35 @@ function openDonePreview(index) {
   wrap.appendChild(titleText);
   wrap.appendChild(meta);
   wrap.appendChild(stats);
+  if (Array.isArray(rec.steps) && rec.steps.length) {
+    const stepsWrap = document.createElement("div");
+    stepsWrap.className = "mt-4 space-y-2";
+    const stepsTitle = document.createElement("div");
+    stepsTitle.className = "text-xs font-semibold uppercase tracking-wide text-slate-300";
+    stepsTitle.textContent = rec.steps.length === 1 ? "Série" : "Séries";
+    const list = document.createElement("ul");
+    list.className = "space-y-1";
+    rec.steps.forEach((step, idx) => {
+      const li = document.createElement("li");
+      li.className =
+        "flex items-center justify-between gap-2 rounded-lg border border-white/5 bg-white/5 px-3 py-2";
+      const label = document.createElement("span");
+      label.className = "font-medium";
+      label.textContent = step?.title || `Série ${idx + 1}`;
+      const details = document.createElement("span");
+      details.className = "text-xs text-slate-300";
+      const stageCount = Number(step?.stageCount) ||
+        (Array.isArray(step?.stages) ? step.stages.length : 0);
+      const duration = Number(step?.totalDurationSec) || 0;
+      details.textContent = `${stageCount} estágios • ${fmtMMSS(duration)}`;
+      li.appendChild(label);
+      li.appendChild(details);
+      list.appendChild(li);
+    });
+    stepsWrap.appendChild(stepsTitle);
+    stepsWrap.appendChild(list);
+    wrap.appendChild(stepsWrap);
+  }
   body.appendChild(wrap);
   // Buttons
   const footer = document.getElementById("sessionPreviewFooter");
@@ -1355,7 +1406,7 @@ function openDonePreview(index) {
       try {
         if (rec.csv) {
           closePreview();
-          loadCompletedSessionFromExportCsv(rec.csv);
+          loadCompletedSessionFromExportCsv(rec.csv, rec.steps);
         }
       } catch { }
     };

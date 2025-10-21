@@ -2,12 +2,14 @@
 
 // Toggle manually when developing without hardware.
 export const DEV_OPTIONS = {
-  bypassConnectScreen: false,
+  bypassConnectScreen: true,
 };
 
 export const DEV_BYPASS_CONNECT = !!DEV_OPTIONS.bypassConnectScreen;
 
 export const state = {
+  // Viewing mode smoothing setting (default: false)
+  viewingModeSmoothingEnabled: false,
   // BLE.
   device: null,
   server: null,
@@ -63,6 +65,9 @@ export const state = {
   flowPlan: null,
   flowArm: null,
   flowStats: [],
+  flowStepRecords: [],
+  viewSeriesGroups: [],
+  viewSeriesActiveGroup: 0,
   measurement: {
     active: false,
     started: false,

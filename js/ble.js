@@ -54,7 +54,7 @@ const OPTIONAL_SUPPORT_SERVICES = [
 const N_PER_KGF = 9.80665;
 
 let lastGattSnapshot = [];
-const DEV_SAMPLE_INTERVAL_MS = 900;
+const DEV_SAMPLE_INTERVAL_MS = 300;
 let devSampleTimer = null;
 let devSamplePhase = 0;
 
@@ -249,7 +249,8 @@ function simulateDevConnection(initial = false) {
   state.commandCharacteristic = null;
   state.forceCalibration.zero = 0;
   state.forceCalibration.samples = [];
-  state.forceCalibration.multiplier = 1;
+  // This keeps kgf→raw (encode) consistent with raw→kgf (decode) in mock mode.
+  state.forceCalibration.multiplier = DEFAULT_MULTIPLIER_FIRMWARE_2;
 
   const status = document.getElementById('status');
   if (status) status.textContent = 'Conectado (modo simulação)';
@@ -315,13 +316,56 @@ function stopDevSampleLoop() {
 function emitDevSample() {
   if (!state.device?.__mock) return;
   devSamplePhase += 0.4;
-  const base = 180 + Math.sin(devSamplePhase) * 60;
-  const noise = (Math.random() - 0.5) * 15;
-  const sample = Math.max(0, base + noise);
+  const kgf = computeMockForceKgf();
+  const sample = Math.max(0, kgfToRawSample(Math.max(0, kgf)));
   const buffer = new ArrayBuffer(2);
   const view = new DataView(buffer);
   view.setInt16(0, Math.round(sample), false);
   handleForceMeasurement(view);
+}
+
+function computeMockForceKgf() {
+  const measurement = state.measurement;
+  if (measurement?.active) {
+    const armMax =
+      measurement.arm === 'direito'
+        ? state.maxDireitoKgf
+        : measurement.arm === 'esquerdo'
+          ? state.maxEsquerdoKgf
+          : null;
+    const target = Number.isFinite(armMax) && armMax > 20 ? armMax : 104;
+    const spread = Math.max(6, target * 0.08);
+    const wobble = Math.sin(devSamplePhase) * spread;
+    const noise = (Math.random() - 0.5) * spread * 0.6;
+    return Math.max(0, target + wobble + noise);
+  }
+
+  const session = state.trainingSession;
+  if (session?.stages?.length) {
+    let idx = Number(state.stageIdx);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= session.stages.length) idx = 0;
+    const stage = session.stages[idx];
+    const lower = Number(stage?.lower);
+    const upper = Number(stage?.upper);
+    if (Number.isFinite(lower) && Number.isFinite(upper) && upper > lower) {
+      const center = (lower + upper) / 2;
+      const span = Math.max(0.5, (upper - lower) / 2);
+      const wobble = Math.sin(devSamplePhase) * span * Math.random();
+      const noise = (Math.random() - Math.random()) * span * Math.random();
+      return Math.max(0, center + wobble + noise);
+    }
+  }
+
+  const idleBase = 25 + Math.sin(devSamplePhase) * 8;
+  const idleNoise = (Math.random() - 0.5) * 5;
+  return Math.max(0, idleBase + idleNoise);
+}
+
+function kgfToRawSample(kgf) {
+  const multiplier = state.forceCalibration?.multiplier || deriveMultiplier() || 1;
+  const zero = state.forceCalibration?.zero ?? 0;
+  const raw = kgf * N_PER_KGF / (Number.isFinite(multiplier) && multiplier !== 0 ? multiplier : 1);
+  return raw + zero;
 }
 
 function handleDisconnect() {
@@ -439,21 +483,45 @@ function logGattSnapshot() {
 }
 
 function clampStage(force) {
-  if (state.trainingSession && state.stageIdx >= 0) {
-    const { lower, upper } = state.trainingSession.stages[state.stageIdx];
-    const lo = lower - 10;
-    const hi = upper + 10;
-    if (force < lo) return lo;
-    if (force > hi) return hi;
+  const session = state.trainingSession;
+  if (session?.stages?.length) {
+    let idx = Number(state.stageIdx);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= session.stages.length) idx = 0;
+    const stage = session.stages[idx];
+    const lower = Number(stage?.lower);
+    const upper = Number(stage?.upper);
+    if (Number.isFinite(lower) && Number.isFinite(upper)) {
+      const lo = Math.min(lower, upper) - 2;
+      const hi = Math.max(lower, upper) + 2;
+      if (force < lo) return lo;
+      if (force > hi) return hi;
+    }
   }
   return force;
 }
 
 function clampSession(force) {
-  if (!state.trainingSession || !state.trainingSession.sessionBounds) return force;
-  const { min, max } = state.trainingSession.sessionBounds;
-  if (force < min) return min;
-  if (force > max) return max;
+  const session = state.trainingSession;
+  if (!session) return force;
+  let bounds = session.sessionBounds;
+  if (!bounds && Array.isArray(session.stages) && session.stages.length) {
+    const lows = session.stages
+      .map((stage) => Number(stage?.lower))
+      .filter((value) => Number.isFinite(value));
+    const highs = session.stages
+      .map((stage) => Number(stage?.upper))
+      .filter((value) => Number.isFinite(value));
+    if (lows.length && highs.length) {
+      const min = Math.min(...lows) - 4;
+      const max = Math.max(...highs) + 4;
+      bounds = { min, max };
+      session.sessionBounds = bounds;
+    }
+  }
+  if (!bounds) return force;
+  const { min, max } = bounds;
+  if (Number.isFinite(min) && force < min) return min;
+  if (Number.isFinite(max) && force > max) return max;
   return force;
 }
 
@@ -580,6 +648,6 @@ async function stopStreaming() {
 
 function formatForce(value, { withUnit = false } = {}) {
   if (!Number.isFinite(value)) return "—";
-  const formatted = value.toFixed(1);
-  return withUnit ? `${formatted} N` : formatted;
+  const rounded = Math.round(value); // nearest integer, no decimals
+  return withUnit ? `${rounded} N` : String(rounded);
 }

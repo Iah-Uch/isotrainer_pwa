@@ -18,27 +18,27 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
-<body class="min-h-svh text-slate-100 font-sans antialiased selection:bg-rose-600/30 selection:text-rose-100">
+<body class="min-h-svh text-slate-100 font-sans antialiased selection:bg-amber-600 selection:text-amber-100" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
   <div id="appRoot" class="mx-auto w-full max-w-7xl p-3 sm:p-4 sm:py-0">
-    <div class="rounded-2xl bg-white/5/50 backdrop-blur-xl shadow-2xl" data-frame>
+    <div class="rounded-2xl bg-[#101011] backdrop-blur-xl shadow-2xl" data-frame>
       <!-- TELA DE CONEXÃO -->
       <div id="connectScreen" class="hidden relative p-6">
         <div class="flex flex-col items-center gap-6">
           <h1 class="text-2xl font-semibold tracking-tight">
             Conecte seu
-            <span class="text-rose-400">dinamômetro TeraForce</span>
+            <span class="text-amber-300">Dinamômetro</span>
           </h1>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button id="connectButton"
-              class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 transition shadow-lg shadow-blue-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">
+              class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 transition shadow-lg shadow-amber-500 disabled:bg-[#0b0b0c] disabled:cursor-not-allowed" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
               Conectar ao dispositivo
             </button>
             <button id="disconnectButton" disabled
-              class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 transition shadow-lg shadow-rose-600/25 disabled:bg-slate-600 disabled:cursor-not-allowed">
+              class="px-5 py-2.5 rounded-xl bg-amber-700 hover:bg-amber-700 transition shadow-lg shadow-rose-600 disabled:bg-[#0b0b0c] disabled:cursor-not-allowed">
               Desconectar
             </button>
           </div>
-          <div id="status" class="text-sm text-slate-400 text-center">
+          <div id="status" class="text-sm text-slate-300 text-center">
             Não conectado
           </div>
         </div>
@@ -47,25 +47,25 @@
       <!-- TELA HOME (PLANOS) -->
       <div id="homeScreen" class="p-0">
         <div
-          class="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-950">
+          class="relative overflow-hidden rounded-2xl border border-[#2a2a2a] bg-gradient-to-br from-[#0f0f10] to-[#09090a]">
           <div class="p-6 sm:p-8">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <h2 class="text-2xl font-bold tracking-tight">Sessões</h2>
-                <p id="homeSubtitle" class="text-slate-400">
+                <p id="homeSubtitle" class="text-slate-300">
                   Explore a biblioteca de mesociclos, importe periodizações ou use o fluxo manual.
                 </p>
               </div>
               <div id="homeActions" class="flex flex-wrap items-center justify-end gap-2">
-                <button id="homeManualBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700"
+                <button id="homeManualBtn" class="px-3 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                   title="Fluxo manual">
                   Fluxo manual
                 </button>
-                <button id="importPlansBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 hidden"
+                <button id="importPlansBtn" class="px-3 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] hidden"
                   title="Importar periodização">
                   Importar periodização
                 </button>
-                <button id="homeImportSessionBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 hidden"
+                <button id="homeImportSessionBtn" class="px-3 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] hidden"
                   title="Importar sessões concluídas">
                   Importar sessões
                 </button>
@@ -80,13 +80,13 @@
                 <h3 class="text-xl font-semibold">
                   Importe sua periodização para começar
                 </h3>
-                <p class="mt-2 text-slate-400">
+                <p class="mt-2 text-slate-300">
                   Solte o arquivo CSV aqui ou clique na área abaixo.
                 </p>
                 <div id="homeEmptyDropzone"
-                  class="mt-6 rounded-2xl border-2 border-dashed border-white/15 bg-white/5 hover:bg-white/10 transition p-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-600/60">
+                  class="mt-6 rounded-2xl border-2 border-dashed border-[#2a2a2a] bg-[#101011] hover:bg-[#121213] transition p-8 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500">
                   <div class="flex flex-col items-center gap-3">
-                    <div class="h-12 w-12 rounded-full bg-purple-600/20 text-purple-300 grid place-items-center">
+                    <div class="h-12 w-12 rounded-full bg-amber-600 text-amber-300 grid place-items-center" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
                         aria-hidden="true">
                         <path d="M5 20h14v-2H5v2zM12 4l6 6h-4v6H10v-6H6l6-6z" />
@@ -96,7 +96,7 @@
                       <div class="text-lg font-semibold">
                         Arraste e solte o arquivo CSV
                       </div>
-                      <div class="text-sm text-slate-400">
+                      <div class="text-sm text-slate-300">
                         ou clique para selecionar do seu dispositivo
                       </div>
                     </div>
@@ -108,23 +108,23 @@
               </div>
             </div>
             <div id="plansEmpty"
-              class="hidden mt-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-300 text-sm">
+              class="hidden mt-3 rounded-xl border border-amber-400 bg-amber-600 p-3 text-amber-300 text-sm" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
               Nenhuma periodização importada ainda. Importe seu arquivo para
               usar todas as funções do app.
             </div>
 
             <div id="homeContentWrap" class="mt-6">
-              <div id="homeTabs" class="flex w-fit mx-auto rounded-xl overflow-hidden border border-white/10">
-                <button id="tabFixed" class="hidden px-4 py-2 bg-slate-800">
+              <div id="homeTabs" class="flex w-fit mx-auto rounded-xl overflow-hidden border border-[#2a2a2a]">
+                <button id="tabFixed" class="hidden px-4 py-2 bg-[#0b0b0c]">
                   Planos fixos
                 </button>
-                <button id="tabTodo" class="px-4 py-2 bg-slate-700">
+                <button id="tabTodo" class="px-4 py-2 bg-[#0b0b0c]">
                   A fazer
                 </button>
-                <button id="tabOverdue" class="px-4 py-2 bg-slate-800">
+                <button id="tabOverdue" class="px-4 py-2 bg-[#0b0b0c]">
                   Pendente
                 </button>
-                <button id="tabDone" class="px-4 py-2 bg-slate-800">
+                <button id="tabDone" class="px-4 py-2 bg-[#0b0b0c]">
                   Concluído
                 </button>
               </div>
@@ -132,7 +132,7 @@
               <div id="panelFixed" class="mt-4 hidden">
                 <div id="fixedPlansWrap" class="text-left">
                   <h3 class="text-lg font-semibold">Planos disponíveis</h3>
-                  <p class="text-slate-400 text-sm mt-1">
+                  <p class="text-slate-300 text-sm mt-1">
                     Selecione um mesociclo para gerar estágios a partir da força máxima estimada do braço.
                   </p>
                   <div id="fixedPlansList" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
@@ -148,17 +148,17 @@
                 </h3>
                 <div id="todoList" class="space-y-2"></div>
                 <div id="todoPager" class="mt-3 flex items-center justify-center gap-2">
-                  <button id="todoPagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="todoPagerPrev" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Página anterior" title="Anterior">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
                       <path d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <div id="todoPagerInfo" class="text-sm text-slate-400">
+                  <div id="todoPagerInfo" class="text-sm text-slate-300">
                     —
                   </div>
-                  <button id="todoPagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="todoPagerNext" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Próxima página" title="Próxima">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
@@ -172,17 +172,17 @@
               <div id="panelOverdue" class="mt-4 hidden">
                 <div id="overdueList" class="space-y-2"></div>
                 <div id="overduePager" class="mt-3 flex items-center justify-center gap-2">
-                  <button id="overduePagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="overduePagerPrev" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Página anterior" title="Anterior">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
                       <path d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <div id="overduePagerInfo" class="text-sm text-slate-400">
+                  <div id="overduePagerInfo" class="text-sm text-slate-300">
                     —
                   </div>
-                  <button id="overduePagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="overduePagerNext" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Próxima página" title="Próxima">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
@@ -196,17 +196,17 @@
               <div id="panelDone" class="mt-4 hidden">
                 <div id="plansDoneList" class="space-y-2"></div>
                 <div id="donePager" class="mt-3 flex items-center justify-center gap-2">
-                  <button id="donePagerPrev" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="donePagerPrev" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Página anterior" title="Anterior">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
                       <path d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <div id="donePagerInfo" class="text-sm text-slate-400">
+                  <div id="donePagerInfo" class="text-sm text-slate-300">
                     —
                   </div>
-                  <button id="donePagerNext" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700"
+                  <button id="donePagerNext" class="px-3 py-1.5 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
                     aria-label="Próxima página" title="Próxima">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
                       aria-hidden="true">
@@ -227,16 +227,16 @@
         <div class="flex flex-col gap-3">
           <h2 class="text-xl font-semibold">
             Carregar plano de treino
-            <span class="text-slate-400">(dispositivo necessário)</span>
+            <span class="text-slate-300">(dispositivo necessário)</span>
           </h2>
           <textarea id="csvInput"
-            class="w-full h-48 rounded-xl border border-white/10 bg-white/5 p-3 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            class="w-full h-48 rounded-xl border border-[#2a2a2a] bg-[#101011] p-3 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             placeholder="Cole aqui o plano separado por ponto e vírgula..."></textarea>
           <div id="csvError" class="hidden text-sm text-rose-400"></div>
           <div class="mt-2 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
               <button id="scanQrBtn" title="Ler QR" aria-label="Ler QR"
-                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 transition flex items-center gap-2">
+                class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 transition flex items-center gap-2" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                   aria-hidden="true">
                   <path
@@ -246,7 +246,7 @@
               </button>
             </div>
             <button id="loadCsvBtn"
-              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/25">
+              class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 transition shadow-lg shadow-amber-600" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
               Carregar plano e iniciar
             </button>
           </div>
@@ -260,7 +260,7 @@
             <h2 class="text-xl font-semibold">Editar Sessão</h2>
           </div>
           <div
-            class="mb-3 rounded-xl border border-rose-500/40 bg-rose-900/40 p-3 text-rose-200 shadow shadow-rose-900/30"
+            class="mb-3 rounded-xl border border-rose-500 bg-amber-700 p-3 text-rose-200 shadow shadow-rose-900"
             role="alert" aria-live="polite">
             <div class="flex items-start gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mt-0.5 text-rose-300" viewBox="0 0 24 24"
@@ -275,58 +275,58 @@
               </p>
             </div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div class="rounded-2xl border border-[#2a2a2a] bg-[#101011] p-3">
             <div
               class="flex flex-nowrap items-center gap-2 mb-2 overflow-x-auto whitespace-nowrap justify-start sm:justify-center btn-row-scroll">
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="-60">
                 −1m
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="-30">
                 −30s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="-10">
                 −10s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="-5">
                 −5s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="5">
                 +5s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="10">
                 +10s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="30">
                 +30s
               </button>
               <button
-                class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 disabled:opacity-30"
+                class="px-2 py-1 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] disabled:bg-[#0b0b0c] disabled:opacity-30"
                 data-act="adjTime" data-delta="60">
                 +1m
               </button>
             </div>
             <div class="flex items-center gap-2 mb-1">
-              <label class="flex items-center gap-2 text-sm text-slate-300"><input id="editSelAll" type="checkbox"
-                  class="accent-emerald-600" />
+              <label class="flex items-center gap-2 text-sm text-slate-200"><input id="editSelAll" type="checkbox"
+                  class="accent-amber-600" />
                 Selecionar todos</label>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-[13px]">
-                <thead class="text-slate-300">
+                <thead class="text-slate-200">
                   <tr>
                     <th class="py-1 pr-1 text-center"></th>
                     <th class="py-1 pr-1 text-center">Estágio</th>
@@ -337,11 +337,11 @@
                 </thead>
                 <tbody id="editPlanBody" class="align-top"></tbody>
               </table>
-              <div class="text-xs text-slate-400 mb-2">
+              <div class="text-xs text-slate-300 mb-2">
                 Dica: selecione um ou mais estágios para ajustar a
-                <span class="text-slate-300">duração</span> pelos botões
+                <span class="text-slate-200">duração</span> pelos botões
                 acima. Edite os
-                <span class="text-slate-300">limites</span> diretamente nos
+                <span class="text-slate-200">limites</span> diretamente nos
                 campos de cada linha.
               </div>
             </div>
@@ -349,15 +349,15 @@
           </div>
           <!-- Sticky footer actions -->
           <div
-            class="sticky bottom-0 mt-4 bg-slate-900/60 backdrop-blur supports-[backdrop-filter]:bg-slate-900/90 rounded-xl border border-white/10 p-3 flex items-center justify-between">
-            <div class="text-xs text-slate-400">
+            class="sticky bottom-0 mt-4 bg-[#0b0b0c] backdrop-blur supports-[backdrop-filter]:bg-[#0b0b0c] rounded-xl border border-[#2a2a2a] p-3 flex items-center justify-between">
+            <div class="text-xs text-slate-300">
               Revise as alterações antes de iniciar.
             </div>
             <div class="flex items-center gap-2">
-              <button id="editBackBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">
+              <button id="editBackBtn" class="px-3 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]">
                 Voltar
               </button>
-              <button id="editStartBtn" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">
+              <button id="editStartBtn" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
                 Iniciar sessão
               </button>
             </div>
@@ -368,6 +368,16 @@
       <!-- PLOT SCREEN -->
       <div id="plotScreen" class="hidden p-3 sm:p-2 relative flex flex-col min-h-svh">
         <!-- Floating Action Button + Menu (top-right) -->
+        <button id="viewSeriesFabToggle" class="fab fab-view hidden" aria-haspopup="true" aria-expanded="false"
+          aria-controls="viewSeriesFabMenu" title="Selecionar série">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"
+            aria-hidden="true">
+            <path
+              d="M4 6h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" />
+          </svg>
+        </button>
+        <div id="viewSeriesFabMenu" class="fab-menu fab-view-menu hidden" role="menu"
+          aria-labelledby="viewSeriesFabToggle"></div>
         <button id="fabToggle" class="fab" aria-haspopup="true" aria-expanded="false" aria-controls="fabMenu"
           title="Ações">
           <!-- 3-dots icon -->
@@ -405,7 +415,7 @@
           </button>
         </div>
         <!-- Top header: single line (session • date • athlete • stage) -->
-        <div id="plotHeader" class="flex items-center justify-center gap-2 text-xs text-slate-400">
+        <div id="plotHeader" class="flex items-center justify-center gap-2 text-xs text-slate-300">
           <span class="uppercase tracking-wide text-[.68rem]">Sessão</span>
           <span id="sessionMeta">—</span>
           <span class="mx-1">•</span>
@@ -414,7 +424,7 @@
           <span id="stageLabel">Estágio —</span>
           <!-- Mobile-only live in-target % -->
           <span class="mx-1 only-mobile">•</span>
-          <div id="stageInTargetPctMobileWrap" class="only-mobile inline-flex items-center gap-1 text-emerald-300"
+          <div id="stageInTargetPctMobileWrap" class="only-mobile inline-flex items-center gap-1 text-amber-300"
             title="No alvo (%)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
               aria-hidden="true">
@@ -429,21 +439,21 @@
         <div id="frameGrid"
           class="grid w-full gap-2 sm:gap-4 grid-cols-1 landscape:grid-cols-[auto_1fr_auto] lg:grid-cols-[auto_1fr_auto] flex-1 min-h-0">
           <aside data-sidebar
-            class="aside-left rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 h-full grid place-items-center shrink-0 lg:w-48 xl:w-64 2xl:w-80">
+            class="aside-left rounded-2xl border border-[#2a2a2a] bg-[#101011] p-3 sm:p-4 h-full grid place-items-center shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <div class="space-y-2">
               <div id="currentForce" class="text-center">
                 <div id="currentForceValue" class="force-value font-bold text-amber-300 leading-none whitespace-nowrap">
                   --
                 </div>
-                <div class="force-unit tracking-wide text-slate-400 whitespace-nowrap">
+                <div class="force-unit tracking-wide text-slate-300 whitespace-nowrap">
                   kgf
                 </div>
-                <div id="stageRange" class="force-range font-semibold text-emerald-300 whitespace-nowrap">
+                <div id="stageRange" class="force-range font-semibold text-amber-300 whitespace-nowrap">
                   —
                 </div>
                 <!-- Next-stage hint appears after halfway point of current stage -->
                 <div id="nextStageHint"
-                  class="next-hint inline-flex items-center justify-center gap-1 text-sky-300/80 text-sm mt-2">
+                  class="next-hint inline-flex items-center justify-center gap-1 text-amber-300 text-sm mt-2">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor"
                     aria-hidden="true">
                     <path d="M8 5l8 7-8 7V5z" />
@@ -456,7 +466,7 @@
 
           <main id="plotStageCard" class="relative overflow-hidden h-full min-h-0">
             <div class="relative w-full h-full p-0 min-h-0">
-              <div class="relative w-full h-full rounded-xl bg-slate-950/75 overflow-hidden">
+              <div class="relative w-full h-full rounded-xl bg-[#0b0b0c] overflow-hidden">
                 <div id="forceMarker" class="absolute left-0 top-0 z-20 opacity-0 force-pulse" style="
                       transform: translate(-50%, -50%);
                       --pulse-period: 1s;
@@ -474,24 +484,24 @@
           </main>
 
           <aside data-sidebar
-            class="aside-right rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-2 grid place-items-center h-full shrink-0 lg:w-48 xl:w-64 2xl:w-80">
+            class="aside-right rounded-2xl border border-[#2a2a2a] bg-[#101011] p-3 sm:p-2 grid place-items-center h-full shrink-0 lg:w-48 xl:w-64 2xl:w-80">
             <!-- Temporizadores maiores -->
             <div class="mt-1 grid grid-cols-1 gap-3">
               <div>
-                <div class="text-[.68rem] uppercase tracking-wide text-slate-400">
+                <div class="text-[.68rem] uppercase tracking-wide text-slate-300">
                   Estágio
                 </div>
                 <div id="stageElapsed" class="timer-xl">00:00</div>
               </div>
               <div>
-                <div class="text-[.68rem] uppercase tracking-wide text-slate-400">
+                <div class="text-[.68rem] uppercase tracking-wide text-slate-300">
                   Total
                 </div>
                 <div id="totalRemaining" class="timer-xl">00:00</div>
               </div>
               <div class="only-desktop">
                 <div
-                  class="target-pct-row text-[.68rem] uppercase tracking-wide text-slate-400 flex items-center justify-start sm:justify-start gap-1">
+                  class="target-pct-row text-[.68rem] uppercase tracking-wide text-slate-300 flex items-center justify-start sm:justify-start gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor"
                     aria-hidden="true" title="No alvo (%)">
                     <path
@@ -500,7 +510,7 @@
                     <circle cx="12" cy="12" r="1.75" />
                   </svg>
                   <span class="sr-only">No alvo (%)</span>
-                  <div id="stageInTargetPct" class="text-2xl text-emerald-300">
+                  <div id="stageInTargetPct" class="text-2xl text-amber-300">
                     —
                   </div>
                 </div>
@@ -530,8 +540,8 @@
           </aside>
         </div>
 
-        <div id="sessionCardContainer" class="mt-2 sm:mt-4 rounded-2xl bg-white/5 p-0">
-          <div class="relative w-full h-[22svh] md:h-[24svh] min-h-[120px] rounded-xl bg-slate-950/75 overflow-hidden">
+        <div id="sessionCardContainer" class="mt-2 sm:mt-4 rounded-2xl bg-[#101011] p-0">
+          <div class="relative w-full h-[22svh] md:h-[24svh] min-h-[120px] rounded-xl bg-[#0b0b0c] overflow-hidden">
             <div id="sessionHrChart" class="absolute inset-0 w-full h-full"></div>
           </div>
         </div>
@@ -542,7 +552,7 @@
   <!-- Connect screen floating FABs (outside container) -->
   <div id="connectFabs" class="hidden">
     <button id="connectBackBtn"
-      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white grid place-items-center shadow-lg"
+      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c] text-white grid place-items-center shadow-lg"
       title="Voltar" aria-label="Voltar">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
         aria-hidden="true">
@@ -550,7 +560,7 @@
       </svg>
     </button>
     <button id="goToPlanButton" disabled
-      class="fixed bottom-6 right-4 z-30 h-16 w-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white grid place-items-center shadow-lg disabled:bg-slate-600 disabled:cursor-not-allowed"
+      class="fixed bottom-6 right-4 z-30 h-16 w-16 rounded-full bg-amber-600 hover:bg-amber-500 text-white grid place-items-center shadow-lg disabled:bg-[#0b0b0c] disabled:cursor-not-allowed" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200
       title="Próximo: Carregar plano" aria-label="Próximo: Carregar plano">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"
         aria-hidden="true">
@@ -560,16 +570,16 @@
   </div>
 
   <!-- Inline Preview Modal (Sessão) -->
-  <div id="sessionPreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/70 p-4" role="dialog"
+  <div id="sessionPreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog"
     aria-modal="true">
     <div
-      class="relative mx-auto mt-6 w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 ring-1 ring-white/10 shadow-2xl">
-      <div class="sticky top-0 z-10 bg-slate-900/95 backdrop-blur rounded-t-2xl border-white/10 px-4 py-3 pb-0">
+      class="relative mx-auto mt-6 w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] ring-1 ring-[#2a2a2a] shadow-2xl">
+      <div class="sticky top-0 z-10 bg-[#0b0b0c] backdrop-blur rounded-t-2xl border-[#2a2a2a] px-4 py-3 pb-0">
         <div class="flex items-center justify-end gap-2">
           <!-- <h3 class="text-lg font-semibold">Pré-visualização da sessão</h3> -->
           <div class="flex items-center gap-2">
             <button id="sessionPreviewClose" title="Fechar" aria-label="Fechar"
-              class="h-9 w-9 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              class="h-9 w-9 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path
@@ -580,11 +590,11 @@
         </div>
       </div>
       <div id="sessionPreviewBody" class="p-5 pt-3 min-h-[6rem]"></div>
-      <div class="sticky bottom-0 z-10 bg-slate-900/95 backdrop-blur rounded-b-2xl border-white/10 px-4 py-3 pt-0">
+      <div class="sticky bottom-0 z-10 bg-[#0b0b0c] backdrop-blur rounded-b-2xl border-[#2a2a2a] px-4 py-3 pt-0">
         <div class="flex items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <button id="sessionPreviewRenameBottom" title="Renomear" aria-label="Renomear"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path
@@ -592,7 +602,7 @@
               </svg>
             </button>
             <button id="sessionPreviewDeleteBottom" title="Excluir" aria-label="Excluir"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-rose-700 hover:bg-rose-600">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-700 hover:bg-amber-700">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path d="M6 7h12l-1 12a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm9-3l-1-1h-4l-1 1H5v2h14V4z" />
@@ -601,14 +611,14 @@
           </div>
           <div class="flex items-center gap-2">
             <button id="sessionPreviewStart" title="Iniciar" aria-label="Iniciar"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-emerald-600 hover:bg-emerald-500">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-600 hover:bg-amber-500" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </button>
             <button id="sessionPreviewEdit" title="Editar" aria-label="Editar"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path
@@ -616,7 +626,7 @@
               </svg>
             </button>
             <button id="sessionPreviewViewBottom" title="Ver" aria-label="Ver"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-blue-600 hover:bg-blue-500">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-600 hover:bg-amber-500" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path
@@ -624,7 +634,7 @@
               </svg>
             </button>
             <button id="sessionPreviewDownloadBottom" title="Baixar CSV" aria-label="Baixar CSV"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-slate-800 hover:bg-slate-700">
+              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
                 aria-hidden="true">
                 <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
@@ -637,29 +647,29 @@
   </div>
 
   <div id="fixedPlanModal" tabindex="-1"
-    class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true"
+    class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog" aria-modal="true"
     aria-labelledby="fixedPlanTitle">
     <div
-      class="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 ring-1 ring-white/10 shadow-2xl flex flex-col gap-4 p-5">
+      class="w-full max-w-lg rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] ring-1 ring-[#2a2a2a] shadow-2xl flex flex-col gap-4 p-5">
       <div class="flex items-start justify-between gap-3">
         <div>
           <h3 id="fixedPlanTitle" class="text-xl font-semibold">Plano fixo</h3>
-          <p id="fixedPlanSummary" class="mt-1 text-sm text-slate-300"></p>
+          <p id="fixedPlanSummary" class="mt-1 text-sm text-slate-200"></p>
         </div>
-        <button id="fixedPlanCloseBtn" class="text-slate-300 hover:text-white text-2xl leading-none"
+        <button id="fixedPlanCloseBtn" class="text-slate-200 hover:text-white text-2xl leading-none"
           aria-label="Fechar">
           ×
         </button>
       </div>
-      <div class="text-sm text-slate-400" id="fixedPlanMeta">—</div>
+      <div class="text-sm text-slate-300" id="fixedPlanMeta">—</div>
       <div class="text-xs text-slate-500" id="fixedPlanMetaRest"></div>
       <ul id="fixedPlanStageList" class="space-y-2"></ul>
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
-        <button id="fixedPlanCancelBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+        <button id="fixedPlanCancelBtn" class="px-4 py-2 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] text-slate-200">
           Cancelar
         </button>
         <button id="fixedPlanStartBtn"
-          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
+          class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
           Iniciar fluxo
         </button>
       </div>
@@ -669,7 +679,7 @@
   <!-- Plan screen floating FABs (outside container) -->
   <div id="planFabs" class="hidden">
     <button id="backToConnect"
-      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white grid place-items-center shadow-lg"
+      class="fixed bottom-6 left-4 z-30 h-14 w-14 rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c] text-white grid place-items-center shadow-lg"
       title="Voltar" aria-label="Voltar">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
         aria-hidden="true">
@@ -681,7 +691,7 @@
   <!-- Home screen floating FABs (outside container) -->
   <div id="homeMenuWrap" class="hidden">
     <button id="homeMenuBtn"
-      class="fixed bottom-6 right-4 z-40 h-14 w-14 rounded-full bg-purple-800 hover:bg-purple-700 text-white grid place-items-center shadow-lg"
+      class="fixed bottom-6 right-4 z-40 h-14 w-14 rounded-full bg-amber-700 hover:bg-amber-600 text-white grid place-items-center shadow-lg" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200
       aria-haspopup="true" aria-expanded="false" aria-controls="homeMenu" title="Menu">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
         aria-hidden="true">
@@ -689,34 +699,34 @@
       </svg>
     </button>
     <div id="homeMenu"
-      class="hidden fixed bottom-24 right-4 z-50 w-56 rounded-xl border border-white/10 bg-slate-900 shadow-xl p-2">
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuManual">
+      class="hidden fixed bottom-24 right-4 z-50 w-56 rounded-xl border border-[#2a2a2a] bg-[#0b0b0c] shadow-xl p-2">
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuManual">
         Fluxo Manual
       </button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportPlan">
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuImportPlan">
         Importar Periodização
       </button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuImportSession">
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuImportSession">
         Importar Sessões Conclúidas
       </button>
-      <div class="my-1 h-px bg-white/10"></div>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuSettings">
+      <div class="my-1 h-px bg-[#121213]"></div>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuSettings">
         Configurações
       </button>
-      <div class="my-1 h-px bg-white/10"></div>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800" id="menuExportAll">
+      <div class="my-1 h-px bg-[#121213]"></div>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuExportAll">
         Exportar Sessões Concluídas (CSV)
       </button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-900/50 text-rose-300" id="menuResetApp">
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-amber-700 text-rose-300" id="menuResetApp">
         Resetar Aplicação
       </button>
     </div>
   </div>
 
   <!-- Completion Screen -->
-  <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6 flex items-center justify-center bg-black/60">
-    <div class="relative mx-auto w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
-      <button id="completeMinimizeIcon" class="absolute top-3 right-3 text-slate-300 hover:text-white" title="Minimizar"
+  <div id="completeScreen" class="hidden fixed inset-0 z-40 p-6 flex items-center justify-center bg-black/55" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200>
+    <div class="relative mx-auto w-full max-w-xl rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-6 shadow-2xl">
+      <button id="completeMinimizeIcon" class="absolute top-3 right-3 text-slate-200 hover:text-white" title="Minimizar"
         aria-label="Minimizar">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
           aria-hidden="true">
@@ -724,38 +734,38 @@
         </svg>
       </button>
       <div class="flex items-center gap-3">
-        <div class="h-10 w-10 rounded-full bg-emerald-600/20 grid place-items-center text-emerald-400">
+        <div class="h-10 w-10 rounded-full bg-amber-600 grid place-items-center text-amber-400" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
           ✓
         </div>
         <h2 class="text-xl font-semibold">Sessão concluída</h2>
       </div>
-      <p class="mt-2 text-slate-300">
+      <p class="mt-2 text-slate-200">
         Bom trabalho! Aqui estão os destaques da sessão.
       </p>
       <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">Força média</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300">Força média</div>
           <div id="statAvg" class="text-2xl font-semibold">—</div>
         </div>
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">Força máxima</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300">Força máxima</div>
           <div id="statMax" class="text-2xl font-semibold">—</div>
         </div>
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">Força mínima</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300">Força mínima</div>
           <div id="statMin" class="text-2xl font-semibold">—</div>
         </div>
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400">No alvo</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300">No alvo</div>
           <div id="statInTarget" class="text-2xl font-semibold">—</div>
         </div>
       </div>
       <div id="completeActions" class="mt-4 grid grid-cols-3 gap-2">
-        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">
+        <button id="completeBackBtn" class="w-full px-4 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]">
           Voltar à Tela Inicial
         </button>
         <button id="completeExportBtn"
-          class="w-full px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-2"
+          class="w-full px-4 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] flex items-center justify-center gap-2"
           title="Exportar CSV" aria-label="Exportar CSV">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
             aria-hidden="true">
@@ -763,7 +773,7 @@
           </svg>
           <span>CSV</span>
         </button>
-        <button id="completePlanBtn" class="w-full px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">
+        <button id="completePlanBtn" class="w-full px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
           Carregar novo plano
         </button>
       </div>
@@ -772,7 +782,7 @@
 
   <!-- Completion Restore FAB -->
   <button id="completeRestoreFab"
-    class="hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg grid place-items-center"
+    class="hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-amber-600 hover:bg-amber-500 text-white shadow-lg grid place-items-center" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200
     title="Ver resumo" aria-label="Ver resumo">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M9 12l2 2 4-4 1.5 1.5L11 17 7.5 13.5 9 12z" />
@@ -780,22 +790,22 @@
   </button>
 
   <!-- Controls Modal -->
-  <div id="controlsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4" role="dialog"
+  <div id="controlsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog"
     aria-modal="true" aria-labelledby="controlsTitle">
-    <div class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10">
+    <div class="w-full max-w-sm rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-4 ring-1 ring-[#2a2a2a]">
       <div class="flex items-center justify-between">
         <h3 id="controlsTitle" class="text-lg font-semibold">
           Controles de estágio
         </h3>
-        <button id="closeControls" class="text-slate-300 hover:text-white text-2xl leading-none" aria-label="Fechar">
+        <button id="closeControls" class="text-slate-200 hover:text-white text-2xl leading-none" aria-label="Fechar">
           ×
         </button>
       </div>
       <div class="mt-4 grid grid-cols-2 gap-2">
-        <button id="prevStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">
+        <button id="prevStageBtn" class="rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] px-3 py-2">
           ◀ Anterior
         </button>
-        <button id="nextStageBtn" class="rounded-xl bg-slate-800 hover:bg-slate-700 px-3 py-2">
+        <button id="nextStageBtn" class="rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] px-3 py-2">
           Próximo ▶
         </button>
       </div>
@@ -803,32 +813,32 @@
   </div>
 
   <!-- Settings Modal -->
-  <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60 p-4 overflow-auto"
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/55 p-4 overflow-auto" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200
     role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div
-      class="w-full max-w-md max-h-[88svh] overflow-auto rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10">
+      class="w-full max-w-md max-h-[88svh] overflow-auto rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-4 ring-1 ring-[#2a2a2a]">
       <div class="flex items-center justify-between">
         <h3 id="settingsTitle" class="text-lg font-semibold">
           Configurações
         </h3>
-        <button id="settingsClose" class="text-slate-300 hover:text-white text-2xl leading-none" aria-label="Fechar">
+        <button id="settingsClose" class="text-slate-200 hover:text-white text-2xl leading-none" aria-label="Fechar">
           ×
         </button>
       </div>
       <div class="mt-4 space-y-3">
-        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#101011] border border-[#2a2a2a]">
           <div>
             <div class="font-medium">Modo de Alto Contraste</div>
           </div>
           <label class="switch"><input id="contrastToggle" type="checkbox" /><span class="slider"></span></label>
         </label>
-        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#101011] border border-[#2a2a2a]">
           <div>
             <div class="font-medium">Legacy Galileu Colors</div>
           </div>
           <label class="switch"><input id="legacyColorsToggle" type="checkbox" /><span class="slider"></span></label>
         </label>
-        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+        <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#101011] border border-[#2a2a2a]">
           <div>
             <div class="font-medium">Planos fixos na Home</div>
           </div>
@@ -836,95 +846,99 @@
         </label>
 
         <!-- Plot Screen Settings -->
-        <details class="rounded-xl bg-white/5 border border-white/10 p-3">
+        <details class="rounded-xl bg-[#101011] border border-[#2a2a2a] p-3">
           <summary class="font-medium cursor-pointer select-none">
             Elementos da tela de Plot
           </summary>
-          <div class="text-sm text-slate-400 mb-2">
+          <div class="text-sm text-slate-300 mb-2">
             Desative/ative elementos individuais do gráfico.
           </div>
           <div class="space-y-2">
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Topo: Sessão</span>
               <label class="switch"><input id="togglePlotHeaderSession" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Topo: Atleta</span>
               <label class="switch"><input id="togglePlotHeaderAthlete" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Topo: Estágio</span>
               <label class="switch"><input id="togglePlotHeaderStageLabel" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Topo: No alvo (mobile)</span>
               <label class="switch"><input id="togglePlotHeaderInTargetMobile" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
 
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Esq.: Força atual</span>
               <label class="switch"><input id="toggleAsideLeftForceValue" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Esq.: Unidade N</span>
               <label class="switch"><input id="toggleAsideLeftForceUnit" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Esq.: Intervalo do estágio</span>
               <label class="switch"><input id="toggleAsideLeftStageRange" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Esq.: Dica próximo estágio</span>
               <label class="switch"><input id="toggleAsideLeftNextHint" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
 
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Gráfico: Marcador de força</span>
               <label class="switch"><input id="toggleForceMarker" type="checkbox" /><span class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Gráfico: Estágio (linha)</span>
               <label class="switch"><input id="toggleStageChart" type="checkbox" /><span class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Gráfico: suavização de tendência</span>
               <label class="switch"><input id="toggleTrendSmoothing" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Força da suavização</span>
               <div class="flex items-center gap-2">
                 <input id="trendSmoothingAlpha" type="range" min="0.02" max="0.95" step="0.02" value="0.02"
                   class="w-32" />
-                <span id="trendSmoothingAlphaValue" class="text-sm text-slate-300">0.02</span>
+                <span id="trendSmoothingAlphaValue" class="text-sm text-slate-200">0.02</span>
               </div>
             </label>
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
+              <span>Suavização no modo de visualização</span>
+              <label class="switch"><input id="toggleViewingModeSmoothing" type="checkbox" /><span class="slider"></span></label>
+            </label>
 
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Dir.: Cronômetro do estágio</span>
               <label class="switch"><input id="toggleAsideRightStageElapsed" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Dir.: Tempo total</span>
               <label class="switch"><input id="toggleAsideRightTotalRemaining" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Lateral Dir.: No alvo (%)</span>
               <label class="switch"><input id="toggleAsideRightInTarget" type="checkbox" /><span
                   class="slider"></span></label>
             </label>
 
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <span>Gráfico inferior: Sessão (linha)</span>
               <label class="switch"><input id="toggleSessionChart" type="checkbox" /><span
                   class="slider"></span></label>
@@ -932,60 +946,60 @@
           </div>
         </details>
 
-        <details class="rounded-xl bg-white/5 border border-white/10 p-3">
+        <details class="rounded-xl bg-[#101011] border border-[#2a2a2a] p-3">
           <summary class="font-medium cursor-pointer select-none">
             Descansos entre etapas
           </summary>
           <div class="space-y-3 mt-3 text-sm">
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <div>
                 <div class="font-medium text-slate-200">Duração do descanso (s)</div>
-                <div class="text-xs text-slate-400">Aplicado a cada descanso configurado.</div>
+                <div class="text-xs text-slate-300">Aplicado a cada descanso configurado.</div>
               </div>
               <input id="restIntervalInput" type="number" min="10" max="600" step="10"
-                class="w-24 rounded-md border border-white/10 bg-slate-900/60 px-2 py-1 text-right" />
+                class="w-24 rounded-md border border-[#2a2a2a] bg-[#0b0b0c] px-2 py-1 text-right" />
             </label>
 
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <div>
                 <div class="font-medium text-slate-200">Permitir pular descanso</div>
-                <div class="text-xs text-slate-400">Exibe o botão “Pular descanso” durante a contagem.</div>
+                <div class="text-xs text-slate-300">Exibe o botão “Pular descanso” durante a contagem.</div>
               </div>
               <label class="switch"><input id="restSkipToggle" type="checkbox" /><span class="slider"></span></label>
             </label>
 
-            <div class="rounded-lg bg-black/20 p-3">
+            <div class="rounded-lg bg-[#0e0e0f] p-3">
               <div class="font-medium text-slate-200">Descansos configurados</div>
-              <div class="text-xs text-slate-400 mt-1">
+              <div class="text-xs text-slate-300 mt-1">
                 Reordene as séries (a primeira de cada braço inclui a medição de força máxima) e insira descansos nos
                 pontos desejados.
               </div>
               <ul id="restPositionsList" class="mt-2 space-y-2"></ul>
               <button id="restAddBtn"
-                class="mt-2 w-full rounded-lg border border-dashed border-white/20 px-3 py-2 text-sm text-slate-300 hover:bg-white/5">
+                class="mt-2 w-full rounded-lg border border-dashed border-[#2a2a2a] px-3 py-2 text-sm text-slate-200 hover:bg-[#101011]">
                 Adicionar descanso
               </button>
             </div>
           </div>
         </details>
 
-        <div class="rounded-xl bg-white/5 border border-white/10 p-3">
+        <div class="rounded-xl bg-[#101011] border border-[#2a2a2a] p-3">
           <div class="font-medium">Multiplicadores das Laterais</div>
           <div class="space-y-2 mt-2">
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <div>
                 <div class="font-medium">Multiplicador Lateral Esquerda</div>
-                <div class="text-xs text-slate-400">
+                <div class="text-xs text-slate-300">
                   Ajusta o tamanho dos elementos (0 = sem ajuste)
                 </div>
               </div>
               <input id="asideLeftMul" type="number" step="0.1" min="-0.9" max="3" value="0"
                 class="w-24 text-black rounded-md px-2 py-1" />
             </label>
-            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-black/20">
+            <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
               <div>
                 <div class="font-medium">Multiplicador Lateral Direita</div>
-                <div class="text-xs text-slate-400">
+                <div class="text-xs text-slate-300">
                   Ajusta o tamanho dos elementos (0 = sem ajuste)
                 </div>
               </div>
@@ -996,11 +1010,11 @@
         </div>
 
         <div class="mt-3 flex items-center justify-between gap-2">
-          <button id="settingsResetAll" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white">
+          <button id="settingsResetAll" class="px-4 py-2 rounded-lg bg-amber-700 hover:bg-amber-700 text-white">
             Restaurar padrões
           </button>
           <div class="flex-1"></div>
-          <button id="settingsSaveBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">
+          <button id="settingsSaveBtn" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
             Salvar
           </button>
         </div>
@@ -1011,38 +1025,38 @@
   <!-- (pre-start flow removed) -->
 
   <!-- Arm Maximum Measurement Modal -->
-  <div id="armMaxModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog"
+  <div id="armMaxModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog"
     aria-modal="true" aria-labelledby="armMaxTitle">
-    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10 space-y-4">
+    <div class="w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-5 ring-1 ring-[#2a2a2a] space-y-4">
       <div>
         <h3 id="armMaxTitle" class="text-xl font-semibold">Medição de força máxima</h3>
-        <p id="armMaxSubtitle" class="text-sm text-slate-400 mt-1">
+        <p id="armMaxSubtitle" class="text-sm text-slate-300 mt-1">
           Mantenha o braço em posição e aplique força máxima por 3 segundos.
         </p>
       </div>
       <div class="grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400 text-xs">Força atual</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300 text-xs">Força atual</div>
           <div id="armMaxCurrent" class="text-2xl font-semibold">0,0 kgf</div>
         </div>
-        <div class="rounded-xl bg-white/5 p-3">
-          <div class="text-slate-400 text-xs">Máximo capturado</div>
+        <div class="rounded-xl bg-[#101011] p-3">
+          <div class="text-slate-300 text-xs">Máximo capturado</div>
           <div id="armMaxPeak" class="text-2xl font-semibold">0,0 kgf</div>
         </div>
       </div>
-      <div class="rounded-xl bg-white/5 p-3">
-        <div class="text-slate-400 text-xs">Progresso da captura</div>
-        <div class="mt-2 h-2 rounded-full bg-slate-800">
-          <div id="armMaxProgress" class="h-2 rounded-full bg-emerald-500 transition-all" style="width: 0%"></div>
+      <div class="rounded-xl bg-[#101011] p-3">
+        <div class="text-slate-300 text-xs">Progresso da captura</div>
+        <div class="mt-2 h-2 rounded-full bg-[#0b0b0c]">
+          <div id="armMaxProgress" class="h-2 rounded-full bg-amber-600 transition-all" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200 style="width: 0%"></div>
         </div>
-        <div id="armMaxCountdown" class="mt-2 text-sm text-slate-300">3,0s restantes</div>
+        <div id="armMaxCountdown" class="mt-2 text-sm text-slate-200">3,0s restantes</div>
       </div>
       <div class="flex items-center justify-end gap-2">
-        <button id="armMaxCancelBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+        <button id="armMaxCancelBtn" class="px-4 py-2 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] text-slate-200">
           Cancelar
         </button>
         <button id="armMaxProceedBtn"
-          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-slate-700 disabled:text-slate-400"
+          class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white disabled:bg-[#0b0b0c] disabled:text-slate-300" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200
           disabled>
           Prosseguir
         </button>
@@ -1051,37 +1065,37 @@
   </div>
 
   <!-- Rest Countdown Overlay -->
-  <div id="restOverlay" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" role="dialog"
+  <div id="restOverlay" class="hidden fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog"
     aria-modal="true" aria-live="polite">
     <div
-      class="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-5 ring-1 ring-white/10 space-y-4 text-center">
-      <div class="text-sm uppercase tracking-wide text-slate-400">Descanso</div>
+      class="w-full max-w-sm rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-5 ring-1 ring-[#2a2a2a] space-y-4 text-center">
+      <div class="text-sm uppercase tracking-wide text-slate-300">Descanso</div>
       <div id="restCountdown" class="text-4xl font-semibold">02:00</div>
-      <div id="restNextInfo" class="text-sm text-slate-400"></div>
+      <div id="restNextInfo" class="text-sm text-slate-300"></div>
       <button id="restSkipBtn"
-        class="hidden w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-white disabled:bg-slate-600">
+        class="hidden w-full rounded-lg bg-amber-600 hover:bg-amber-500 px-4 py-2 text-white disabled:bg-[#0b0b0c]" shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
         Pular descanso
       </button>
     </div>
   </div>
 
   <!-- QR Scan Modal -->
-  <div id="qrModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/70 p-4">
+  <div id="qrModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/55 p-4" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200>
     <div
-      class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-4 ring-1 ring-white/10 flex flex-col gap-3">
+      class="w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] p-4 ring-1 ring-[#2a2a2a] flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold">Ler QR do plano de treino</h3>
-        <button id="closeQr" class="text-slate-300 hover:text-white text-2xl leading-none" aria-label="Fechar">
+        <button id="closeQr" class="text-slate-200 hover:text-white text-2xl leading-none" aria-label="Fechar">
           ×
         </button>
       </div>
-      <video id="qrVideo" class="w-full aspect-[4/3] bg-black/40 rounded-xl" muted playsinline></video>
-      <div id="qrHint" class="text-sm text-slate-400">
+      <video id="qrVideo" class="w-full aspect-[4/3] bg-black/55 rounded-xl" border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 muted playsinline></video>
+      <div id="qrHint" class="text-sm text-slate-300">
         Aponte a câmera para o QR code
       </div>
       <div id="qrError" class="hidden text-sm text-rose-400"></div>
       <div class="flex items-center justify-between gap-2">
-        <!-- <button id="qrRetry" disabled class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700">Ler
+        <!-- <button id="qrRetry" disabled class="px-4 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]">Ler
           novamente</button> -->
       </div>
     </div>
@@ -1092,6 +1106,44 @@
   <script type="module" src="./js/edit-plan.js"></script>
   <script type="module" src="./js/qr.js"></script>
   <script type="module" src="./js/pwa.js"></script>
+  <script>
+    // Viewing mode smoothing toggle
+    document.addEventListener("DOMContentLoaded", function () {
+      const toggle = document.getElementById("toggleViewingModeSmoothing");
+      if (toggle && window.state) {
+        // Load persisted setting
+        const persisted = localStorage.getItem("isotrainer:viewingModeSmoothingEnabled");
+        if (persisted !== null) {
+          window.state.viewingModeSmoothingEnabled = persisted === "true";
+        }
+        toggle.checked = !!window.state.viewingModeSmoothingEnabled;
+        // Apply on load
+        if (typeof window.applyTrendSmoothingSetting === "function") {
+          window.applyTrendSmoothingSetting(window.state.viewingModeSmoothingEnabled);
+        }
+        if (typeof window.refreshStageSeriesForSmoothing === "function") {
+          window.refreshStageSeriesForSmoothing();
+        }
+        if (typeof window.plotStageSliceByIndex === "function" && window.state && typeof window.state.stageIdx === "number") {
+          window.plotStageSliceByIndex(window.state.stageIdx);
+        }
+        // On toggle
+        toggle.addEventListener("change", function () {
+          window.state.viewingModeSmoothingEnabled = !!toggle.checked;
+          localStorage.setItem("isotrainer:viewingModeSmoothingEnabled", window.state.viewingModeSmoothingEnabled ? "true" : "false");
+          if (typeof window.applyTrendSmoothingSetting === "function") {
+            window.applyTrendSmoothingSetting(window.state.viewingModeSmoothingEnabled);
+          }
+          if (typeof window.refreshStageSeriesForSmoothing === "function") {
+            window.refreshStageSeriesForSmoothing();
+          }
+          if (typeof window.plotStageSliceByIndex === "function" && window.state && typeof window.state.stageIdx === "number") {
+            window.plotStageSliceByIndex(window.state.stageIdx);
+          }
+        });
+      }
+    });
+  </script>
   <script type="module">
     import { enableWakeLock } from "./js/wake-lock.js";
     // Enable wake lock as early as possible

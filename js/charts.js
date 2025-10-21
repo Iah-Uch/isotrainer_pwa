@@ -31,14 +31,19 @@ function getSessionSeriesData() {
 }
 
 function refreshStageSeriesForSmoothing() {
+  // Always use viewingModeSmoothingEnabled in viewing mode
+  const smoothing =
+    state.isImportedSession && typeof state.viewingModeSmoothingEnabled !== "undefined"
+      ? state.viewingModeSmoothingEnabled
+      : trendSmoothingEnabled;
   if (state.trainingSession && state.stageIdx >= 0) {
     try {
-      plotStageSliceByIndex(state.stageIdx);
+      plotStageSliceByIndex(state.stageIdx, smoothing);
       return;
     } catch { }
   }
   if (state.chart) {
-    const data = trendSmoothingEnabled
+    const data = smoothing
       ? toSmoothedXY(state.series, trendSmoothingAlpha)
       : toXY(state.series);
     try {
@@ -48,10 +53,15 @@ function refreshStageSeriesForSmoothing() {
 }
 
 function applyTrendSmoothingSetting(enabled) {
-  const next = !!enabled;
-  if (trendSmoothingEnabled === next) return;
-  trendSmoothingEnabled = next;
-  state.trendSmoothingEnabled = next;
+  // Always force smoothing to the viewing mode setting in viewing mode
+  if (state.isImportedSession && typeof state.viewingModeSmoothingEnabled !== "undefined") {
+    trendSmoothingEnabled = !!state.viewingModeSmoothingEnabled;
+    state.trendSmoothingEnabled = !!state.viewingModeSmoothingEnabled;
+  } else {
+    const next = !!enabled;
+    trendSmoothingEnabled = next;
+    state.trendSmoothingEnabled = next;
+  }
   refreshStageSeriesForSmoothing();
   try {
     const data = getSessionSeriesData();
@@ -175,17 +185,10 @@ function buildBoundsMarkLine(bounds, active) {
   ];
 }
 
-function buildStageBands() {
+function buildStageBands(groupStart = null, groupEnd = null, xOffset = 0) {
   const s = state;
   if (!s.trainingSession) return [];
   const contrast = isContrast();
-  // Map color using ONLY the lower bound (lo)
-  // Thresholds (choose the highest threshold <= lower):
-  // - >= 159: Red
-  // - >= 152: Orange
-  // - >= 142: Yellow
-  // - >= 111: Green
-  // - else: Blue
   const pickColorByLower = (lo) => {
     const lower = Number(lo) || 0;
     if (lower >= 159) return "red";
@@ -195,7 +198,6 @@ function buildStageBands() {
     return "blue";
   };
   const colorVal = (name, strong) => {
-    // Tailwind-ish palette with adjusted opacity for themes
     const op = strong ? (contrast ? 1.0 : 0.84) : contrast ? 0.65 : 0.34;
     switch (name) {
       case "blue":
@@ -211,7 +213,6 @@ function buildStageBands() {
         return `rgba(239,68,68,${op})`;
     }
   };
-  // Fallback palette for non-legacy (index-cycled).
   const cols = contrast
     ? [
       "rgba(59,130,246,0.65)",
@@ -243,14 +244,26 @@ function buildStageBands() {
       "rgba(239,68,68,0.84)",
     ];
 
+  const stages = s.trainingSession.stages;
+  let start, end;
+  if (groupStart === null || groupEnd === null) {
+    start = 0;
+    end = stages.length - 1;
+  } else {
+    start = groupStart;
+    end = groupEnd;
+  }
   let acc = 0;
+  for (let i = 0; i < start; i++) acc += stages[i].durationSec;
   const t = performance.now() - (s.pulseAnimation?.startTime || 0);
   const pulse = (Math.sin(t / 400) + 1) / 2;
   const blur = 10 + pulse * 10;
   const weakGlow = contrast ? 6 + pulse * 6 : 0;
   const strongGlow = contrast ? 22 + pulse * 16 : blur;
   const data = [];
-  s.trainingSession.stages.forEach((stg, i) => {
+  let x = acc;
+  for (let i = start; i <= end; i++) {
+    const stg = stages[i];
     const isCur = i === s.stageIdx;
     const legacy = isLegacyGalileuColorsOn();
     const base = legacy ? pickColorByLower(stg.lower) : null;
@@ -274,16 +287,16 @@ function buildStageBands() {
               : "transparent",
         },
         label: { show: false },
-        xAxis: acc,
+        xAxis: xOffset + x - acc,
         yAxis: stg.upper,
       },
       {
-        xAxis: acc + stg.durationSec,
+        xAxis: xOffset + x + stg.durationSec - acc,
         yAxis: stg.lower,
       },
     ]);
-    acc += stg.durationSec;
-  });
+    x += stg.durationSec;
+  }
   return data;
 }
 
@@ -554,7 +567,7 @@ export function setStageXAxis(sec) {
     state.chart.setOption({ xAxis: { min: 0, max } }, false, true);
 }
 
-export function syncChartScales() {
+export function syncChartScales(groupStart = null, groupEnd = null, xOffset = 0, xMax = null) {
   if (!state.trainingSession) return;
   const firstStage = state.trainingSession.stages[Math.max(0, state.stageIdx)];
   if (firstStage) setStageXAxis(firstStage.durationSec);
@@ -562,12 +575,20 @@ export function syncChartScales() {
     min: 40,
     max: 200,
   };
+  let markAreaData, xAxisMax;
+  if (groupStart !== null && groupEnd !== null) {
+    markAreaData = buildStageBands(groupStart, groupEnd, xOffset);
+    xAxisMax = xMax;
+  } else {
+    markAreaData = buildStageBands(0, state.trainingSession.stages.length - 1, 0);
+    xAxisMax = state.trainingSession.totalDurationSec;
+  }
   if (state.sessionChart)
     state.sessionChart.setOption(
       {
-        xAxis: { max: state.trainingSession.totalDurationSec },
+        xAxis: { max: xAxisMax },
         yAxis: { min, max },
-        series: [{ markArea: { data: buildStageBands(), silent: true } }],
+        series: [{ markArea: { data: markAreaData, silent: true } }],
       },
       false,
       true,
@@ -575,6 +596,12 @@ export function syncChartScales() {
 }
 
 function updateForceMarker(x, y) {
+  if (state.isImportedSession) {
+    // Hide marker in viewing mode
+    const marker = document.getElementById("forceMarker");
+    if (marker) marker.style.opacity = "0";
+    return;
+  }
   const marker = document.getElementById("forceMarker");
   if (!marker || !state.chart) return;
   // eslint-disable-next-line no-undef
@@ -588,6 +615,12 @@ function updateForceMarker(x, y) {
   marker.style.left = `${left}px`;
   marker.style.top = `${top}px`;
   marker.style.opacity = "1";
+}
+
+// FIX: local formatter to mirror the numeric box style (integer, unitless)
+function formatForceForDisplay(v) {
+  if (!Number.isFinite(v)) return "—";
+  return String(Math.round(v));
 }
 
 export function updateStageChart(force, tMs) {
@@ -621,7 +654,14 @@ export function updateStageChart(force, tMs) {
     const displayY = trendSmoothingEnabled
       ? (data[data.length - 1]?.[1] ?? pt.y)
       : pt.y;
-    if (Number.isFinite(displayY)) updateForceMarker(pt.x, displayY);
+    if (Number.isFinite(displayY)) {
+      updateForceMarker(pt.x, displayY);
+      // FIX: keep the numeric readout in sync with what the chart shows
+      try {
+        const el = document.getElementById("currentForceValue");
+        if (el) el.textContent = formatForceForDisplay(displayY);
+      } catch { }
+    }
   }
 }
 
@@ -646,7 +686,7 @@ export function refreshSessionSeries() {
 }
 
 // Plot only the points for a given stage index into the stage chart (forceChart).
-export function plotStageSliceByIndex(index) {
+export function plotStageSliceByIndex(index, overrideSmoothing = null) {
   if (!state.trainingSession || !Array.isArray(state.trainingSession.stages))
     return;
   const stages = state.trainingSession.stages;
@@ -669,8 +709,13 @@ export function plotStageSliceByIndex(index) {
     const y = typeof p?.y === "number" ? p.y : null;
     state.series.push({ x: Math.max(0, p.x - start), y });
   }
+  // Always use viewingModeSmoothingEnabled in viewing mode
+  const smoothing =
+    state.isImportedSession && typeof state.viewingModeSmoothingEnabled !== "undefined"
+      ? state.viewingModeSmoothingEnabled
+      : (overrideSmoothing !== null ? overrideSmoothing : trendSmoothingEnabled);
   if (state.chart) {
-    const data = trendSmoothingEnabled
+    const data = smoothing
       ? toSmoothedXY(state.series, trendSmoothingAlpha)
       : toXY(state.series);
     state.chart.setOption({ series: [{ data }] }, false, true);
@@ -679,7 +724,13 @@ export function plotStageSliceByIndex(index) {
       last &&
       Number.isFinite(last[0]) &&
       Number.isFinite(last[1])
-    )
+    ) {
       updateForceMarker(last[0], last[1]);
+      // FIX: also sync numeric readout when jumping between slices
+      try {
+        const el = document.getElementById("currentForceValue");
+        if (el) el.textContent = formatForceForDisplay(last[1]);
+      } catch { }
+    }
   }
 }
