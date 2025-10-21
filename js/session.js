@@ -1152,9 +1152,9 @@ function hydrateViewSeriesGroups(session, stepsMeta) {
   renderViewSeriesFab();
 }
 
-function formatNumber(n, digits = 0) {
+function formatNumber(n, digits = 1) {
   if (typeof n !== "number" || !isFinite(n)) return "";
-  return digits ? n.toFixed(digits) : String(n);
+  return n.toFixed(digits);
 }
 
 function computePerStageStats(
@@ -1206,10 +1206,10 @@ function computePerStageStats(
     durationSec: stages[i].durationSec,
     lower: stages[i].lower,
     upper: stages[i].upper,
-    avg: s.count ? Math.round(s.sum / s.count) : 0,
-    min: isFinite(s.min) ? s.min : 0,
-    max: isFinite(s.max) ? s.max : 0,
-    inTargetPct: s.count ? Math.round((s.inTarget / s.count) * 100) : 0,
+    avg: s.count ? Number((s.sum / s.count).toFixed(1)) : 0,
+    min: isFinite(s.min) ? Number(s.min.toFixed(1)) : 0,
+    max: isFinite(s.max) ? Number(s.max.toFixed(1)) : 0,
+    inTargetPct: s.count ? Number(((s.inTarget / s.count) * 100).toFixed(1)) : 0,
     samples: s.count,
   }));
 }
@@ -1221,11 +1221,15 @@ export function exportSessionCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const dateSlug = String(state.trainingSession?.date || "").replace(
-    /\s+/g,
+    /[\s:\/]/g,
+    "_",
+  );
+  const clientSlug = String(state.trainingSession?.athlete || "session").replace(
+    /[\s:\/]/g,
     "_",
   );
   a.href = url;
-  a.download = `isotrainer_${dateSlug || "session"}.csv`;
+  a.download = `isotrainer_${clientSlug}_${dateSlug}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -1240,59 +1244,61 @@ function buildExportCsvFromState(
   const stats = computeSessionStats(session, points);
   const perStages = computePerStageStats(session, points);
 
-  // Single, normalized table with a 'type' discriminator
+  // Enhanced header with units in column names
   const header = [
     "type",
     "date",
-    "athlete",
-    "stage_index",
+    "client",
+    "stage",
     "duration_sec",
-    "lower",
-    "upper",
-    "avg_force",
-    "min_force",
-    "max_force",
+    "lower_kgf",
+    "upper_kgf",
+    "avg_kgf",
+    "min_kgf",
+    "max_kgf",
     "in_target_pct",
     "samples",
     "elapsed_sec",
     "stage_elapsed_sec",
-    "force",
+    "force_kgf",
     "in_target",
   ];
   const rows = [];
+  
   // Summary row
   rows.push([
     "summary",
-    session.date,
-    session.athlete,
+    session.date || "",
+    session.athlete || "",
     "",
-    session.totalDurationSec,
+    session.totalDurationSec || "",
     "",
     "",
-    stats.avg,
-    stats.min,
-    stats.max,
-    stats.inTargetPct,
-    "",
+    formatNumber(stats.avg),
+    formatNumber(stats.min),
+    formatNumber(stats.max),
+    formatNumber(stats.inTargetPct),
+    stats.samples || "",
     "",
     "",
     "",
     "",
   ]);
+  
   // Per-stage rows
   for (const s of perStages) {
     rows.push([
       "stage",
-      session.date,
-      session.athlete,
+      session.date || "",
+      session.athlete || "",
       s.index,
       s.durationSec,
-      s.lower,
-      s.upper,
-      s.avg,
-      s.min,
-      s.max,
-      s.inTargetPct,
+      formatNumber(s.lower),
+      formatNumber(s.upper),
+      formatNumber(s.avg),
+      formatNumber(s.min),
+      formatNumber(s.max),
+      formatNumber(s.inTargetPct),
       s.samples,
       "",
       "",
@@ -1300,6 +1306,7 @@ function buildExportCsvFromState(
       "",
     ]);
   }
+  
   // Time series rows
   const offsets = [];
   let acc = 0;
@@ -1328,12 +1335,12 @@ function buildExportCsvFromState(
         : "";
     rows.push([
       "series",
-      session.date,
-      session.athlete,
+      session.date || "",
+      session.athlete || "",
       idx + 1,
       stage.durationSec,
-      stage.lower,
-      stage.upper,
+      formatNumber(stage.lower),
+      formatNumber(stage.upper),
       "",
       "",
       "",
@@ -1341,7 +1348,7 @@ function buildExportCsvFromState(
       "",
       formatNumber(t, 2),
       formatNumber(stageElapsed, 2),
-      force,
+      typeof force === "number" ? formatNumber(force) : "",
       inTarget,
     ]);
   }
@@ -1371,7 +1378,7 @@ export function loadCompletedSessionFromExportCsv(text, stepsMeta = null) {
     }
     throw new Error(`Coluna ausente no CSV: ${names.join(" | ")}`);
   };
-  // Detect exported format
+  // Detect exported format (support both old and new column names)
   const hasType = header.includes("type");
   if (!hasType)
     throw new Error(
@@ -1380,19 +1387,20 @@ export function loadCompletedSessionFromExportCsv(text, stepsMeta = null) {
 
   const TYPE = colIdx("type");
   const DATE = colIdx("date");
-  const ATHLETE = colIdx("athlete");
-  const STAGE_INDEX = colIdx("stage_index");
-  const DURATION = colIdx("duration_sec");
-  const LOWER = colIdx("lower");
-  const UPPER = colIdx("upper");
-  const ELAPSED = colIdx("elapsed_sec");
-  const FORCE = colIdxAny("force", "force");
+  const ATHLETE = colIdxAny("client", "athlete");
+  const STAGE_INDEX = colIdxAny("stage", "stage_index");
+  const DURATION = colIdxAny("duration_sec");
+  const LOWER = colIdxAny("lower_kgf", "lower");
+  const UPPER = colIdxAny("upper_kgf", "upper");
+  const ELAPSED = colIdxAny("elapsed_sec");
+  const FORCE = colIdxAny("force_kgf", "force");
 
   // Detect if this is a full export (multiple sessions concatenated under a single header)
   let summaryCount = 0;
   for (let i = 1; i < lines.length; i++) {
     const parts = lines[i].split(";");
-    if ((parts[TYPE] || "").trim() === "summary") summaryCount += 1;
+    const typeVal = (parts[TYPE] || "").trim();
+    if (typeVal === "summary") summaryCount += 1;
   }
   if (summaryCount > 1) {
     try {
@@ -1599,13 +1607,13 @@ function importAllCompletedSessionsFromCsv(text) {
   };
   const TYPE = colIdx("type");
   const DATE = colIdx("date");
-  const ATHLETE = colIdx("athlete");
-  const STAGE_INDEX = colIdx("stage_index");
-  const DURATION = colIdx("duration_sec");
-  const LOWER = colIdx("lower");
-  const UPPER = colIdx("upper");
-  const ELAPSED = colIdx("elapsed_sec");
-  const FORCE = colIdxAny("force", "force");
+  const ATHLETE = colIdxAny("client", "athlete");
+  const STAGE_INDEX = colIdxAny("stage", "stage_index");
+  const DURATION = colIdxAny("duration_sec");
+  const LOWER = colIdxAny("lower_kgf", "lower");
+  const UPPER = colIdxAny("upper_kgf", "upper");
+  const ELAPSED = colIdxAny("elapsed_sec");
+  const FORCE = colIdxAny("force_kgf", "force");
 
   // Group lines by session, delimited by 'summary'
   const sessions = [];
@@ -2310,3 +2318,4 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+

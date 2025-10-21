@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="pt-BR" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IsoTrainer - Gerador de Periodização</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0a0b 0%, #1a1a1d 100%);
+      min-height: 100vh;
+    }
+    .card {
+      background: rgba(16, 16, 17, 0.95);
+      border: 1px solid #2a2a2a;
+      backdrop-filter: blur(10px);
+    }
+    .input-field {
+      background: #0b0b0c;
+      border: 1px solid #2a2a2a;
+      color: #f1f5f9;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+    }
+    .btn-primary {
+      background: #f59e0b;
+      color: white;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: #d97706;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+    }
+    .btn-secondary {
+      background: #0b0b0c;
+      border: 1px solid #2a2a2a;
+      color: #f1f5f9;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #1a1a1b;
+      border-color: #f59e0b;
+    }
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+    }
+    .warning-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid #ef4444;
+      color: #fecaca;
+    }
+    .info-box {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid #3b82f6;
+      color: #bfdbfe;
+    }
+    .success-box {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid #22c55e;
+      color: #bbf7d0;
+    }
+    /* Force date input to show DD/MM/YYYY format */
+    input[type="date"] {
+      color-scheme: dark;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 pb-24">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="card rounded-2xl p-6 mb-6">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-bold text-amber-500 mb-2">Gerador de Periodização</h1>
+          <p class="text-slate-300">Configure e gere planos de treinamento personalizados com base em mesociclos científicos</p>
+        </div>
+        <a href="/app.html" class="btn-primary px-6 py-3 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-600 transition-colors whitespace-nowrap">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+          Abrir IsoTrainer
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left Column: Basic Info -->
+      <div class="card rounded-2xl p-6">
+        <h2 class="text-xl font-semibold text-amber-500 mb-4">Informações Básicas</h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Nome do Cliente *</label>
+            <input type="text" id="clientName" class="input-field w-full rounded-lg px-3 py-2" 
+                   placeholder="Ex: João Silva" required>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Força Máxima Média (kgf) *</label>
+            <input type="number" id="maxForce" class="input-field w-full rounded-lg px-3 py-2" 
+                   placeholder="Ex: 45.5" step="0.1" min="1" required>
+            <p class="text-xs text-slate-400 mt-1">Média da força máxima isométrica do cliente</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Idade</label>
+            <input type="number" id="age" class="input-field w-full rounded-lg px-3 py-2" 
+                   placeholder="Ex: 35" min="10" max="120">
+            <p class="text-xs text-slate-400 mt-1">Opcional - para ajustes de intensidade</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Data da Primeira Sessão *</label>
+            <input type="date" id="startDate" class="input-field w-full rounded-lg px-3 py-2" required>
+            <p class="text-xs text-slate-400 mt-1">Selecione a data de início do plano</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Duração Total (dias) *</label>
+            <input type="number" id="totalDays" class="input-field w-full rounded-lg px-3 py-2" 
+                   placeholder="Ex: 84" min="7" required>
+            <p class="text-xs text-slate-400 mt-1">Duração total do plano em dias</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Training Days -->
+      <div class="card rounded-2xl p-6">
+        <h2 class="text-xl font-semibold text-amber-500 mb-4">Dias de Treino</h2>
+        
+        <p class="text-sm text-slate-300 mb-3">Selecione os dias da semana disponíveis para treino:</p>
+        
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day0" value="0" class="accent-amber-600 w-4 h-4">
+            <span class="text-slate-200">Domingo</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day1" value="1" class="accent-amber-600 w-4 h-4" checked>
+            <span class="text-slate-200">Segunda-feira</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day2" value="2" class="accent-amber-600 w-4 h-4">
+            <span class="text-slate-200">Terça-feira</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day3" value="3" class="accent-amber-600 w-4 h-4" checked>
+            <span class="text-slate-200">Quarta-feira</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day4" value="4" class="accent-amber-600 w-4 h-4">
+            <span class="text-slate-200">Quinta-feira</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day5" value="5" class="accent-amber-600 w-4 h-4" checked>
+            <span class="text-slate-200">Sexta-feira</span>
+          </label>
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+            <input type="checkbox" id="day6" value="6" class="accent-amber-600 w-4 h-4">
+            <span class="text-slate-200">Sábado</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mesocycle Selection -->
+    <div class="card rounded-2xl p-6 mt-6">
+      <h2 class="text-xl font-semibold text-amber-500 mb-4">Seleção de Mesociclos</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="mesocycleList">
+        <!-- Will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Periodization Strategy -->
+    <div class="card rounded-2xl p-6 mt-6" id="strategySection" style="display: none;">
+      <h2 class="text-xl font-semibold text-amber-500 mb-4">Estratégia de Periodização</h2>
+      
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+          <input type="radio" name="strategy" value="sequential" class="accent-amber-600 mt-1" checked>
+          <div>
+            <div class="font-semibold text-slate-200">Sequencial (Linear)</div>
+            <div class="text-sm text-slate-400">Completa todos os ciclos do mesociclo A, depois B, etc. Ideal para progressão linear de força.</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+          <input type="radio" name="strategy" value="alternated" class="accent-amber-600 mt-1">
+          <div>
+            <div class="font-semibold text-slate-200">Alternado (Ondulado)</div>
+            <div class="text-sm text-slate-400">Alterna entre mesociclos semana a semana. Baseado em periodização ondulatória (DUP).</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+          <input type="radio" name="strategy" value="block" class="accent-amber-600 mt-1">
+          <div>
+            <div class="font-semibold text-slate-200">Blocos (Block Periodization)</div>
+            <div class="text-sm text-slate-400">Blocos de 2-4 semanas de cada mesociclo. Concentra adaptações específicas por período.</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+          <input type="radio" name="strategy" value="pyramidal" class="accent-amber-600 mt-1">
+          <div>
+            <div class="font-semibold text-slate-200">Piramidal</div>
+            <div class="text-sm text-slate-400">Progressão gradual de intensidade baixa para alta. Incorporação → Básico → Estabilizador → Pré-Otimização.</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition">
+          <input type="radio" name="strategy" value="concurrent" class="accent-amber-600 mt-1">
+          <div>
+            <div class="font-semibold text-slate-200">Concorrente</div>
+            <div class="text-sm text-slate-400">Mistura sessões de diferentes mesociclos na mesma semana. Treino variado e adaptável.</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="mt-4" id="blockSizeConfig" style="display: none;">
+        <label class="block text-sm font-medium text-slate-300 mb-1">Tamanho dos Blocos (semanas)</label>
+        <input type="number" id="blockSize" class="input-field w-full md:w-48 rounded-lg px-3 py-2" 
+               value="3" min="1" max="8">
+      </div>
+    </div>
+
+    <!-- Validation Messages -->
+    <div id="validationMessage" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl px-4" style="display: none;"></div>
+
+    <!-- Floating Action Bar -->
+    <div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-lg px-4">
+      <div class="flex items-center gap-2 bg-[#0b0b0c] border border-[#2a2a2a] rounded-2xl px-3 py-2 shadow-2xl backdrop-blur-lg">
+        <button id="mainActionBtn" class="btn-primary px-3 py-2 rounded-lg font-medium text-xs flex-1">
+          Validar
+        </button>
+        <button id="loadDirectBtn" class="px-3 py-2 rounded-lg font-medium text-xs flex-1" disabled style="background: #6b7280; color: #9ca3af;">
+          Carregar
+        </button>
+        <button id="resetBtn" class="btn-secondary px-3 py-2 rounded-lg font-medium text-xs flex-1">
+          Limpar
+        </button>
+      </div>
+    </div>
+
+    <!-- Preview Section -->
+    <div id="previewSection" class="card rounded-2xl p-6 mt-6" style="display: none;">
+      <h2 class="text-xl font-semibold text-amber-500 mb-4">Pré-visualização do Plano</h2>
+      <div id="previewContent" class="text-slate-300"></div>
+    </div>
+  </div>
+
+
+  <script>
+    // Mesocycle library - MUST match the app's FIXED_PLAN_LIBRARY
+    const MESOCYCLES = {
+      'mesociclo-incorporacao': {
+        name: 'Mesociclo de Incorporação',
+        weeklyFrequency: 3,
+        description: 'Introduzir o usuário ao treino isométrico de preensão, priorizando tolerância e controle respiratório durante esforços leves e curtos.',
+        stages: [
+          { label: "Familiarização", durationSec: 60, restSec: 60, lowerPct: 0.15, upperPct: 0.18 },
+          { label: "Controle leve", durationSec: 60, restSec: 60, lowerPct: 0.17, upperPct: 0.20 },
+          { label: "Consistência inicial", durationSec: 60, restSec: 60, lowerPct: 0.18, upperPct: 0.21 },
+        ]
+      },
+      'mesociclo-basico': {
+        name: 'Mesociclo Básico',
+        weeklyFrequency: 3,
+        description: 'Aprimorar a capacidade de sustentar isometria com estabilidade de força e respiração, desenvolvendo adaptação autonômica inicial.',
+        stages: [
+          { label: "Estabilidade leve", durationSec: 60, restSec: 60, lowerPct: 0.20, upperPct: 0.23 },
+          { label: "Controle respiratório", durationSec: 60, restSec: 60, lowerPct: 0.22, upperPct: 0.25 },
+          { label: "Sustentação moderada", durationSec: 60, restSec: 60, lowerPct: 0.24, upperPct: 0.27 },
+        ]
+      },
+      'mesociclo-estabilizador': {
+        name: 'Mesociclo Estabilizador',
+        weeklyFrequency: 3,
+        description: 'Consolidar o controle pressórico e respiratório, reduzindo a variabilidade da força e aprimorando o equilíbrio autonômico.',
+        stages: [
+          { label: "Controle sustentado", durationSec: 60, restSec: 60, lowerPct: 0.23, upperPct: 0.27 },
+          { label: "Estabilidade contínua", durationSec: 60, restSec: 60, lowerPct: 0.25, upperPct: 0.28 },
+          { label: "Refinamento técnico", durationSec: 60, restSec: 60, lowerPct: 0.26, upperPct: 0.30 },
+        ]
+      },
+      'mesociclo-controle': {
+        name: 'Mesociclo de Controle',
+        weeklyFrequency: 3,
+        description: 'Avaliar o progresso do controle pressórico e autonômico, ajustando a faixa de intensidade conforme a resposta do usuário.',
+        stages: [
+          { label: "Aquecimento leve", durationSec: 60, restSec: 60, lowerPct: 0.20, upperPct: 0.24 },
+          { label: "Avaliação controlada", durationSec: 60, restSec: 60, lowerPct: 0.24, upperPct: 0.28 },
+          { label: "Estabilidade máxima", durationSec: 60, restSec: 60, lowerPct: 0.27, upperPct: 0.30 },
+        ]
+      },
+      'mesociclo-pre-otimizacao': {
+        name: 'Mesociclo de Pré-Otimização',
+        weeklyFrequency: 3,
+        description: 'Atingir o melhor controle pressórico e respiratório com intensidades próximas ao limite superior seguro (30% da Fmax).',
+        stages: [
+          { label: "Pré-ativação", durationSec: 60, restSec: 60, lowerPct: 0.24, upperPct: 0.28 },
+          { label: "Sustentação máxima segura", durationSec: 60, restSec: 60, lowerPct: 0.27, upperPct: 0.30 },
+          { label: "Descompressão", durationSec: 60, restSec: 60, lowerPct: 0.22, upperPct: 0.26 },
+        ]
+      },
+      'mesociclo-recuperativo': {
+        name: 'Mesociclo Recuperativo',
+        weeklyFrequency: 2,
+        description: 'Favorecer a recuperação autonômica e a estabilidade hemodinâmica, mantendo estímulo leve e controlado.',
+        stages: [
+          { label: "Relaxamento ativo", durationSec: 60, restSec: 60, lowerPct: 0.15, upperPct: 0.18 },
+          { label: "Controle suave", durationSec: 60, restSec: 60, lowerPct: 0.16, upperPct: 0.19 },
+          { label: "Recuperação sustentada", durationSec: 60, restSec: 60, lowerPct: 0.15, upperPct: 0.18 },
+        ]
+      }
+    };
+
+    let selectedMesocycles = [];
+    let validationResult = null;
+
+    // Initialize
+    function init() {
+      renderMesocycles();
+      attachEventListeners();
+      // Set today's date in custom format
+      setTodayDate();
+      // Initialize button states
+      updateMainActionButton();
+    }
+
+    function setTodayDate() {
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      document.getElementById('startDate').value = todayString;
+    }
+
+    function renderMesocycles() {
+      const container = document.getElementById('mesocycleList');
+      container.innerHTML = '';
+
+      Object.entries(MESOCYCLES).forEach(([id, meso]) => {
+        const card = document.createElement('label');
+        card.className = 'flex flex-col gap-2 p-4 rounded-lg bg-[#0b0b0c] border border-[#2a2a2a] hover:border-amber-600 cursor-pointer transition';
+        
+        card.innerHTML = `
+          <div class="flex items-center gap-2">
+            <input type="checkbox" class="mesocycle-checkbox accent-amber-600" value="${id}" data-frequency="${meso.weeklyFrequency}">
+            <span class="font-semibold text-slate-200">${meso.name}</span>
+          </div>
+          <div class="text-xs text-slate-400">${meso.description}</div>
+          <div class="text-xs text-amber-500">${meso.weeklyFrequency}x/semana • ${meso.stages.length} estágios</div>
+        `;
+        
+        container.appendChild(card);
+      });
+    }
+
+    function attachEventListeners() {
+      document.querySelectorAll('.mesocycle-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectedMesocycles);
+      });
+
+      document.querySelectorAll('input[name="strategy"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          const blockConfig = document.getElementById('blockSizeConfig');
+          blockConfig.style.display = radio.value === 'block' ? 'block' : 'none';
+        });
+      });
+
+      document.getElementById('mainActionBtn').addEventListener('click', handleMainAction);
+      document.getElementById('loadDirectBtn').addEventListener('click', loadDirectly);
+      document.getElementById('resetBtn').addEventListener('click', resetForm);
+      
+      // Add auto-revalidation listeners
+      addAutoRevalidationListeners();
+      
+    }
+
+    function updateSelectedMesocycles() {
+      selectedMesocycles = Array.from(document.querySelectorAll('.mesocycle-checkbox:checked'))
+        .map(cb => cb.value);
+      
+      const strategySection = document.getElementById('strategySection');
+      strategySection.style.display = selectedMesocycles.length > 1 ? 'block' : 'none';
+      
+      // Reset validation when selection changes
+      validationResult = null;
+      updateMainActionButton();
+      document.getElementById('loadDirectBtn').disabled = true;
+      document.getElementById('validationMessage').style.display = 'none';
+    }
+
+    function handleMainAction() {
+      if (!validationResult) {
+        validateConfiguration();
+      } else if (validationResult.feasible) {
+        generatePlan();
+      }
+    }
+
+    function updateMainActionButton() {
+      const mainBtn = document.getElementById('mainActionBtn');
+      const loadBtn = document.getElementById('loadDirectBtn');
+      
+      if (!validationResult) {
+        mainBtn.textContent = 'Validar';
+        loadBtn.disabled = true;
+        loadBtn.style.background = '#6b7280';
+        loadBtn.style.color = '#9ca3af';
+      } else if (validationResult.feasible) {
+        mainBtn.textContent = 'Gerar CSV';
+        loadBtn.disabled = false;
+        loadBtn.style.background = '#10b981';
+        loadBtn.style.color = 'white';
+      } else {
+        mainBtn.textContent = 'Validar';
+        loadBtn.disabled = true;
+        loadBtn.style.background = '#6b7280';
+        loadBtn.style.color = '#9ca3af';
+      }
+    }
+
+    function addAutoRevalidationListeners() {
+      // Listen to all form inputs
+      const formInputs = [
+        'clientName',
+        'maxForce', 
+        'age',
+        'startDate',
+        'totalDays'
+      ];
+      
+      formInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.addEventListener('input', autoRevalidate);
+          element.addEventListener('change', autoRevalidate);
+        }
+      });
+      
+      // Listen to training day checkboxes
+      document.querySelectorAll('input[type="checkbox"][id^="day"]').forEach(checkbox => {
+        checkbox.addEventListener('change', autoRevalidate);
+      });
+      
+      // Listen to mesocycle checkboxes
+      document.querySelectorAll('.mesocycle-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', autoRevalidate);
+      });
+      
+      // Listen to strategy radio buttons
+      document.querySelectorAll('input[name="strategy"]').forEach(radio => {
+        radio.addEventListener('change', autoRevalidate);
+      });
+      
+      // Listen to block size input
+      const blockSizeInput = document.getElementById('blockSize');
+      if (blockSizeInput) {
+        blockSizeInput.addEventListener('input', autoRevalidate);
+        blockSizeInput.addEventListener('change', autoRevalidate);
+      }
+    }
+
+    function autoRevalidate() {
+      // Only auto-revalidate if we already have a validation result
+      if (validationResult) {
+        // Small delay to avoid too frequent revalidation
+        clearTimeout(window.autoRevalidateTimeout);
+        window.autoRevalidateTimeout = setTimeout(() => {
+          validateConfiguration();
+        }, 500);
+      }
+    }
+
+    function ignoreValidationAndProceed() {
+      // Force the validation result to be feasible so user can proceed
+      if (validationResult) {
+        validationResult.feasible = true;
+        updateMainActionButton();
+        
+        // Hide the validation message
+        document.getElementById('validationMessage').style.display = 'none';
+        
+        // Show a success message
+        showValidation('success', `
+          <strong>Configuração aceita!</strong><br>
+          Você optou por prosseguir mesmo com a frequência alta.<br>
+          O plano será gerado com as sessões possíveis nos dias disponíveis.
+        `);
+      }
+    }
+
+    function validateConfiguration() {
+      const clientName = document.getElementById('clientName').value.trim();
+      const maxForce = parseFloat(document.getElementById('maxForce').value);
+      const startDateValue = document.getElementById('startDate').value;
+      const totalDays = parseInt(document.getElementById('totalDays').value);
+      const availableDays = Array.from(document.querySelectorAll('input[type="checkbox"][id^="day"]:checked'))
+        .map(cb => parseInt(cb.value));
+
+      // Validation
+      if (!clientName) {
+        showValidation('error', 'Por favor, preencha o nome do cliente.');
+        return;
+      }
+
+      if (!maxForce || maxForce <= 0) {
+        showValidation('error', 'Por favor, informe a força máxima média.');
+        return;
+      }
+
+      if (!startDateValue) {
+        showValidation('error', 'Por favor, selecione a data de início.');
+        return;
+      }
+
+      // Create and validate the date
+      const selectedDate = new Date(startDateValue + 'T00:00:00'); // Force local timezone
+      
+      // Validate that the date is not in the past (allow today)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Compare dates properly
+      const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      if (selectedDateOnly < todayOnly) {
+        showValidation('error', 'Por favor, selecione uma data futura ou hoje.');
+        return;
+      }
+
+      if (!totalDays || totalDays < 7) {
+        showValidation('error', 'A duração total deve ser de pelo menos 7 dias.');
+        return;
+      }
+
+      if (availableDays.length === 0) {
+        showValidation('error', 'Por favor, selecione pelo menos um dia da semana.');
+        return;
+      }
+
+      if (selectedMesocycles.length === 0) {
+        showValidation('error', 'Por favor, selecione pelo menos um mesociclo.');
+        return;
+      }
+
+      // Calculate required frequency
+      const strategy = document.querySelector('input[name="strategy"]:checked')?.value || 'sequential';
+      const result = calculatePlanFeasibility(availableDays, totalDays, selectedMesocycles, strategy);
+      
+      validationResult = result;
+
+      if (result.feasible) {
+        showValidation('success', `
+          <strong>Configuração válida!</strong><br>
+          Total de sessões: ${result.totalSessions}<br>
+          Duração estimada: ${result.estimatedWeeks} semanas<br>
+          Frequência média: ${result.avgFrequency.toFixed(1)}x/semana<br>
+          <br>
+          <button onclick="showPreview()" class="btn-secondary px-4 py-2 rounded-lg mt-2">
+            Ver Pré-visualização
+          </button>
+        `);
+        updateMainActionButton();
+      } else {
+        let message = `<strong>Configuração inválida!</strong><br>${result.reason}<br><br>`;
+        message += '<strong>Soluções sugeridas:</strong><ul class="list-disc list-inside mt-2">';
+        
+        if (result.solutions.includes('add_days')) {
+          message += `<li>Adicione mais dias de treino (dias disponíveis: ${availableDays.length})</li>`;
+        }
+        if (result.solutions.includes('increase_duration')) {
+          message += `<li>Aumente a duração total para pelo menos ${result.minDurationNeeded} dias</li>`;
+        }
+        if (result.solutions.includes('reduce_frequency')) {
+          message += `<li>Reduza a frequência semanal ou selecione mesociclos com menor frequência</li>`;
+        }
+        
+        message += '</ul>';
+        message += '<div class="mt-4 flex gap-2">';
+        message += '<button onclick="ignoreValidationAndProceed()" class="btn-primary px-4 py-2 rounded-lg text-sm">Ignorar e Prosseguir</button>';
+        message += '<button onclick="document.getElementById(\'validationMessage\').style.display=\'none\'" class="btn-secondary px-4 py-2 rounded-lg text-sm">Fechar</button>';
+        message += '</div>';
+        showValidation('warning', message);
+        updateMainActionButton();
+      }
+    }
+
+    function calculatePlanFeasibility(availableDays, totalDays, mesocycleIds, strategy) {
+      const totalWeeks = Math.floor(totalDays / 7);
+      const availableDaysPerWeek = availableDays.length;
+      
+      // Calculate based on strategy
+      let requiredFrequency = 0;
+      let totalSessions = 0;
+
+      if (strategy === 'sequential') {
+        // Each mesocycle runs its full course
+        mesocycleIds.forEach(id => {
+          const meso = MESOCYCLES[id];
+          const sessionsPerCycle = meso.weeklyFrequency;
+          const cyclesNeeded = Math.max(3, Math.floor(totalWeeks / mesocycleIds.length / 3)); // min 3 cycles
+          totalSessions += sessionsPerCycle * cyclesNeeded;
+        });
+        requiredFrequency = totalSessions / totalWeeks;
+      } else if (strategy === 'alternated') {
+        // Alternate weekly
+        const avgFreq = mesocycleIds.reduce((sum, id) => sum + MESOCYCLES[id].weeklyFrequency, 0) / mesocycleIds.length;
+        requiredFrequency = avgFreq;
+        totalSessions = Math.floor(avgFreq * totalWeeks);
+      } else if (strategy === 'block') {
+        const blockSize = parseInt(document.getElementById('blockSize')?.value || 3);
+        const blocksPerMeso = Math.ceil(totalWeeks / mesocycleIds.length / blockSize);
+        mesocycleIds.forEach(id => {
+          totalSessions += MESOCYCLES[id].weeklyFrequency * blockSize * blocksPerMeso;
+        });
+        requiredFrequency = totalSessions / totalWeeks;
+      } else if (strategy === 'pyramidal') {
+        // Increasing intensity
+        const avgFreq = mesocycleIds.reduce((sum, id) => sum + MESOCYCLES[id].weeklyFrequency, 0) / mesocycleIds.length;
+        requiredFrequency = avgFreq;
+        totalSessions = Math.floor(avgFreq * totalWeeks);
+      } else { // concurrent
+        const maxFreq = Math.max(...mesocycleIds.map(id => MESOCYCLES[id].weeklyFrequency));
+        requiredFrequency = maxFreq;
+        totalSessions = maxFreq * totalWeeks;
+      }
+
+      const feasible = requiredFrequency <= availableDaysPerWeek;
+      const minDurationNeeded = Math.ceil((totalSessions / availableDaysPerWeek) * 7);
+
+      const result = {
+        feasible,
+        totalSessions,
+        estimatedWeeks: totalWeeks,
+        avgFrequency: requiredFrequency,
+        availableDaysPerWeek,
+        minDurationNeeded,
+        reason: '',
+        solutions: []
+      };
+
+      if (!feasible) {
+        result.reason = `A frequência média necessária (${requiredFrequency.toFixed(1)}x/semana) excede os dias disponíveis (${availableDaysPerWeek}x/semana).`;
+        
+        if (availableDaysPerWeek < 3) {
+          result.solutions.push('add_days');
+        }
+        if (minDurationNeeded > totalDays) {
+          result.solutions.push('increase_duration');
+        }
+        result.solutions.push('reduce_frequency');
+      }
+
+      return result;
+    }
+
+    function showValidation(type, message) {
+      const container = document.getElementById('validationMessage');
+      container.style.display = 'block';
+      
+      let className = 'info-box';
+      if (type === 'error' || type === 'warning') className = 'warning-box';
+      if (type === 'success') className = 'success-box';
+      
+      container.className = `fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-2xl px-4 ${className} rounded-xl p-4 shadow-2xl backdrop-blur-lg`;
+      container.innerHTML = message;
+      
+      // Auto-hide after 5 seconds for success messages
+      if (type === 'success') {
+        setTimeout(() => {
+          container.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    function showPreview() {
+      if (!validationResult || !validationResult.feasible) return;
+
+      const preview = document.getElementById('previewSection');
+      const content = document.getElementById('previewContent');
+      
+      const plan = generatePlanData();
+      
+      let html = '<div class="space-y-4">';
+      html += `<div class="text-lg font-semibold">Cliente: ${plan.clientName}</div>`;
+      html += `<div>Total de sessões: ${plan.sessions.length}</div>`;
+      html += `<div>Período: ${plan.sessions[0].date} até ${plan.sessions[plan.sessions.length - 1].date}</div>`;
+      html += '<div class="mt-4"><strong>Primeiras 10 sessões:</strong></div>';
+      html += '<div class="overflow-x-auto"><table class="w-full text-sm mt-2">';
+      html += '<thead class="border-b border-[#2a2a2a]"><tr><th class="text-left p-2">Data</th><th class="text-left p-2">Mesociclo</th><th class="text-left p-2">Tipo</th></tr></thead><tbody>';
+      
+      plan.sessions.slice(0, 10).forEach(session => {
+        html += `<tr class="border-b border-[#2a2a2a]">
+          <td class="p-2">${session.date}</td>
+          <td class="p-2">${session.mesocycleName}</td>
+          <td class="p-2 text-xs text-slate-400">${session.mesocycleId}</td>
+        </tr>`;
+      });
+      
+      html += '</tbody></table></div>';
+      html += '</div>';
+      
+      content.innerHTML = html;
+      preview.style.display = 'block';
+    }
+
+    function generatePlanData() {
+      const clientName = document.getElementById('clientName').value.trim();
+      const maxForce = parseFloat(document.getElementById('maxForce').value);
+      const age = parseInt(document.getElementById('age').value) || null;
+      // Get date input
+      const startDateValue = document.getElementById('startDate').value;
+      const startDate = new Date(startDateValue);
+      const totalDays = parseInt(document.getElementById('totalDays').value);
+      const availableDays = Array.from(document.querySelectorAll('input[type="checkbox"][id^="day"]:checked'))
+        .map(cb => parseInt(cb.value));
+      const strategy = document.querySelector('input[name="strategy"]:checked')?.value || 'sequential';
+      const blockSize = parseInt(document.getElementById('blockSize')?.value || 3);
+
+      // Generate session schedule
+      const sessions = [];
+      const mesocycleSequence = generateMesocycleSequence(selectedMesocycles, strategy, totalDays, blockSize);
+      
+      let currentDate = new Date(startDate);
+      let sessionIndex = 0;
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + totalDays);
+
+      while (currentDate < endDate && sessionIndex < mesocycleSequence.length) {
+        const dayOfWeek = currentDate.getDay();
+        
+        if (availableDays.includes(dayOfWeek)) {
+          const mesoId = mesocycleSequence[sessionIndex];
+          const meso = MESOCYCLES[mesoId];
+          
+          // Apply age-based adjustments if provided
+          let intensityMultiplier = 1.0;
+          if (age) {
+            if (age > 60) intensityMultiplier = 0.85;
+            else if (age > 50) intensityMultiplier = 0.90;
+            else if (age < 25) intensityMultiplier = 1.05;
+          }
+
+          sessions.push({
+            date: formatDate(currentDate),
+            mesocycleId: mesoId,
+            mesocycleName: meso.name,
+            maxForce: maxForce * intensityMultiplier,
+            sessionNumber: sessionIndex + 1
+          });
+          
+          sessionIndex++;
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return {
+        clientName,
+        maxForce,
+        age,
+        startDate: formatDate(startDate),
+        totalDays,
+        availableDays,
+        strategy,
+        sessions
+      };
+    }
+
+    function generateMesocycleSequence(mesocycleIds, strategy, totalDays, blockSize) {
+      const sequence = [];
+      const totalWeeks = Math.floor(totalDays / 7);
+      
+      if (strategy === 'sequential') {
+        // Each mesocycle completes before next starts
+        const weeksPerMeso = Math.floor(totalWeeks / mesocycleIds.length);
+        mesocycleIds.forEach(id => {
+          const meso = MESOCYCLES[id];
+          const sessionsNeeded = weeksPerMeso * meso.weeklyFrequency;
+          for (let i = 0; i < sessionsNeeded; i++) {
+            sequence.push(id);
+          }
+        });
+      } else if (strategy === 'alternated') {
+        // Alternate weekly
+        let week = 0;
+        while (week < totalWeeks) {
+          mesocycleIds.forEach(id => {
+            const meso = MESOCYCLES[id];
+            for (let i = 0; i < meso.weeklyFrequency; i++) {
+              sequence.push(id);
+            }
+          });
+          week++;
+        }
+      } else if (strategy === 'block') {
+        // Blocks of N weeks
+        const blocksNeeded = Math.ceil(totalWeeks / blockSize);
+        for (let b = 0; b < blocksNeeded; b++) {
+          mesocycleIds.forEach(id => {
+            const meso = MESOCYCLES[id];
+            for (let w = 0; w < blockSize; w++) {
+              for (let s = 0; s < meso.weeklyFrequency; s++) {
+                sequence.push(id);
+              }
+            }
+          });
+        }
+      } else if (strategy === 'pyramidal') {
+        // Sort by intensity (lower to higher) using upperPct
+        const sorted = [...mesocycleIds].sort((a, b) => {
+          const avgA = MESOCYCLES[a].stages.reduce((s, st) => s + st.upperPct, 0) / MESOCYCLES[a].stages.length;
+          const avgB = MESOCYCLES[b].stages.reduce((s, st) => s + st.upperPct, 0) / MESOCYCLES[b].stages.length;
+          return avgA - avgB;
+        });
+        
+        sorted.forEach(id => {
+          const meso = MESOCYCLES[id];
+          const weeks = Math.floor(totalWeeks / sorted.length);
+          for (let w = 0; w < weeks; w++) {
+            for (let s = 0; s < meso.weeklyFrequency; s++) {
+              sequence.push(id);
+            }
+          }
+        });
+      } else { // concurrent
+        // Mix within each week
+        for (let w = 0; w < totalWeeks; w++) {
+          mesocycleIds.forEach(id => {
+            const meso = MESOCYCLES[id];
+            const sessions = Math.ceil(meso.weeklyFrequency / mesocycleIds.length);
+            for (let s = 0; s < sessions; s++) {
+              sequence.push(id);
+            }
+          });
+        }
+      }
+
+      return sequence;
+    }
+
+    function generatePlan() {
+      const plan = generatePlanData();
+      const csv = buildCSV(plan);
+      downloadCSV(csv, `periodizacao_${plan.clientName.replace(/\s+/g, '_')}_${plan.startDate.replace(/\//g, '-')}.csv`);
+    }
+
+    function loadDirectly() {
+      const plan = generatePlanData();
+      const csv = buildCSV(plan);
+      
+      // Parse the CSV and convert to the format expected by the app
+      const lines = csv.split('\n');
+      const sessions = parseMesocycleReferenceCsv(lines);
+      
+      // Store in localStorage like the import function does
+      try {
+        const existingPlans = JSON.parse(localStorage.getItem('isotrainer:plans') || '[]');
+        const updatedPlans = [...existingPlans, ...sessions];
+        localStorage.setItem('isotrainer:plans', JSON.stringify(updatedPlans));
+        
+        // Turn off fixed plans preference
+        localStorage.setItem('isotrainer:fixedPlanPreference', 'false');
+        
+        showValidation('success', `
+          <strong>Plano carregado com sucesso!</strong><br>
+          ${sessions.length} sessões foram adicionadas ao IsoTrainer.<br>
+          <br>
+          <a href="/app.html" class="btn-primary px-4 py-2 rounded-lg mt-2 inline-block">
+            Abrir IsoTrainer
+          </a>
+        `);
+      } catch (error) {
+        showValidation('error', `Erro ao carregar o plano: ${error.message}`);
+      }
+    }
+
+    function parseMesocycleReferenceCsv(lines) {
+      const sessions = [];
+      
+      if (lines.length < 2) return sessions;
+      
+      const header = lines[0].toLowerCase().split(';').map(s => s.trim());
+      const dateIdx = header.findIndex(h => h.includes('date') || h.includes('data'));
+      const athleteIdx = header.findIndex(h => h.includes('athlete') || h.includes('atleta'));
+      const planIdIdx = header.findIndex(h => h.includes('planid') || h.includes('mesociclo'));
+      
+      if (dateIdx === -1 || athleteIdx === -1 || planIdIdx === -1) {
+        throw new Error('Formato de CSV inválido');
+      }
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const cols = line.split(';');
+        if (cols.length < 4) continue;
+        
+        const dateStr = cols[dateIdx];
+        const athlete = cols[athleteIdx];
+        const planId = cols[planIdIdx];
+        
+        if (!dateStr || !athlete || !planId) continue;
+        
+        // Look up the mesocycle in our library
+        const mesocycle = MESOCYCLES[planId];
+        if (!mesocycle) {
+          console.warn(`Mesocycle not found: ${planId}`);
+          continue;
+        }
+        
+        // Convert mesocycle stages to the format expected by the app
+        const stages = mesocycle.stages.map((stage, idx) => ({
+          index: idx + 1,
+          durationSec: stage.durationSec || 60,
+          lower: stage.lowerPct ? Math.round(stage.lowerPct * 100) : stage.lower || 0,
+          upper: stage.upperPct ? Math.round(stage.upperPct * 100) : stage.upper || 100,
+        }));
+        
+        const totalDurationSec = stages.reduce((sum, stage) => sum + stage.durationSec, 0);
+        
+        sessions.push({
+          date: dateStr,
+          athlete: athlete,
+          planId: planId,
+          stages: stages,
+          totalDurationSec: totalDurationSec
+        });
+      }
+      
+      return sessions;
+    }
+
+    function buildCSV(plan) {
+      const rows = [];
+      
+      // Simple format with mesocycle references
+      // Header
+      rows.push('date;athlete;planId;idx');
+      
+      // Data rows
+      plan.sessions.forEach((session, idx) => {
+        rows.push(`${session.date};${plan.clientName};${session.mesocycleId};${idx + 1}`);
+      });
+      
+      return rows.join('\n');
+    }
+
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showValidation('success', `Arquivo <strong>${filename}</strong> gerado com sucesso! Importe-o no IsoTrainer.`);
+    }
+
+    function formatDate(date) {
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+
+    function resetForm() {
+      document.getElementById('clientName').value = '';
+      document.getElementById('maxForce').value = '';
+      document.getElementById('age').value = '';
+      setTodayDate();
+      document.getElementById('totalDays').value = '';
+      
+      document.querySelectorAll('.mesocycle-checkbox').forEach(cb => cb.checked = false);
+      document.querySelectorAll('input[name="strategy"]')[0].checked = true;
+      
+      selectedMesocycles = [];
+      validationResult = null;
+      
+      document.getElementById('strategySection').style.display = 'none';
+      document.getElementById('validationMessage').style.display = 'none';
+      document.getElementById('previewSection').style.display = 'none';
+      updateMainActionButton();
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+

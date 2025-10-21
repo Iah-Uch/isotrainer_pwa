@@ -450,12 +450,103 @@ function parseRow(parts, lineNo) {
   return { sessionNum, dateStr, type, timeStr, min, max };
 }
 
+function parseMesocycleReferenceCsv(lines) {
+  // New format: date;athlete;planId;idx
+  // Header is line 0, data starts at line 1
+  if (lines.length < 2) {
+    throw new Error("CSV vazio - nenhuma sessão encontrada.");
+  }
+
+  const sessions = [];
+  const header = lines[0].toLowerCase().split(';').map(s => s.trim());
+  
+  console.log('Header:', header);
+  
+  // Find column indices
+  const dateIdx = header.findIndex(h => h.includes('date') || h.includes('data'));
+  const athleteIdx = header.findIndex(h => h.includes('athlete') || h.includes('atleta'));
+  const planIdIdx = header.findIndex(h => h.includes('planid') || h.includes('mesociclo'));
+  
+  console.log('Column indices:', { dateIdx, athleteIdx, planIdIdx });
+  
+  if (dateIdx === -1 || athleteIdx === -1 || planIdIdx === -1) {
+    throw new Error("Formato de CSV inválido - colunas esperadas: date, athlete, planId");
+  }
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(';').map(s => s.trim());
+    if (parts.length < 3) continue;
+
+    const dateStr = parts[dateIdx];
+    const athlete = parts[athleteIdx];
+    const planId = parts[planIdIdx];
+
+    console.log(`Linha ${i}: date=${dateStr}, athlete=${athlete}, planId=${planId}`);
+
+    // Validate date format (DD/MM/YYYY)
+    if (!/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+      throw new Error(`Linha ${i + 1}: data inválida (esperado DD/MM/AAAA): ${dateStr}`);
+    }
+
+    // Get mesocycle definition from library
+    const mesocycle = getFixedPlanById(planId);
+    if (!mesocycle) {
+      console.error(`Mesocycle not found: ${planId}`);
+      throw new Error(`Linha ${i + 1}: mesociclo não encontrado: ${planId}`);
+    }
+
+    console.log(`Found mesocycle: ${mesocycle.name}`);
+
+    // Build session from mesocycle stages
+    const stages = mesocycle.stages.map((stage, idx) => ({
+      index: idx + 1,
+      durationSec: stage.durationSec || 60,
+      lower: stage.lowerPct ? Math.round(stage.lowerPct * 100) : stage.lower || 0,
+      upper: stage.upperPct ? Math.round(stage.upperPct * 100) : stage.upper || 100,
+    }));
+
+    const totalDurationSec = stages.reduce((sum, s) => sum + s.durationSec, 0);
+
+    const session = {
+      date: dateStr,
+      athlete: athlete,
+      planId: planId,
+      stages: stages,
+      totalDurationSec: totalDurationSec,
+    };
+    
+    console.log('Created session:', session);
+    sessions.push(session);
+  }
+
+  if (!sessions.length) {
+    throw new Error("Nenhuma sessão encontrada no CSV.");
+  }
+
+  console.log(`Total sessions created: ${sessions.length}`);
+  return sessions;
+}
+
 export function parsePeriodizationCsv(text) {
   const src = normalizeText(text);
   if (!src) throw new Error("O arquivo está vazio.");
 
   const rawLines = src.split(/\r?\n/).map((l) => l.trim());
   const lines = rawLines.filter((l) => l.length > 0);
+  if (lines.length < 2)
+    throw new Error("Conteúdo insuficiente.");
+
+  // Detect new mesocycle reference format
+  const firstLine = lines[0].toLowerCase();
+  const hasDate = firstLine.includes('date') || firstLine.includes('data');
+  const hasPlanId = firstLine.includes('planid') || firstLine.includes('mesociclo');
+  
+  if (hasDate && hasPlanId) {
+    console.log('Detected new mesocycle reference format');
+    return parseMesocycleReferenceCsv(lines);
+  }
+
+  // Legacy format
   if (lines.length < 3)
     throw new Error(
       "Conteúdo insuficiente (metadados, cabeçalho e linhas de treino são esperados).",
@@ -929,10 +1020,11 @@ export function renderHome(plans) {
   };
   let desiredTab = activeHomeTab;
   if (!availableTabs[desiredTab]) {
+    // Default to 'todo' (A fazer) when fixed plans are off
     if (availableTabs.fixed) desiredTab = "fixed";
-    else if (availableTabs.done) desiredTab = "done";
     else if (availableTabs.todo) desiredTab = "todo";
     else if (availableTabs.overdue) desiredTab = "overdue";
+    else if (availableTabs.done) desiredTab = "done";
     else desiredTab = "done";
   }
   activate(desiredTab);
@@ -1574,9 +1666,20 @@ export function bindHomeNav() {
   document
     .getElementById("menuImportPlan")
     ?.addEventListener("click", () => importPlansInput?.click());
+  document.getElementById("menuPlanGenerator")?.addEventListener("click", () => {
+    window.open("/plan-generator.html", "_blank");
+    menu?.classList.add("hidden");
+  });
   const onDecoded = (decoded) => {
     const sessions = parsePeriodizationCsv(decoded);
     savePlans(sessions);
+    // Turn off fixed plans after import
+    persistFixedPlanPreference(false);
+    // Update toggle UI
+    try {
+      const toggle = document.getElementById("fixedPlanToggle");
+      if (toggle) toggle.checked = false;
+    } catch { }
     renderHome(sessions);
     alert("Planos importados com sucesso.");
     // Switch to hamburger after first import
@@ -1666,6 +1769,13 @@ export function bindHomeNav() {
           const decoded = tryDecodeContent(String(reader.result || ""));
           const sessions = parsePeriodizationCsv(decoded);
           savePlans(sessions);
+          // Turn off fixed plans after import
+          persistFixedPlanPreference(false);
+          // Update toggle UI
+          try {
+            const toggle = document.getElementById("fixedPlanToggle");
+            if (toggle) toggle.checked = false;
+          } catch { }
           renderHome(sessions);
           alert("Planos importados com sucesso.");
         } catch (err) {
@@ -1745,8 +1855,9 @@ function exportAllDoneCsv() {
     alert("Nenhuma sessão concluída disponível para exportar.");
     return;
   }
+  // Header with units in column names
   const HEADER =
-    "type;date;athlete;stage_index;duration_sec;lower;upper;avg;min;max;inTargetPct;samples;elapsed_sec;stage_elapsed_sec;force;inTarget";
+    "type;date;client;stage;duration_sec;lower_kgf;upper_kgf;avg_kgf;min_kgf;max_kgf;in_target_pct;samples;elapsed_sec;stage_elapsed_sec;force_kgf;in_target";
   const parts = [HEADER];
   for (const rec of dones) {
     const csv = String(rec?.csv || "").trim();
@@ -1756,7 +1867,7 @@ function exportAllDoneCsv() {
       .map((l) => l.trim())
       .filter(Boolean);
     if (!lines.length) continue;
-    // skip per-session header
+    // skip per-session header (line 0)
     for (let i = 1; i < lines.length; i++) parts.push(lines[i]);
   }
   if (parts.length <= 1) {
@@ -1769,7 +1880,7 @@ function exportAllDoneCsv() {
   const a = document.createElement("a");
   const dateSlug = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
   a.href = url;
-  a.download = `isotrainer_sessoes_${dateSlug}.csv`;
+  a.download = `isotrainer_all_sessions_${dateSlug}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();

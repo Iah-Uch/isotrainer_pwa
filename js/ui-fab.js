@@ -29,6 +29,9 @@ const forward = {
     const m = qs("#controlsModal");
     if (m) m.classList.remove("hidden");
   },
+  generator: () => {
+    window.open("/plan-generator.html", "_blank");
+  },
   back: () => qs("#backButton")?.click(),
 };
 
