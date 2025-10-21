@@ -58,6 +58,46 @@ const DEV_SAMPLE_INTERVAL_MS = 300;
 let devSampleTimer = null;
 let devSamplePhase = 0;
 
+// --- Keep Alive for Force Start Meas characteristic ---
+let keepAliveTimer = null;
+const KEEP_ALIVE_INTERVAL_MS = 60000; // 60 seconds
+const FORCE_START_MEAS_UUID = "0000fca1-0000-1000-8000-00805f9b34fb";
+
+function startKeepAlive() {
+  stopKeepAlive();
+  if (
+    state.commandCharacteristic &&
+    state.commandCharacteristic.uuid &&
+    state.commandCharacteristic.uuid.toLowerCase() === FORCE_START_MEAS_UUID
+  ) {
+    keepAliveTimer = setInterval(sendKeepAlive, KEEP_ALIVE_INTERVAL_MS);
+  }
+}
+
+function stopKeepAlive() {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  }
+}
+
+async function sendKeepAlive() {
+  if (
+    state.commandCharacteristic &&
+    state.commandCharacteristic.uuid &&
+    state.commandCharacteristic.uuid.toLowerCase() === FORCE_START_MEAS_UUID
+  ) {
+    try {
+      // Write 0x02 as required by hardware
+      if (typeof state.commandCharacteristic.writeValue === "function") {
+        await state.commandCharacteristic.writeValue(new Uint8Array([2]));
+      }
+    } catch (err) {
+      console.warn("Falha ao enviar keep-alive para Force Start Meas:", err?.message || err);
+    }
+  }
+}
+
 function devBypassEnabled() {
   return !!DEV_OPTIONS?.bypassConnectScreen;
 }
@@ -214,6 +254,7 @@ export function disconnectFromDevice() {
     stopStreaming().catch(() => { });
     state.device.gatt.disconnect();
   }
+  stopKeepAlive();
   state.commandCharacteristic = null;
   resetForceCalibration();
 }
@@ -649,10 +690,12 @@ async function sendCommand(bytes) {
 
 async function startStreaming() {
   await sendCommand(new Uint8Array([1]));
+  startKeepAlive();
 }
 
 async function stopStreaming() {
   await sendCommand(new Uint8Array([0]));
+  stopKeepAlive();
 }
 
 function formatForce(value, { withUnit = false } = {}) {
