@@ -10,6 +10,8 @@ export const DEV_BYPASS_CONNECT = !!DEV_OPTIONS.bypassConnectScreen;
 export const state = {
   // Viewing mode smoothing setting (default: false)
   viewingModeSmoothingEnabled: false,
+  // Active profile for multi-athlete support
+  activeProfileId: null,
   // BLE.
   device: null,
   server: null,
@@ -63,6 +65,7 @@ export const state = {
   showFixedPlans: true,
   flowActive: false,
   flowPlan: null,
+  flowSourceSession: null,  // Original scheduled session (for fixed plan references)
   flowArm: null,
   flowStats: [],
   flowStepRecords: [],

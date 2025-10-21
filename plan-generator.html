@@ -5,74 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IsoTrainer - Gerador de Periodização</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      background: linear-gradient(135deg, #0a0a0b 0%, #1a1a1d 100%);
-      min-height: 100vh;
-    }
-    .card {
-      background: rgba(16, 16, 17, 0.95);
-      border: 1px solid #2a2a2a;
-      backdrop-filter: blur(10px);
-    }
-    .input-field {
-      background: #0b0b0c;
-      border: 1px solid #2a2a2a;
-      color: #f1f5f9;
-      transition: all 0.2s;
-    }
-    .input-field:focus {
-      outline: none;
-      border-color: #f59e0b;
-      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
-    }
-    .btn-primary {
-      background: #f59e0b;
-      color: white;
-      transition: all 0.2s;
-    }
-    .btn-primary:hover {
-      background: #d97706;
-      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
-    }
-    .btn-secondary {
-      background: #0b0b0c;
-      border: 1px solid #2a2a2a;
-      color: #f1f5f9;
-      transition: all 0.2s;
-    }
-    .btn-secondary:hover {
-      background: #1a1a1b;
-      border-color: #f59e0b;
-    }
-    .checkbox-group {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 0.5rem;
-    }
-    .warning-box {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid #ef4444;
-      color: #fecaca;
-    }
-    .info-box {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid #3b82f6;
-      color: #bfdbfe;
-    }
-    .success-box {
-      background: rgba(34, 197, 94, 0.1);
-      border: 1px solid #22c55e;
-      color: #bbf7d0;
-    }
-    /* Force date input to show DD/MM/YYYY format */
-    input[type="date"] {
-      color-scheme: dark;
-    }
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-    }
-  </style>
+  <link rel="stylesheet" href="/assets/css/plan-generator.css">
 </head>
 <body class="p-4 md:p-8 pb-24">
   <div class="max-w-6xl mx-auto">
@@ -84,9 +17,6 @@
           <p class="text-slate-300">Configure e gere planos de treinamento personalizados com base em mesociclos científicos</p>
         </div>
         <a href="/app.html" class="btn-primary px-6 py-3 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-600 transition-colors whitespace-nowrap">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
           Abrir IsoTrainer
         </a>
       </div>
@@ -245,7 +175,7 @@
           Validar
         </button>
         <button id="loadDirectBtn" class="px-3 py-2 rounded-lg font-medium text-xs flex-1" disabled style="background: #6b7280; color: #9ca3af;">
-          Carregar
+          Carregar Localmente
         </button>
         <button id="resetBtn" class="btn-secondary px-3 py-2 rounded-lg font-medium text-xs flex-1">
           Limpar
@@ -866,14 +796,84 @@
       const lines = csv.split('\n');
       const sessions = parseMesocycleReferenceCsv(lines);
       
-      // Store in localStorage like the import function does
+      // Store using the profile-aware storage system
       try {
-        const existingPlans = JSON.parse(localStorage.getItem('isotrainer:plans') || '[]');
-        const updatedPlans = [...existingPlans, ...sessions];
-        localStorage.setItem('isotrainer:plans', JSON.stringify(updatedPlans));
+        // Read current state (profile-aware)
+        const STORAGE_KEY = "isotrainer:plans";
+        const PROFILE_VERSION = 2;
+        let planState;
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            planState = JSON.parse(raw);
+            // If it's an old array format, convert it
+            if (Array.isArray(planState)) {
+              const profileId = 'profile_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+              planState = {
+                version: PROFILE_VERSION,
+                activeProfileId: profileId,
+                profiles: [{
+                  id: profileId,
+                  name: plan.clientName || 'Atleta',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  plans: planState
+                }]
+              };
+            }
+          }
+        } catch {
+          planState = null;
+        }
+        
+        // Initialize if no state exists
+        if (!planState || !planState.profiles) {
+          const profileId = 'profile_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+          planState = {
+            version: PROFILE_VERSION,
+            activeProfileId: profileId,
+            profiles: [{
+              id: profileId,
+              name: plan.clientName || 'Atleta',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              plans: []
+            }]
+          };
+        }
+        
+        // Find or create profile for this athlete
+        let profile = planState.profiles.find(p => p.name === plan.clientName);
+        if (!profile) {
+          const profileId = 'profile_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+          profile = {
+            id: profileId,
+            name: plan.clientName,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            plans: []
+          };
+          planState.profiles.push(profile);
+        }
+        
+        // Add plan IDs and profile reference
+        const updatedSessions = sessions.map((s, i) => ({
+          ...s,
+          id: 'plan_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36) + '_' + i,
+          idx: profile.plans.length + i + 1,
+          profileId: profile.id
+        }));
+        
+        // Append to profile's plans
+        profile.plans = [...profile.plans, ...updatedSessions];
+        profile.updatedAt = new Date().toISOString();
+        planState.activeProfileId = profile.id;
+        
+        // Save back to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(planState));
         
         // Turn off fixed plans preference
-        localStorage.setItem('isotrainer:fixedPlanPreference', 'false');
+        localStorage.setItem('isotrainer:home:fixedPlans', 'false');
         
         showValidation('success', `
           <strong>Plano carregado com sucesso!</strong><br>
@@ -895,10 +895,10 @@
       
       const header = lines[0].toLowerCase().split(';').map(s => s.trim());
       const dateIdx = header.findIndex(h => h.includes('date') || h.includes('data'));
-      const athleteIdx = header.findIndex(h => h.includes('athlete') || h.includes('atleta'));
+      const clientIdx = header.findIndex(h => h.includes('client') || h.includes('athlete') || h.includes('atleta'));
       const planIdIdx = header.findIndex(h => h.includes('planid') || h.includes('mesociclo'));
       
-      if (dateIdx === -1 || athleteIdx === -1 || planIdIdx === -1) {
+      if (dateIdx === -1 || clientIdx === -1 || planIdIdx === -1) {
         throw new Error('Formato de CSV inválido');
       }
       
@@ -910,34 +910,28 @@
         if (cols.length < 4) continue;
         
         const dateStr = cols[dateIdx];
-        const athlete = cols[athleteIdx];
-        const planId = cols[planIdIdx];
+        const client = cols[clientIdx];
+        const fixedPlanId = cols[planIdIdx];
         
-        if (!dateStr || !athlete || !planId) continue;
+        if (!dateStr || !client || !fixedPlanId) continue;
         
-        // Look up the mesocycle in our library
-        const mesocycle = MESOCYCLES[planId];
+        // Look up the mesocycle in our library to validate it exists
+        const mesocycle = MESOCYCLES[fixedPlanId];
         if (!mesocycle) {
-          console.warn(`Mesocycle not found: ${planId}`);
+          console.warn(`Mesocycle not found: ${fixedPlanId}`);
           continue;
         }
         
-        // Convert mesocycle stages to the format expected by the app
-        const stages = mesocycle.stages.map((stage, idx) => ({
-          index: idx + 1,
-          durationSec: stage.durationSec || 60,
-          lower: stage.lowerPct ? Math.round(stage.lowerPct * 100) : stage.lower || 0,
-          upper: stage.upperPct ? Math.round(stage.upperPct * 100) : stage.upper || 100,
-        }));
-        
-        const totalDurationSec = stages.reduce((sum, stage) => sum + stage.durationSec, 0);
-        
+        // Create a REFERENCE-ONLY session (no stages, just points to fixed plan)
+        // The app will resolve the actual stages from FIXED_PLAN_LIBRARY at runtime
         sessions.push({
           date: dateStr,
-          athlete: athlete,
-          planId: planId,
-          stages: stages,
-          totalDurationSec: totalDurationSec
+          athlete: client,  // Map client column to athlete field (internal field name)
+          fixedPlanId: fixedPlanId,  // Reference to FIXED_PLAN_LIBRARY
+          isFixedPlanReference: true,  // Flag to indicate this is a reference
+          // Minimal data for display purposes only
+          stages: [],  // Empty - will be resolved from library
+          totalDurationSec: 0  // Will be calculated from library
         });
       }
       
@@ -948,12 +942,12 @@
       const rows = [];
       
       // Simple format with mesocycle references
-      // Header
-      rows.push('date;athlete;planId;idx');
+      // Header with version marker
+      rows.push('date;client;planId;idx;version');
       
-      // Data rows
+      // Data rows with version marker
       plan.sessions.forEach((session, idx) => {
-        rows.push(`${session.date};${plan.clientName};${session.mesocycleId};${idx + 1}`);
+        rows.push(`${session.date};${plan.clientName};${session.mesocycleId};${idx + 1};isotrainer-v2`);
       });
       
       return rows.join('\n');

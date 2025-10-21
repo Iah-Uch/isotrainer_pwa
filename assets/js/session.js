@@ -442,6 +442,7 @@ export function setPlayPauseVisual() {
 
 export function showScreen(which) {
   const connect = document.getElementById("connectScreen");
+  const profiles = document.getElementById("profileSelectScreen");
   const home = document.getElementById("homeScreen");
   const plan = document.getElementById("planScreen");
   const plot = document.getElementById("plotScreen");
@@ -452,12 +453,14 @@ export function showScreen(which) {
   const planFabs = document.getElementById("planFabs");
   const homeMenuWrap = document.getElementById("homeMenuWrap");
   connect.classList.add("hidden");
+  if (profiles) profiles.classList.add("hidden");
   if (home) home.classList.add("hidden");
   plan.classList.add("hidden");
   plot.classList.add("hidden");
   complete.classList.add("hidden");
   if (editPlan) editPlan.classList.add("hidden");
   if (which === "connect") connect.classList.remove("hidden");
+  if (which === "profiles" && profiles) profiles.classList.remove("hidden");
   if (which === "home" && home) home.classList.remove("hidden");
   if (which === "plan") plan.classList.remove("hidden");
   if (which === "plot") plot.classList.remove("hidden");
@@ -651,6 +654,8 @@ function showCompletion(stats) {
           : Number.isFinite(Number(sessionData.idx))
             ? Number(sessionData.idx)
             : null,
+        fixedPlanId: sessionData.fixedPlanId || null,
+        isFixedPlanReference: sessionData.isFixedPlanReference || false,
       };
       // Tag manual flow sessions with a clear prefix in the title
       try {
@@ -844,17 +849,20 @@ function finalizeFlowSession() {
   const completionIso =
     steps[steps.length - 1]?.completedAt || new Date().toISOString();
 
+  const sourceSession = state.flowSourceSession;
   const aggregatedRecord = {
-    date: session.date,
-    athlete: session.athlete,
+    date: sourceSession?.date || session.date,
+    athlete: sourceSession?.athlete || session.athlete,
     totalDurationSec: session.totalDurationSec,
     stagesCount: sessionStages.length,
     stats,
     isImported: false,
     csv,
     completedAt: completionIso,
-    planId: plan?.id || steps[0]?.planId || null,
-    planIdx: steps[0]?.planIdx ?? null,
+    planId: sourceSession?.id || plan?.id || steps[0]?.planId || null,
+    planIdx: sourceSession?.idx ?? steps[0]?.planIdx ?? null,
+    fixedPlanId: sourceSession?.fixedPlanId || plan?.id || null,
+    isFixedPlanReference: sourceSession?.isFixedPlanReference || false,
     title,
     steps: stepsForRecord,
     stages: sessionStages.map((stage) => ({ ...stage })),
@@ -867,6 +875,7 @@ function finalizeFlowSession() {
   } catch { }
   state.flowStepRecords = [];
   state.flowStats = [];
+  state.flowSourceSession = null;  // Clear the source session reference
 }
 
 let viewFabInitialized = false;
@@ -1779,7 +1788,7 @@ function ensureFlowSequence() {
   return FLOW_TRAINING_STEPS.slice();
 }
 
-export function prepareFixedPlanFlow(planId) {
+export function prepareFixedPlanFlow(planId, sourceSession = null) {
   const plan = getFixedPlanById(planId);
   if (!plan) {
     alert('Plano fixo não encontrado.');
@@ -1792,6 +1801,7 @@ export function prepareFixedPlanFlow(planId) {
   stopMeasurement();
   stopRestTimer();
   state.flowPlan = plan;
+  state.flowSourceSession = sourceSession || null;  // Store the original scheduled session if any
   state.flowActive = true;
   state.flowSequence = ensureFlowSequence();
   state.currentStepIndex = 0;

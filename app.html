@@ -15,7 +15,7 @@
   <!-- QR Scanner (ESM build also available; using global for simplicity) -->
   <script defer src="https://unpkg.com/qr-scanner@1.4.2/qr-scanner.umd.min.js" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="/assets/css/styles.css" />
 </head>
 
 <body class="min-h-svh text-slate-100 font-sans antialiased selection:bg-amber-600 selection:text-amber-100"
@@ -46,6 +46,69 @@
         </div>
       </div>
 
+      <!-- TELA DE PERFIS -->
+      <div id="profileSelectScreen" class="hidden p-6">
+        <div
+          class="relative rounded-2xl border border-[#2a2a2a] bg-gradient-to-br from-[#0f0f10] to-[#09090a] overflow-hidden">
+          <button id="profileSelectClose" title="Fechar" aria-label="Fechar"
+            class="absolute top-4 right-4 h-10 w-10 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c] transition"
+            type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true">
+              <path
+                d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.6l6.3-6.31z" />
+            </svg>
+          </button>
+          <div class="p-6 sm:p-8 space-y-6">
+            <div class="space-y-2 text-center sm:text-left">
+              <h2 class="text-2xl font-bold tracking-tight">Quem vai treinar?</h2>
+              <p class="text-slate-300">
+                Selecione o atleta para carregar as sessões disponíveis.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
+              <button id="profileSelectSearchBtn" title="Buscar atleta" aria-label="Buscar atleta"
+                class="h-10 w-10 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
+                  aria-hidden="true">
+                  <path d="M10 4a6 6 0 014.9 9.6l4.7 4.7-1.4 1.4-4.7-4.7A6 6 0 1110 4zm0 2a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+              </button>
+              <div id="profileSelectSearchInputWrap" class="hidden w-full sm:w-64">
+                <input id="profileSelectSearchInput" type="text" autocomplete="off" placeholder="Buscar atleta"
+                  class="w-full rounded-xl border border-[#2a2a2a] bg-[#101011] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+              </div>
+            </div>
+            <div id="profileSelectList" class="grid gap-3"></div>
+            <div id="profileSelectNoResults"
+              class="hidden rounded-xl border border-[#2a2a2a] bg-[#101011] p-4 text-sm text-slate-300 text-center">
+              Nenhum atleta encontrado para esta busca.
+            </div>
+            <div id="profileSelectEmpty"
+              class="hidden rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-200 text-center">
+              Nenhuma periodização importada ainda. Importe um arquivo CSV para começar.
+            </div>
+          </div>
+          <div
+            class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[#2a2a2a] bg-[#0b0b0c] px-6 py-4">
+            <div class="text-sm text-slate-300">
+              Gerencie periodizações separadas por atleta.
+            </div>
+            <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
+              <button id="profileSelectImport"
+                class="px-4 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] transition">
+                + Importar nova periodização
+              </button>
+              <button id="profileSelectContinue"
+                class="hidden px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 transition shadow-lg shadow-amber-600/25">
+                Entrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- TELA HOME (PLANOS) -->
       <div id="homeScreen" class="p-0">
         <div
@@ -57,6 +120,18 @@
                 <p id="homeSubtitle" class="text-slate-300">
                   Explore a biblioteca de mesociclos, importe periodizações ou use o fluxo manual.
                 </p>
+                <div id="homeActiveProfileWrap"
+                  class="hidden mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                  <span class="uppercase tracking-wide text-xs text-slate-500">Atleta</span>
+                  <span id="homeActiveProfileName"
+                    class="px-2 py-0.5 rounded-lg bg-[#2a2a2a] text-slate-100 font-semibold">
+                    —
+                  </span>
+                  <button id="homeSwitchProfileBtn" class="px-2 py-0.5 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c]"
+                    type="button">
+                    Trocar
+                  </button>
+                </div>
               </div>
               <div id="homeActions" class="flex flex-wrap items-center justify-end gap-2">
                 <button id="homeManualBtn" class="px-3 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c]"
@@ -410,14 +485,6 @@
             </svg>
             <span>Controles de estágio</span>
           </button>
-          <button class="fab-item flex items-center gap-2" data-act="generator" role="menuitem" title="Gerador de Periodização"
-            aria-label="Gerador de Periodização">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
-              aria-hidden="true">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <span>Gerador de Periodização</span>
-          </button>
           <button class="fab-item flex items-center gap-2" data-act="back" role="menuitem" title="Voltar"
             aria-label="Voltar">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"
@@ -584,80 +651,36 @@
   </div>
 
   <!-- Inline Preview Modal (Sessão) -->
-  <div id="sessionPreviewModal" class="hidden fixed inset-0 z-[60] overflow-y-auto bg-black/55 p-4" border
-    border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog" aria-modal="true">
+  <div id="sessionPreviewModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4"
+    border border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog" aria-modal="true">
     <div
-      class="relative mx-auto mt-6 w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] ring-1 ring-[#2a2a2a] shadow-2xl">
-      <div class="sticky top-0 z-10 bg-[#0b0b0c] backdrop-blur rounded-t-2xl border-[#2a2a2a] px-4 py-3 pb-0">
-        <div class="flex items-center justify-end gap-2">
-          <!-- <h3 class="text-lg font-semibold">Pré-visualização da sessão</h3> -->
-          <div class="flex items-center gap-2">
-            <button id="sessionPreviewClose" title="Fechar" aria-label="Fechar"
-              class="h-9 w-9 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path
-                  d="M18.3 5.71L12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.71 2.88 18.3 9.17 12 2.88 5.71 4.29 4.29 10.59 10.6l6.3-6.31z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div id="sessionPreviewBody" class="p-5 pt-3 min-h-[6rem]"></div>
-      <div class="sticky bottom-0 z-10 bg-[#0b0b0c] backdrop-blur rounded-b-2xl border-[#2a2a2a] px-4 py-3 pt-0">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <button id="sessionPreviewRenameBottom" title="Renomear" aria-label="Renomear"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path
-                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
-              </svg>
-            </button>
-            <button id="sessionPreviewDeleteBottom" title="Excluir" aria-label="Excluir"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-700 hover:bg-amber-700">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path d="M6 7h12l-1 12a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7zm9-3l-1-1h-4l-1 1H5v2h14V4z" />
-              </svg>
-            </button>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="sessionPreviewStart" title="Iniciar" aria-label="Iniciar"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-600 hover:bg-amber-500"
-              shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-            <button id="sessionPreviewEdit" title="Editar" aria-label="Editar"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path
-                  d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
-              </svg>
-            </button>
-            <button id="sessionPreviewViewBottom" title="Ver" aria-label="Ver"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-amber-600 hover:bg-amber-500"
-              shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path
-                  d="M12 5c-7.633 0-10 7-10 7s2.367 7 10 7 10-7 10-7-2.367-7-10-7zm0 12a5 5 0 115-5 5.006 5.006 0 01-5 5z" />
-              </svg>
-            </button>
-            <button id="sessionPreviewDownloadBottom" title="Baixar CSV" aria-label="Baixar CSV"
-              class="hidden h-11 w-11 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c]">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
-                aria-hidden="true">
-                <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
-              </svg>
-            </button>
-          </div>
-        </div>
+      class="w-full max-w-lg rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] ring-1 ring-[#2a2a2a] shadow-2xl flex flex-col gap-4 p-5">
+      <div id="sessionPreviewBody" class="min-h-[6rem]"></div>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+        <button id="sessionPreviewClose" class="px-4 py-2 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] text-slate-200">
+          Fechar
+        </button>
+        <button id="sessionPreviewDownloadBottom" title="Baixar CSV" aria-label="Baixar CSV"
+          class="hidden px-4 py-2 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] text-slate-200">
+          Baixar CSV
+        </button>
+        <button id="sessionPreviewEdit" title="Editar" aria-label="Editar"
+          class="hidden px-4 py-2 rounded-lg bg-[#0b0b0c] hover:bg-[#0b0b0c] text-slate-200">
+          Editar
+        </button>
+        <button id="sessionPreviewViewBottom" title="Visualizar" aria-label="Visualizar"
+          class="hidden px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
+          shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
+          Visualizar
+        </button>
+        <button id="sessionPreviewStart" title="Iniciar" aria-label="Iniciar"
+          class="hidden px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium"
+          shadow-[0_0_8px_#ffae00]/40 hover:shadow-[0_0_12px_#ffae00]/50 transition-all duration-200>
+          Iniciar sessão
+        </button>
+        <!-- Legacy buttons for compatibility - hidden -->
+        <button id="sessionPreviewRenameBottom" class="hidden"></button>
+        <button id="sessionPreviewDeleteBottom" class="hidden"></button>
       </div>
     </div>
   </div>
@@ -706,6 +729,38 @@
     </button>
   </div>
 
+  <!-- Modal: Confirmar nome do atleta durante importação -->
+  <div id="profileNameModal" class="hidden fixed inset-0 z-[70] overflow-y-auto bg-black/55 p-4" border
+    border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog" aria-modal="true">
+    <div
+      class="mx-auto mt-12 w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] shadow-2xl p-5 space-y-4">
+      <div class="space-y-1">
+        <h3 class="text-lg font-semibold">Confirmar nome do atleta</h3>
+        <p class="text-sm text-slate-300" id="profileNameModalHint">
+          Ajuste ou confirme o nome do atleta identificado no arquivo importado.
+        </p>
+        <p id="profileNameModalFile" class="hidden text-xs text-slate-500 break-words"></p>
+      </div>
+      <div class="space-y-2">
+        <label for="profileNameInput" class="text-sm font-medium text-slate-200">Nome do atleta</label>
+        <input id="profileNameInput" type="text" maxlength="120"
+          class="w-full rounded-xl border border-[#2a2a2a] bg-[#101011] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
+        <div id="profileNameError" class="hidden text-sm text-rose-400"></div>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button id="profileNameCancel" class="px-4 py-2 rounded-xl bg-[#0b0b0c] hover:bg-[#0b0b0c] transition"
+          type="button">
+          Cancelar
+        </button>
+        <button id="profileNameConfirm"
+          class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 transition shadow-lg shadow-amber-600/25"
+          type="button">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Home screen floating FABs (outside container) -->
   <div id="homeMenuWrap" class="hidden">
     <button id="homeMenuBtn"
@@ -726,21 +781,24 @@
         Configurações
       </button>
       <div class="my-1 h-px bg-[#121213]"></div>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuManual">
-        Fluxo Manual
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c] flex items-center gap-3" id="menuPlanGenerator">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.002 1.002 0 000-1.42l-2.34-2.34a1.002 1.002 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
+        </svg>
+        Gerar Periodização
       </button>
+      <div class="my-1 h-px bg-[#121213]"></div>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuImportPlan">
         Importar Periodização
-      </button>
-      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuPlanGenerator">
-        Gerador de Periodização
       </button>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuImportSession">
         Importar Sessões Conclúidas
       </button>
-      <div class="my-1 h-px bg-[#121213]"></div>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuExportAll">
         Exportar Sessões Concluídas (CSV)
+      </button>
+      <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#0b0b0c]" id="menuManual">
+        Fluxo Manual
       </button>
       <button class="w-full text-left px-3 py-2 rounded-lg hover:bg-amber-700 text-rose-300" id="menuResetApp">
         Resetar Aplicação
@@ -1213,11 +1271,11 @@
     </div>
   </div>
 
-  <script type="module" src="./js/main.js"></script>
-  <script type="module" src="./js/ui-fab.js"></script>
-  <script type="module" src="./js/edit-plan.js"></script>
-  <script type="module" src="./js/qr.js"></script>
-  <script type="module" src="./js/pwa.js"></script>
+  <script type="module" src="/assets/js/main.js"></script>
+  <script type="module" src="/assets/js/ui-fab.js"></script>
+  <script type="module" src="/assets/js/edit-plan.js"></script>
+  <script type="module" src="/assets/js/qr.js"></script>
+  <script type="module" src="/assets/js/pwa.js"></script>
   <script>
     // Viewing mode smoothing toggle
     document.addEventListener("DOMContentLoaded", function () {
@@ -1257,7 +1315,7 @@
     });
   </script>
   <script type="module">
-    import { enableWakeLock } from "./js/wake-lock.js";
+    import { enableWakeLock } from "/assets/js/wake-lock.js";
     // Enable wake lock as early as possible
     enableWakeLock();
   </script>

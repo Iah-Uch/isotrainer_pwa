@@ -28,6 +28,11 @@ import {
   isContrastOn,
   applyContrastToDocument,
   applyPlotSettingsToDom,
+  getPlanProfiles,
+  getActiveProfileId,
+  setActiveProfileId,
+  isProfileSelectionRequired,
+  openProfileSelectionScreen,
 } from "./plans.js";
 
 const DEBUG_NAV = true;
@@ -88,7 +93,7 @@ function launchPreparedTraining() {
     logNav('Launching fixed plan', intent.planId);
     state.pendingIntent = null;
     state.startReturnScreen = null;
-    prepareFixedPlanFlow(intent.planId);
+    prepareFixedPlanFlow(intent.planId, intent.sourceSession);
     return true;
   }
   return false;
@@ -156,9 +161,6 @@ window.addEventListener("load", async () => {
     bindHomeNav();
   } catch { }
   try {
-    showScreen('home');
-  } catch { }
-  try {
     applyPlotSettingsToDom();
   } catch { }
   try {
@@ -168,7 +170,34 @@ window.addEventListener("load", async () => {
   try {
     loadPersistedAutoForwardSettings();
   } catch { }
+  // Decide initial screen (profile selection or home)
+  try {
+    decideInitialScreen();
+  } catch {
+    try {
+      showScreen('home');
+    } catch { }
+  }
 });
+
+function decideInitialScreen() {
+  const profiles = getPlanProfiles();
+  let activeId = getActiveProfileId();
+  const hasProfiles = profiles.length > 0;
+  const activeIsValid =
+    activeId && profiles.some((p) => p.id === activeId);
+  if (!activeIsValid && hasProfiles) {
+    activeId = setActiveProfileId(profiles[0].id);
+  }
+  const shouldShowSelector =
+    (!hasProfiles && isProfileSelectionRequired()) ||
+    (profiles.length > 1 && isProfileSelectionRequired());
+  if (shouldShowSelector) {
+    openProfileSelectionScreen();
+    return;
+  }
+  showScreen('home');
+}
 
 // Event wiring: connect/disconnect and navigation.
 document.getElementById("connectButton").addEventListener("click", async () => {
