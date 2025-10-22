@@ -95,5 +95,5 @@ export const state = {
   trendSmoothingAlpha: 0.02,
   // New: Auto-forward settings for modals
   autoForwardMeasurement: false,
-  autoForwardPrestart: false,
+  autoForwardPrestart: true,
 };
