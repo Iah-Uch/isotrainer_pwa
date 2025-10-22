@@ -587,15 +587,21 @@ function handleForceMeasurement(value) {
       }
     } catch { }
 
+    // Only start timers if we're not in the prestart modal
     if (state.waitingForFirstSample && Math.abs(force) > 0.1) {
-      state.waitingForFirstSample = false;
-      state.sessionStartMs = now();
-      state.stageStartMs = now();
-      updateStageUI();
-      state.timerHandle = setInterval(
-        () => window.dispatchEvent(new CustomEvent("session:tick")),
-        200,
-      );
+      const preStartModal = document.getElementById('preStartModal');
+      const preStartActive = preStartModal && !preStartModal.classList.contains('hidden');
+      
+      if (!preStartActive) {
+        state.waitingForFirstSample = false;
+        state.sessionStartMs = now();
+        state.stageStartMs = now();
+        updateStageUI();
+        state.timerHandle = setInterval(
+          () => window.dispatchEvent(new CustomEvent("session:tick")),
+          200,
+        );
+      }
     }
     if (state.paused) break;
 

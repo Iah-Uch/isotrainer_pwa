@@ -190,7 +190,16 @@ export function startTraining(session) {
   if (window.showPreStartModal) {
     window.onPreStartProceed = () => {
       state.waitingForFirstSample = false;
-      // Start session as normal (data will arrive and tick will proceed)
+      // Start timers immediately when prestart completes
+      state.sessionStartMs = performance.now();
+      state.stageStartMs = performance.now();
+      updateStageUI();
+      if (!state.timerHandle) {
+        state.timerHandle = setInterval(
+          () => window.dispatchEvent(new CustomEvent("session:tick")),
+          200,
+        );
+      }
     };
     window.showPreStartModal(session.stages[0]);
   } else {
