@@ -1,5 +1,6 @@
 // Module: App bootstrap and UI wiring.
 import { state } from './state.js';
+import { SETTINGS_DEFAULTS } from './settings-defaults.js';
 import { setupCharts } from "./charts.js";
 import {
   parseTrainingCsv,
@@ -43,6 +44,36 @@ const logNav = (...args) => {
   } catch { }
 };
 
+// Auto-disconnect timer for battery saving
+let idleDisconnectTimer = null;
+const IDLE_DISCONNECT_MS = 30000; // 30 seconds for most screens
+const CONNECT_SCREEN_DISCONNECT_MS = 90000; // 1.5 minutes for connect screen
+
+function startIdleDisconnectTimer(timeoutMs = IDLE_DISCONNECT_MS) {
+  stopIdleDisconnectTimer();
+  
+  if (!hasEffectiveConnection()) return;
+  
+  const seconds = Math.round(timeoutMs / 1000);
+  logNav(`Starting idle disconnect timer (${seconds}s)`);
+  idleDisconnectTimer = setTimeout(() => {
+    if (hasEffectiveConnection()) {
+      logNav('Auto-disconnecting due to idle timeout (silent)');
+      // Silent disconnect - mark it so we don't navigate to connect screen
+      state.silentDisconnect = true;
+      disconnectFromDevice();
+    }
+  }, timeoutMs);
+}
+
+function stopIdleDisconnectTimer() {
+  if (idleDisconnectTimer) {
+    clearTimeout(idleDisconnectTimer);
+    idleDisconnectTimer = null;
+    logNav('Stopped idle disconnect timer');
+  }
+}
+
 function isPhysicalDeviceConnected() {
   return !!(state.device && state.device.gatt?.connected);
 }
@@ -54,12 +85,17 @@ function hasEffectiveConnection() {
 
 function updateConnectUi() {
   const statusEl = document.getElementById('status');
+  const spinner = document.getElementById('statusSpinner');
   const connectBtn = document.getElementById('connectButton');
   const disconnectBtn = document.getElementById('disconnectButton');
   const goBtn = document.getElementById('goToPlanButton');
   const effective = hasEffectiveConnection();
   const physical = isPhysicalDeviceConnected();
   const isMock = Boolean(state.device?.__mock);
+  
+  // Hide spinner when updating UI (connection complete or failed)
+  if (spinner) spinner.classList.add('hidden');
+  
   if (statusEl) {
     if (effective) {
       if (isMock || !physical) {
@@ -68,7 +104,12 @@ function updateConnectUi() {
         statusEl.textContent = `Conectado a ${state.device?.name || 'TeraForce'}`;
       }
     } else {
-      statusEl.textContent = 'Desconectado';
+      // Show message only if a connection was attempted before
+      if (state.connectionAttempted) {
+        statusEl.textContent = 'Desconectado! Tente novamente.';
+      } else {
+        statusEl.textContent = '';
+      }
     }
   }
   if (connectBtn) connectBtn.disabled = isPhysicalDeviceConnected();
@@ -118,10 +159,12 @@ if (typeof window !== 'undefined') {
 }
 
 function loadPersistedAutoForwardSettings() {
-  // Measurement
+  // Measurement - load from localStorage or use default
   const persistedMeasurement = localStorage.getItem("isotrainer:autoForwardMeasurement");
   if (persistedMeasurement !== null) {
     state.autoForwardMeasurement = persistedMeasurement === "true";
+  } else {
+    state.autoForwardMeasurement = SETTINGS_DEFAULTS.autoForwardMeasurement;
   }
   const measurementToggle = document.getElementById("autoForwardMeasurementToggle");
   if (measurementToggle) {
@@ -131,10 +174,12 @@ function loadPersistedAutoForwardSettings() {
       localStorage.setItem("isotrainer:autoForwardMeasurement", state.autoForwardMeasurement ? "true" : "false");
     });
   }
-  // Prestart
+  // Prestart - load from localStorage or use default
   const persistedPrestart = localStorage.getItem("isotrainer:autoForwardPrestart");
   if (persistedPrestart !== null) {
     state.autoForwardPrestart = persistedPrestart === "true";
+  } else {
+    state.autoForwardPrestart = SETTINGS_DEFAULTS.autoForwardPrestart;
   }
   const prestartToggle = document.getElementById("autoForwardPrestartToggle");
   if (prestartToggle) {
@@ -178,6 +223,25 @@ window.addEventListener("load", async () => {
       showScreen('home');
     } catch { }
   }
+  
+  // Listen for screen navigation to manage auto-disconnect timer
+  window.addEventListener('router:navigate', (e) => {
+    const route = e.detail?.route;
+    logNav('Router navigate event', route);
+    
+    const isActiveSession = route === 'plot' && state.trainingSession && !state.isImportedSession;
+    
+    if (isActiveSession) {
+      // Don't auto-disconnect during active training sessions
+      stopIdleDisconnectTimer();
+    } else if (route === 'connect') {
+      // Connect screen: longer timeout (1.5 minutes)
+      startIdleDisconnectTimer(CONNECT_SCREEN_DISCONNECT_MS);
+    } else {
+      // Other screens (home, plan, profiles, editPlan, complete): standard timeout (30 seconds)
+      startIdleDisconnectTimer(IDLE_DISCONNECT_MS);
+    }
+  });
 });
 
 function decideInitialScreen() {
@@ -204,8 +268,20 @@ document.getElementById("connectButton").addEventListener("click", async () => {
   if (await checkBluetoothSupport()) await connectToDevice();
 });
 document.getElementById("disconnectButton").addEventListener("click", () => {
+  // Preserve pending intent during manual reconnection
+  const preservedIntent = state.pendingIntent;
+  const preservedReturnScreen = state.startReturnScreen;
+  
   cancelActiveSession();
   disconnectFromDevice();
+  
+  // Restore intent if it was set (user wants to reconnect to start a session)
+  if (preservedIntent) {
+    state.pendingIntent = preservedIntent;
+    state.startReturnScreen = preservedReturnScreen;
+    logNav('Preserved pending intent during disconnect', preservedIntent);
+  }
+  
   switchToConnect();
 });
 document.getElementById("connectBackBtn")?.addEventListener("click", () => {
@@ -359,8 +435,30 @@ window.addEventListener("session:tick", () => tick());
 // Handle BLE disconnect from other modules.
 window.addEventListener("ble:disconnected", () => {
   logNav('BLE disconnected');
+  
+  // Check if this was a silent disconnect (auto-timeout)
+  const wasSilent = state.silentDisconnect;
+  state.silentDisconnect = false;
+  
+  // Preserve pending intent during connection loss (user may want to reconnect)
+  const preservedIntent = state.pendingIntent;
+  const preservedReturnScreen = state.startReturnScreen;
+  
   cancelActiveSession();
-  switchToConnect();
+  
+  // Restore intent if it was set
+  if (preservedIntent) {
+    state.pendingIntent = preservedIntent;
+    state.startReturnScreen = preservedReturnScreen;
+    logNav('Preserved pending intent during connection loss', preservedIntent);
+  }
+  
+  // Only navigate to connect screen if not a silent disconnect
+  if (!wasSilent) {
+    switchToConnect();
+  } else {
+    logNav('Silent disconnect - staying on current screen');
+  }
 });
 window.addEventListener('ble:connected', () => {
   logNav('BLE connected event');

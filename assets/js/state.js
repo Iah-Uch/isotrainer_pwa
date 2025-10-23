@@ -1,15 +1,16 @@
 // Module: Central app state shared across modules.
+import { SETTINGS_DEFAULTS } from './settings-defaults.js';
 
 // Toggle manually when developing without hardware.
 export const DEV_OPTIONS = {
-  bypassConnectScreen: true,
+  bypassConnectScreen: false,
 };
 
 export const DEV_BYPASS_CONNECT = !!DEV_OPTIONS.bypassConnectScreen;
 
 export const state = {
-  // Viewing mode smoothing setting (default: false)
-  viewingModeSmoothingEnabled: false,
+  // Viewing mode smoothing setting
+  viewingModeSmoothingEnabled: SETTINGS_DEFAULTS.viewingModeSmoothingEnabled,
   // Active profile for multi-athlete support
   activeProfileId: null,
   // BLE.
@@ -48,6 +49,8 @@ export const state = {
   pendingIntent: null, // { type: 'manual' } | { type: 'edit', sessionIndex: number }
   // From which screen we opened the editor ('home' | 'plan').
   editOrigin: null,
+  // Track if connection was ever attempted (to show appropriate message)
+  connectionAttempted: false,
   // Where to return if user cancels from pre-start modal.
   startReturnScreen: null, // 'editPlan' | 'plan' | 'home'
   // Guided flow context (fixed plans + measurements).
@@ -57,12 +60,12 @@ export const state = {
   maxDireitoN: null,
   maxEsquerdoN: null,
   flowSequence: [],
-  flowStepOrder: ["R1","L1","R2","L2"],
+  flowStepOrder: SETTINGS_DEFAULTS.flowStepOrder,
   pendingTrainingStep: null,
-  restIntervalSec: 120,
-  restPositions: [1,2,3],
-  restSkipEnabled: true,
-  showFixedPlans: true,
+  restIntervalSec: SETTINGS_DEFAULTS.restIntervalSec,
+  restPositions: SETTINGS_DEFAULTS.restPositions,
+  restSkipEnabled: SETTINGS_DEFAULTS.restSkipEnabled,
+  showFixedPlans: SETTINGS_DEFAULTS.showFixedPlans,
   flowActive: false,
   flowPlan: null,
   flowSourceSession: null,  // Original scheduled session (for fixed plan references)
@@ -91,9 +94,9 @@ export const state = {
     handle: null,
     stepId: null,
   },
-  trendSmoothingEnabled: true,
-  trendSmoothingAlpha: 0.02,
-  // New: Auto-forward settings for modals
-  autoForwardMeasurement: false,
-  autoForwardPrestart: true,
+  trendSmoothingEnabled: SETTINGS_DEFAULTS.trendSmoothingEnabled,
+  trendSmoothingAlpha: SETTINGS_DEFAULTS.trendSmoothingAlpha,
+  // Auto-forward settings for modals
+  autoForwardMeasurement: SETTINGS_DEFAULTS.autoForwardMeasurement,
+  autoForwardPrestart: SETTINGS_DEFAULTS.autoForwardPrestart,
 };

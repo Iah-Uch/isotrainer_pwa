@@ -191,8 +191,8 @@ export function startTraining(session) {
     window.onPreStartProceed = () => {
       state.waitingForFirstSample = false;
       // Start timers immediately when prestart completes
-      state.sessionStartMs = performance.now();
-      state.stageStartMs = performance.now();
+      state.sessionStartMs = now();
+      state.stageStartMs = now();
       updateStageUI();
       if (!state.timerHandle) {
         state.timerHandle = setInterval(
@@ -497,6 +497,11 @@ export function showScreen(which) {
     if (which !== "home") homeMenuWrap.classList.add("hidden");
     else homeMenuWrap.classList.remove("hidden");
   }
+  
+  // Dispatch navigation event for other modules
+  try {
+    window.dispatchEvent(new CustomEvent('router:navigate', { detail: { route: which } }));
+  } catch { }
 }
 
 // Forcefully snap UI to Home, bypassing transient callers

@@ -1,711 +1,219 @@
-// Module: Web Bluetooth connection and streaming for TeraForce dynamometers.
-import { state, DEV_OPTIONS } from './state.js';
-import { now } from "./utils.js";
-import { updateStageChart, updateSessionChart } from "./charts.js";
-import {
-  updateStageUI,
-  updateLiveStageInTargetPct,
-  processMeasurementSample,
-} from './session.js';
+// Module: Adapter for isotrainer to use TeraForce class
+// Provides backward-compatible API while using the clean TeraForce implementation
 
-// Known service/characteristic pairs observed on TeraForce firmwares.
-// We request all candidates so Chrome grants access whichever the device exposes.
-const SERVICE_CANDIDATES = [
-  // Latest generations (custom 128-bit UUIDs beginning with fc52…).
-  "fc52fca0-55f8-4501-afd1-f32e33e8668d",
-  "fc52fca1-55f8-4501-afd1-f32e33e8668d",
-  "fc52fca2-55f8-4501-afd1-f32e33e8668d",
-  // Legacy 16-bit services (mapped into 128-bit space).
-  "0000fca0-0000-1000-8000-00805f9b34fb",
-  "0000fca1-0000-1000-8000-00805f9b34fb",
-  "0000fca2-0000-1000-8000-00805f9b34fb",
-  // Nordic UART fallbacks that some engineering builds used.
-  "6e400001-b5a3-f393-e0a9-e50e24dcca9e",
-  // Texas Instruments CC26xx profiles (firmware updater variants).
-  "f000ffc0-0451-4000-b000-000000000000",
-  "f000ffc1-0451-4000-b000-000000000000",
-  "f000ffc2-0451-4000-b000-000000000000",
-];
-const NOTIFY_CHARACTERISTIC_HINTS = [
-  "fc52fca2-55f8-4501-afd1-f32e33e8668d",
-  "0000fca2-0000-1000-8000-00805f9b34fb",
-  "6e400003-b5a3-f393-e0a9-e50e24dcca9e",
-  "0000ffb2-0000-1000-8000-00805f9b34fb",
-  "0000ffd4-0000-1000-8000-00805f9b34fb",
-  "0000ffe1-0000-1000-8000-00805f9b34fb",
-  "0000fff1-0000-1000-8000-00805f9b34fb",
-  "f000ffc2-0451-4000-b000-000000000000",
-];
-const WRITE_CHARACTERISTIC_HINTS = [
-  "fc52fca1-55f8-4501-afd1-f32e33e8668d",
-  "0000fca1-0000-1000-8000-00805f9b34fb",
-  "6e400002-b5a3-f393-e0a9-e50e24dcca9e",
-  "0000ffb1-0000-1000-8000-00805f9b34fb",
-  "0000ffd1-0000-1000-8000-00805f9b34fb",
-  "f000ffc1-0451-4000-b000-000000000000",
-];
-
-const OPTIONAL_SUPPORT_SERVICES = [
-  ...SERVICE_CANDIDATES,
-  "0000180f-0000-1000-8000-00805f9b34fb", // Battery Service
-  "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
-];
-
-const N_PER_KGF = 9.80665;
-
-let lastGattSnapshot = [];
-const DEV_SAMPLE_INTERVAL_MS = 300;
-let devSampleTimer = null;
-let devSamplePhase = 0;
-
-// --- Keep Alive for Force Start Meas characteristic ---
-let keepAliveTimer = null;
-const KEEP_ALIVE_INTERVAL_MS = 60000; // 60 seconds
-const FORCE_START_MEAS_UUID = "0000fca1-0000-1000-8000-00805f9b34fb";
-
-function startKeepAlive() {
-  stopKeepAlive();
-  if (
-    state.commandCharacteristic &&
-    state.commandCharacteristic.uuid &&
-    state.commandCharacteristic.uuid.toLowerCase() === FORCE_START_MEAS_UUID
-  ) {
-    keepAliveTimer = setInterval(sendKeepAlive, KEEP_ALIVE_INTERVAL_MS);
-  }
-}
-
-function stopKeepAlive() {
-  if (keepAliveTimer) {
-    clearInterval(keepAliveTimer);
-    keepAliveTimer = null;
-  }
-}
-
-async function sendKeepAlive() {
-  if (
-    state.commandCharacteristic &&
-    state.commandCharacteristic.uuid &&
-    state.commandCharacteristic.uuid.toLowerCase() === FORCE_START_MEAS_UUID
-  ) {
-    try {
-      // Write 0x02 as required by hardware
-      if (typeof state.commandCharacteristic.writeValue === "function") {
-        await state.commandCharacteristic.writeValue(new Uint8Array([2]));
-      }
-    } catch (err) {
-      console.warn("Falha ao enviar keep-alive para Force Start Meas:", err?.message || err);
-    }
-  }
-}
-
-function devBypassEnabled() {
-  return !!DEV_OPTIONS?.bypassConnectScreen;
-}
-
-export function ensureDevMockConnection() {
-  if (!devBypassEnabled()) return;
-  simulateDevConnection(true);
-}
+import { TeraForce } from './tera-force.js';
+import { BluetoothUtil } from './bluetooth.js';
+import { startForceStreaming } from './ble-integration.js';
+import { state } from './state.js';
 
 export async function checkBluetoothSupport() {
-  if (devBypassEnabled()) {
-    simulateDevConnection(true);
-    const status = document.getElementById('status');
-    if (status)
-      status.textContent = 'Modo desenvolvedor: conexão simulada, hardware opcional.';
+    try {
+        await BluetoothUtil.isBluetoothAvailable();
     const connectBtn = document.getElementById('connectButton');
     if (connectBtn) connectBtn.disabled = false;
     return true;
-  }
-  if (!navigator.bluetooth) {
-    document.getElementById("status").textContent =
-      "Web Bluetooth indisponível. Use HTTPS/localhost e conceda permissões.";
-    document.getElementById("connectButton").disabled = true;
+    } catch (err) {
+        const status = document.getElementById('status');
+        if (status) {
+            status.textContent = err.message || 'Web Bluetooth indisponível.';
+        }
+        const connectBtn = document.getElementById('connectButton');
+        if (connectBtn) connectBtn.disabled = true;
     return false;
-  }
-  try {
-    if (typeof navigator.bluetooth.getAvailability === "function") {
-      const available = await navigator.bluetooth.getAvailability();
-      if (!available) {
-        document.getElementById("status").textContent =
-          "Adaptador Bluetooth possivelmente indisponível. Ainda é possível tentar conectar.";
-      }
     }
-  } catch {
-    document.getElementById("status").textContent =
-      "Não foi possível verificar disponibilidade do Bluetooth. Tente conectar.";
-  }
-  document.getElementById("connectButton").disabled = false;
-  return true;
 }
 
 export async function connectToDevice() {
-  if (devBypassEnabled()) {
-    simulateDevConnection();
-    return;
-  }
   if (!(await checkBluetoothSupport())) return;
-  try {
-    document.getElementById("status").textContent =
-      "Abrindo seletor de dispositivo...";
-    document.getElementById("connectButton").disabled = true;
 
-    const optionalServices = Array.from(new Set(OPTIONAL_SUPPORT_SERVICES));
-    const serviceFilterUuids = optionalServices.filter(
-      (svc) => typeof svc === "number",
-    );
-    const filters = [{ namePrefix: "Tera" }, { namePrefix: "TF" }];
-    if (serviceFilterUuids.length)
-      filters.push({ services: serviceFilterUuids });
     try {
-      state.device = await navigator.bluetooth.requestDevice({
-        filters,
-        optionalServices,
-        acceptAllDevices: false,
-      });
-    } catch (err) {
-      if (err?.name === "NotFoundError") {
-        document.getElementById("status").textContent =
-          "Nenhum dispositivo selecionado.";
-        restoreButtons();
-        return;
-      }
-      document.getElementById("status").textContent =
-        "Lista completa, aguarde...";
-      state.device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices,
-      });
-    }
+        const status = document.getElementById('status');
+        const spinner = document.getElementById('statusSpinner');
+        const connectBtn = document.getElementById('connectButton');
+        const disconnectBtn = document.getElementById('disconnectButton');
+        const goBtn = document.getElementById('goToPlanButton');
 
-    document.getElementById("status").textContent =
-      "Conectando ao TeraForce...";
-    state.server = await state.device.gatt.connect();
-    const { service, characteristic, command } =
-      await resolveMeasurementCharacteristic(state.server);
-    if (!service || !characteristic) {
-      const snapshot = logGattSnapshot();
-      const summary = snapshot
-        .map((entry) => {
-          const chars = entry.characteristics
-            ?.map((c) => `${c.uuid}${c.properties?.length ? `(${c.properties.join(',')})` : ""}`)
-            .join(", ") || "";
-          if (entry.error) return `${entry.uuid || "(desconhecido)"} ✖ ${entry.error}`;
-          return chars
-            ? `${entry.uuid || "(desconhecido)"} → ${chars}`
-            : `${entry.uuid || "(desconhecido)"}`;
-        })
-        .filter(Boolean)
-        .join(" | ");
-      const hint = summary
-        ? ` Serviços acessíveis: ${summary}. Veja o console para detalhes.`
-        : "";
-      throw new Error(
-        `Não foi possível localizar a característica de força.${hint}`,
-      );
-    }
-    state.service = service;
-    state.characteristic = characteristic;
-    state.commandCharacteristic = command || null;
+        if (spinner) spinner.classList.remove('hidden');
+        if (status) status.textContent = 'Abrindo seletor de dispositivo...';
+        if (connectBtn) connectBtn.disabled = true;
 
-    await state.characteristic.startNotifications();
-    state.characteristic.addEventListener("characteristicvaluechanged", (event) =>
-      handleForceMeasurement(event.target.value),
-    );
+        const tf = TeraForce.getInstance();
+        
+        // Pair with device
+        await tf.pair();
+        
+        // Mark that a connection attempt was made
+        state.connectionAttempted = true;
+        
+        if (status) status.textContent = 'Conectando ao TeraForce...';
+        
+        // Connect and get device info
+        const { batteryLevel, macAddress, firmwareVersion, hardwareVersion } = await tf.connect({
+            onConnectionLost: () => {
+                console.log('Conexão com TeraForce perdida.');
+                // Clear state
+                state.device = null;
+                state.server = null;
+                state.deviceInfo = null;
+                // Hide device info and spinner on connection loss
+                updateDeviceInfoDisplay(false);
+                const spinner = document.getElementById('statusSpinner');
+                if (spinner) spinner.classList.add('hidden');
+                try {
+                    window.dispatchEvent(new CustomEvent('ble:disconnected'));
+                } catch { }
+            }
+        });
 
-    resetForceCalibration();
-    await startStreaming();
+        // Log device information
+        console.log('TeraForce conectado:');
+        console.log('  Bateria:', batteryLevel ? `${batteryLevel}%` : 'N/A');
+        console.log('  MAC:', macAddress || 'N/A');
+        console.log('  Firmware:', firmwareVersion || 'N/A');
+        console.log('  Hardware:', hardwareVersion || 'N/A');
 
-    document.getElementById("status").textContent =
-      `Conectado a ${state.device.name || "TeraForce"}`;
-    document.getElementById("disconnectButton").disabled = false;
-    document.getElementById("goToPlanButton").disabled = false;
-    addDisconnectListener();
-    try {
-      window.updateConnectUi?.();
-    } catch { }
-    try {
-      window.dispatchEvent(new CustomEvent("ble:connected"));
-    } catch { }
-  } catch (err) {
-    const msg = err?.message || String(err);
-    document.getElementById("status").textContent = `Erro: ${msg}`;
-    restoreButtons();
-  }
-}
+        // Store device info in state
+        state.deviceInfo = {
+            batteryLevel,
+            macAddress,
+            firmwareVersion,
+            hardwareVersion
+        };
 
-function restoreButtons() {
-  document.getElementById("connectButton").disabled = false;
-  document.getElementById("disconnectButton").disabled = true;
-  document.getElementById("goToPlanButton").disabled = true;
-  state.commandCharacteristic = null;
-  resetForceCalibration();
+        // Update state for backward compatibility with UI checks
+        state.device = {
+            name: 'TeraForce',
+            gatt: {
+                connected: true
+            }
+        };
+        state.server = { connected: true };
+        
+        // Update device info UI
+        updateDeviceInfoDisplay(true);
+
+        // Auto-setup based on hardware version
+        if (status) status.textContent = 'Configurando...';
+        await tf.setup();
+        
+        if (status) status.textContent = 'Calibrando...';
+        
+        // Auto-calibrate
+        await tf.startCalibration();
+        
+        if (status) status.textContent = 'Iniciando medição...';
+        
+        // Start force streaming with isotrainer integration
+        await startForceStreaming();
+
+        if (spinner) spinner.classList.add('hidden');
+        if (status) {
+            status.textContent = `Conectado a TeraForce`;
+        }
+        if (disconnectBtn) disconnectBtn.disabled = false;
+        if (goBtn) goBtn.disabled = false;
+
   try {
     window.updateConnectUi?.();
   } catch { }
-}
 
-export function disconnectFromDevice() {
-  if (devBypassEnabled()) {
-    simulateDevDisconnect();
-    return;
-  }
-  if (state.device && state.device.gatt.connected) {
-    stopStreaming().catch(() => { });
-    state.device.gatt.disconnect();
-  }
-  stopKeepAlive();
-  state.commandCharacteristic = null;
-  resetForceCalibration();
-}
-
-function simulateDevConnection(initial = false) {
-  if (!devBypassEnabled()) return;
-  if (state.device?.__mock && state.device?.gatt?.connected) {
-    startDevSampleLoop();
-    if (!initial) {
       try {
         window.dispatchEvent(new CustomEvent('ble:connected'));
       } catch { }
-    }
-    return;
-  }
-
-  const mockGatt = {
-    connected: true,
-    disconnect: () => simulateDevDisconnect(),
-    connect: async () => mockGatt,
-  };
-
-  state.device = {
-    name: 'TeraForce (Simulado)',
-    gatt: mockGatt,
-    __mock: true,
-    addEventListener() { },
-    removeEventListener() { },
-  };
-  state.server = mockGatt;
-  state.service = null;
-  state.characteristic = null;
-  state.commandCharacteristic = null;
-  state.forceCalibration.zero = 0;
-  state.forceCalibration.samples = [];
-  // This keeps kgf→raw (encode) consistent with raw→kgf (decode) in mock mode.
-  state.forceCalibration.multiplier = DEFAULT_MULTIPLIER_FIRMWARE_2;
-
-  const status = document.getElementById('status');
-  if (status) status.textContent = 'Conectado (modo simulação)';
+    } catch (err) {
+        const msg = err?.message || String(err);
+        const status = document.getElementById('status');
+        const spinner = document.getElementById('statusSpinner');
+        
+        if (spinner) spinner.classList.add('hidden');
+        if (status) status.textContent = `Erro: ${msg}`;
+        
+        // Clear state on error
+        state.device = null;
+        state.server = null;
+        
   const connectBtn = document.getElementById('connectButton');
-  if (connectBtn) connectBtn.disabled = true;
+        if (connectBtn) connectBtn.disabled = false;
   const disconnectBtn = document.getElementById('disconnectButton');
-  if (disconnectBtn) disconnectBtn.disabled = false;
+        if (disconnectBtn) disconnectBtn.disabled = true;
   const goBtn = document.getElementById('goToPlanButton');
-  if (goBtn) goBtn.disabled = false;
+        if (goBtn) goBtn.disabled = true;
 
-  startDevSampleLoop();
   try {
     window.updateConnectUi?.();
-  } catch { }
-  if (!initial) {
-    try {
-      window.dispatchEvent(new CustomEvent('ble:connected'));
     } catch { }
   }
 }
 
-function simulateDevDisconnect() {
-  if (!state.device?.__mock) return;
-  stopDevSampleLoop();
-  devSamplePhase = 0;
-  if (state.device?.gatt) state.device.gatt.connected = false;
+export function disconnectFromDevice() {
+    const tf = TeraForce.getInstance();
+    tf.disconnect().then(() => {
+        // Clear state
   state.device = null;
   state.server = null;
-  state.service = null;
-  state.characteristic = null;
-  state.commandCharacteristic = null;
-  state.forceCalibration.zero = 0;
-  state.forceCalibration.samples = [];
-  state.forceCalibration.multiplier = 1;
+  state.deviceInfo = null;
 
   const status = document.getElementById('status');
-  if (status) status.textContent = 'Desconectado (modo simulação)';
+  const spinner = document.getElementById('statusSpinner');
+        if (spinner) spinner.classList.add('hidden');
+        if (status) status.textContent = 'Desconectado! Tente novamente.';
+        
   const connectBtn = document.getElementById('connectButton');
   if (connectBtn) connectBtn.disabled = false;
   const disconnectBtn = document.getElementById('disconnectButton');
   if (disconnectBtn) disconnectBtn.disabled = true;
+        const goBtn = document.getElementById('goToPlanButton');
+        if (goBtn) goBtn.disabled = true;
+        
+  // Hide device info
+  updateDeviceInfoDisplay(false);
+        
   try {
     window.updateConnectUi?.();
   } catch { }
+        
   try {
     window.dispatchEvent(new CustomEvent('ble:disconnected'));
   } catch { }
+    });
 }
 
-function startDevSampleLoop() {
-  if (devSampleTimer) return;
-  emitDevSample();
-  devSampleTimer = setInterval(() => emitDevSample(), DEV_SAMPLE_INTERVAL_MS);
+export function ensureDevMockConnection() {
+    // Dev mode not implemented in clean version
+    // Can be added separately if needed
 }
 
-function stopDevSampleLoop() {
-  if (devSampleTimer) {
-    clearInterval(devSampleTimer);
-    devSampleTimer = null;
-  }
-}
-
-function emitDevSample() {
-  if (!state.device?.__mock) return;
-  devSamplePhase += 0.4;
-  const kgf = computeMockForceKgf();
-  const sample = Math.max(0, kgfToRawSample(Math.max(0, kgf)));
-  const buffer = new ArrayBuffer(2);
-  const view = new DataView(buffer);
-  view.setInt16(0, Math.round(sample), false);
-  handleForceMeasurement(view);
-}
-
-function computeMockForceKgf() {
-  const measurement = state.measurement;
-  if (measurement?.active) {
-    const armMax =
-      measurement.arm === 'direito'
-        ? state.maxDireitoKgf
-        : measurement.arm === 'esquerdo'
-          ? state.maxEsquerdoKgf
-          : null;
-    const target = Number.isFinite(armMax) && armMax > 20 ? armMax : 104;
-    const spread = Math.max(6, target * 0.08);
-    const wobble = Math.sin(devSamplePhase) * spread;
-    const noise = (Math.random() - 0.5) * spread * 0.6;
-    return Math.max(0, target + wobble + noise);
-  }
-
-  const session = state.trainingSession;
-  if (session?.stages?.length) {
-    let idx = Number(state.stageIdx);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= session.stages.length) idx = 0;
-    const stage = session.stages[idx];
-    const lower = Number(stage?.lower);
-    const upper = Number(stage?.upper);
-    if (Number.isFinite(lower) && Number.isFinite(upper) && upper > lower) {
-      const center = (lower + upper) / 2;
-      const span = Math.max(0.5, (upper - lower) / 2);
-      const wobble = Math.sin(devSamplePhase) * span * Math.random();
-      const noise = (Math.random() - Math.random()) * span * Math.random();
-      return Math.max(0, center + wobble + noise);
-    }
-  }
-
-  const idleBase = 25 + Math.sin(devSamplePhase) * 8;
-  const idleNoise = (Math.random() - 0.5) * 5;
-  return Math.max(0, idleBase + idleNoise);
-}
-
-function kgfToRawSample(kgf) {
-  const multiplier = state.forceCalibration?.multiplier || deriveMultiplier() || 1;
-  const zero = state.forceCalibration?.zero ?? 0;
-  const raw = kgf * N_PER_KGF / (Number.isFinite(multiplier) && multiplier !== 0 ? multiplier : 1);
-  return raw + zero;
-}
-
-function handleDisconnect() {
-  stopStreaming().catch(() => { });
-  state.commandCharacteristic = null;
-  resetForceCalibration();
-  const ev = new CustomEvent("ble:disconnected");
-  window.dispatchEvent(ev);
-}
-
-function addDisconnectListener() {
-  if (!state.device || typeof state.device.addEventListener !== 'function') return;
-  state.device.addEventListener("gattserverdisconnected", handleDisconnect, {
-    once: true,
-  });
-}
-
-async function resolveMeasurementCharacteristic(server) {
-  lastGattSnapshot = [];
-
-  for (const uuid of SERVICE_CANDIDATES) {
-    const detail = await inspectServiceByUuid(server, uuid);
-    if (detail) return detail;
-  }
-
-  try {
-    const services = await server.getPrimaryServices();
-    for (const service of services) {
-      const detail = await inspectExistingService(service);
-      if (detail) return detail;
-    }
-  } catch (err) {
-    lastGattSnapshot.push({ uuid: "getPrimaryServices", error: err?.message || String(err) });
-  }
-
-  return { service: null, characteristic: null, command: null };
-}
-
-async function inspectServiceByUuid(server, uuid) {
-  try {
-    const service = await server.getPrimaryService(uuid);
-    return await inspectExistingService(service);
-  } catch (err) {
-    lastGattSnapshot.push({ uuid, error: err?.message || String(err) });
-    return null;
-  }
-}
-
-async function inspectExistingService(service) {
-  if (!service) return null;
-  let notifyCandidate = null;
-  let writeCandidate = null;
-  const info = {
-    uuid: service.uuid,
-    characteristics: [],
-    matched: null,
-    command: null,
-  };
-  try {
-    const chars = await service.getCharacteristics();
-    for (const characteristic of chars) {
-      const props = Object.entries(characteristic.properties || {})
-        .filter(([, enabled]) => Boolean(enabled))
-        .map(([key]) => key);
-      info.characteristics.push({ uuid: characteristic.uuid, properties: props });
-      if (!notifyCandidate) {
-        const isHint = NOTIFY_CHARACTERISTIC_HINTS.includes(characteristic.uuid);
-        if (isHint || characteristic.properties?.notify || characteristic.properties?.indicate) {
-          notifyCandidate = characteristic;
-          info.matched = characteristic.uuid;
+function updateDeviceInfoDisplay(show = false) {
+    const deviceInfo = document.getElementById('deviceInfo');
+    if (!deviceInfo) return;
+    
+    if (show && state.deviceInfo) {
+        const batteryEl = document.getElementById('deviceBattery');
+        const firmwareEl = document.getElementById('deviceFirmware');
+        const hardwareEl = document.getElementById('deviceHardware');
+        
+        if (batteryEl) {
+            batteryEl.textContent = state.deviceInfo.batteryLevel 
+                ? `Bateria ${state.deviceInfo.batteryLevel}%` 
+                : 'Bateria —';
         }
-      }
-      if (!writeCandidate) {
-        const isCommand = WRITE_CHARACTERISTIC_HINTS.includes(characteristic.uuid);
-        if (isCommand || characteristic.properties?.write || characteristic.properties?.writeWithoutResponse) {
-          writeCandidate = characteristic;
-          info.command = characteristic.uuid;
+        if (firmwareEl) {
+            firmwareEl.textContent = state.deviceInfo.firmwareVersion 
+                ? `FW ${state.deviceInfo.firmwareVersion}` 
+                : 'FW —';
         }
-      }
+        if (hardwareEl) {
+            hardwareEl.textContent = state.deviceInfo.hardwareVersion 
+                ? `HW ${state.deviceInfo.hardwareVersion}` 
+                : 'HW —';
+        }
+        
+        deviceInfo.classList.remove('hidden');
+    } else {
+        deviceInfo.classList.add('hidden');
     }
-  } catch (err) {
-    info.error = err?.message || String(err);
-  }
-  lastGattSnapshot.push(info);
-  if (notifyCandidate)
-    return { service, characteristic: notifyCandidate, command: writeCandidate ?? null };
-  return null;
 }
 
-function logGattSnapshot() {
-  if (!lastGattSnapshot.length) return [];
-  try {
-    console.groupCollapsed("TeraForce BLE serviços detectados");
-    for (const entry of lastGattSnapshot) {
-      if (entry.error) {
-        console.warn(entry.uuid, "erro:", entry.error);
-        continue;
-      }
-      console.group(entry.uuid || "(uuid desconhecido)");
-      entry.characteristics?.forEach((char) => {
-        console.info(
-          char.uuid,
-          Array.isArray(char.properties) && char.properties.length
-            ? `props: ${char.properties.join(", ")}`
-            : "props: —",
-          entry.matched === char.uuid ? "← notify" : "",
-          entry.command === char.uuid ? "(cmd)" : "",
-        );
-      });
-      console.groupEnd();
-    }
-    console.groupEnd();
-  } catch { }
-  return lastGattSnapshot;
-}
-
-function clampStage(force) {
-  const session = state.trainingSession;
-  if (session?.stages?.length) {
-    let idx = Number(state.stageIdx);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= session.stages.length) idx = 0;
-    const stage = session.stages[idx];
-    const lower = Number(stage?.lower);
-    const upper = Number(stage?.upper);
-    if (Number.isFinite(lower) && Number.isFinite(upper)) {
-      const lo = Math.min(lower, upper) - 2;
-      const hi = Math.max(lower, upper) + 2;
-      if (force < lo) return lo;
-      if (force > hi) return hi;
-    }
-  }
-  return force;
-}
-
-function clampSession(force) {
-  const session = state.trainingSession;
-  if (!session) return force;
-  let bounds = session.sessionBounds;
-  if (!bounds && Array.isArray(session.stages) && session.stages.length) {
-    const lows = session.stages
-      .map((stage) => Number(stage?.lower))
-      .filter((value) => Number.isFinite(value));
-    const highs = session.stages
-      .map((stage) => Number(stage?.upper))
-      .filter((value) => Number.isFinite(value));
-    if (lows.length && highs.length) {
-      const min = Math.min(...lows) - 4;
-      const max = Math.max(...highs) + 4;
-      bounds = { min, max };
-      session.sessionBounds = bounds;
-    }
-  }
-  if (!bounds) return force;
-  const { min, max } = bounds;
-  if (Number.isFinite(min) && force < min) return min;
-  if (Number.isFinite(max) && force > max) return max;
-  return force;
-}
-
-function handleForceMeasurement(value) {
-  const dv = value instanceof DataView ? value : new DataView(value.buffer);
-  const samples = decodeForceSamples(dv);
-  if (!samples.length) return;
-
-  for (const force of samples) {
-    if (!Number.isFinite(force)) continue;
-
-    try {
-      // Route force sample to prestart modal if active, else to measurement
-      if (
-        typeof window.onPreStartForceSample === 'function' &&
-        document.getElementById('preStartModal') &&
-        !document.getElementById('preStartModal').classList.contains('hidden')
-      ) {
-        window.onPreStartForceSample(force);
-      } else {
-        processMeasurementSample(force);
-      }
-    } catch { }
-
-    // Only start timers if we're not in the prestart modal
-    if (state.waitingForFirstSample && Math.abs(force) > 0.1) {
-      const preStartModal = document.getElementById('preStartModal');
-      const preStartActive = preStartModal && !preStartModal.classList.contains('hidden');
-      
-      if (!preStartActive) {
-        state.waitingForFirstSample = false;
-        state.sessionStartMs = now();
-        state.stageStartMs = now();
-        updateStageUI();
-        state.timerHandle = setInterval(
-          () => window.dispatchEvent(new CustomEvent("session:tick")),
-          200,
-        );
-      }
-    }
-    if (state.paused) break;
-
-    const currentForceValue = document.getElementById("currentForceValue");
-    if (currentForceValue) currentForceValue.textContent = formatForce(force);
-
-    const marker = document.getElementById("forceMarker");
-    if (marker) {
-      const normalized = Math.max(1, Math.abs(force));
-      const period = Math.max(0.4, Math.min(2.5, 8 / normalized));
-      marker.style.setProperty("--pulse-period", `${period.toFixed(2)}s`);
-    }
-
-    const currentTime = now();
-    updateStageChart(clampStage(force), currentTime);
-    updateSessionChart(clampSession(force), currentTime);
-    try {
-      updateLiveStageInTargetPct();
-    } catch { }
-
-  }
-}
-
-const DEFAULT_MULTIPLIER_FIRMWARE_1 = (8.65 / 235) * 9.80665; // N per ADC delta
-const DEFAULT_MULTIPLIER_FIRMWARE_2 = (45 / 3800) * 9.80665;
-
-function resetForceCalibration() {
-  state.forceCalibration.zero = null;
-  state.forceCalibration.samples = [];
-  state.forceCalibration.multiplier = null;
-}
-
-function deriveMultiplier() {
-  if (state.forceCalibration.multiplier) return state.forceCalibration.multiplier;
-  if (state.service?.uuid?.startsWith("fc52")) {
-    state.forceCalibration.multiplier = DEFAULT_MULTIPLIER_FIRMWARE_2;
-  } else {
-    state.forceCalibration.multiplier = DEFAULT_MULTIPLIER_FIRMWARE_1;
-  }
-  return state.forceCalibration.multiplier;
-}
-
-function applyCalibration(rawSample) {
-  const cal = state.forceCalibration;
-  if (!Number.isFinite(rawSample)) return NaN;
-
-  if (cal.zero === null) {
-    cal.samples.push(rawSample);
-    if (cal.samples.length >= 80) {
-      const sorted = [...cal.samples].sort((a, b) => a - b);
-      const middle = sorted.slice(20, sorted.length - 20);
-      cal.zero = middle.reduce((acc, v) => acc + v, 0) / middle.length;
-      cal.samples = [];
-    }
-    return 0;
-  }
-
-  const multiplier = deriveMultiplier();
-  let force = (rawSample - cal.zero) * multiplier;
-  if (!Number.isFinite(force)) force = 0;
-  return force / N_PER_KGF;
-}
-
-function decodeForceSamples(dataView) {
-  if (!dataView || dataView.byteLength < 2) return [];
-  const result = [];
-  for (let offset = 0; offset + 1 < dataView.byteLength; offset += 2) {
-    let raw;
-    try {
-      raw = dataView.getInt16(offset, false);
-    } catch {
-      continue;
-    }
-    const calibrated = applyCalibration(raw);
-    result.push(calibrated);
-  }
-  return result;
-}
-
-async function sendCommand(bytes) {
-  const characteristic = state.commandCharacteristic;
-  if (!characteristic || !bytes) return;
-  try {
-    if (typeof characteristic.writeValueWithoutResponse === "function")
-      await characteristic.writeValueWithoutResponse(bytes);
-    else if (typeof characteristic.writeValue === "function")
-      await characteristic.writeValue(bytes);
-  } catch (err) {
-    console.warn("Falha ao enviar comando para o TeraForce:", err?.message || err);
-  }
-}
-
-async function startStreaming() {
-  await sendCommand(new Uint8Array([1]));
-  startKeepAlive();
-}
-
-async function stopStreaming() {
-  await sendCommand(new Uint8Array([0]));
-  stopKeepAlive();
-}
-
-function formatForce(value, { withUnit = false } = {}) {
-  if (!Number.isFinite(value)) return "—";
-  const rounded = value.toFixed(1); // one decimal place
-  return withUnit ? `${rounded} kgf` : String(rounded);
-}
+// Export TeraForce class and integration for direct usage
+export { TeraForce };
+export { startForceStreaming };

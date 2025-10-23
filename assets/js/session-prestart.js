@@ -31,7 +31,7 @@ function showPreStartModal(stage) {
   preStartGoBtn.disabled = state.autoForwardPrestart;
   preStartCountdown.classList.toggle('hidden', !state.autoForwardPrestart);
   preStartCountdown.textContent = state.autoForwardPrestart ? '3,0' : '';
-  preStartStageRange.textContent = `${stage.lower} / ${stage.upper}`;
+  preStartStageRange.textContent = `${stage.lower}/${stage.upper}`;
   preStartForceValue.textContent = '—';
 
   // Calculate buffered min/max for the bar
@@ -43,8 +43,9 @@ function showPreStartModal(stage) {
   preStartScaleMax.textContent = barMax;
 
   preStartText.textContent = 'Aguardando leitura de força...';
-  updatePreStartBar(0);
   preStartModal.classList.remove('hidden');
+  // Delay updatePreStartBar until after modal is visible and has dimensions
+  setTimeout(() => updatePreStartBar(0), 10);
   if (state.autoForwardPrestart) {
     preStartGoBtn.classList.add('disabled');
     startPreStartAutoForward();

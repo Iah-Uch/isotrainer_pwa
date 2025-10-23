@@ -43,9 +43,23 @@ function refreshStageSeriesForSmoothing() {
     } catch { }
   }
   if (state.chart) {
-    const data = smoothing
+    let data = smoothing
       ? toSmoothedXY(state.series, trendSmoothingAlpha)
       : toXY(state.series);
+    
+    // Apply clamping to stage bounds for saturation
+    const b = state.currentStageBoundsOriginal || {};
+    if (typeof b.lo === "number" && typeof b.hi === "number") {
+      const clampMin = b.lo - 2;
+      const clampMax = b.hi + 2;
+      data = data.map(([x, y]) => {
+        if (!Number.isFinite(y)) return [x, y];
+        if (y < clampMin) return [x, clampMin];
+        if (y > clampMax) return [x, clampMax];
+        return [x, y];
+      });
+    }
+    
     try {
       state.chart.setOption({ series: [{ data }] }, false, true);
     } catch { }
@@ -630,11 +644,25 @@ export function updateStageChart(force, tMs) {
   const pt = { x: Math.max(0, x), y: force };
   state.series.push(pt);
   if (state.chart) {
-    const data = trendSmoothingEnabled
+    // Apply smoothing first, then clamp to respect stage bounds
+    let data = trendSmoothingEnabled
       ? toSmoothedXY(state.series, trendSmoothingAlpha)
       : toXY(state.series);
-    state.chart.setOption({ series: [{ data }] }, false, true);
+    
+    // Clamp smoothed data to stage bounds for visual saturation
     const b = state.currentStageBoundsOriginal || {};
+    if (typeof b.lo === "number" && typeof b.hi === "number") {
+      const clampMin = b.lo - 2;
+      const clampMax = b.hi + 2;
+      data = data.map(([x, y]) => {
+        if (!Number.isFinite(y)) return [x, y];
+        if (y < clampMin) return [x, clampMin];
+        if (y > clampMax) return [x, clampMax];
+        return [x, y];
+      });
+    }
+    
+    state.chart.setOption({ series: [{ data }] }, false, true);
     const above = typeof b.hi === "number" && force > b.hi;
     const below = typeof b.lo === "number" && force < b.lo;
     state.chart.setOption(
@@ -651,9 +679,7 @@ export function updateStageChart(force, tMs) {
       false,
       true,
     );
-    const displayY = trendSmoothingEnabled
-      ? (data[data.length - 1]?.[1] ?? pt.y)
-      : pt.y;
+    const displayY = data[data.length - 1]?.[1] ?? pt.y;
     if (Number.isFinite(displayY)) {
       updateForceMarker(pt.x, displayY);
       // FIX: keep the numeric readout in sync with what the chart shows
@@ -677,8 +703,22 @@ export function updateSessionChart(force, tMs) {
 export function refreshSessionSeries() {
   if (!state.sessionChart) return;
   try {
+    let data = getSessionSeriesData();
+    // Apply clamping to session chart data for saturation
+    const session = state.trainingSession;
+    if (session?.sessionBounds) {
+      const { min, max } = session.sessionBounds;
+      if (Number.isFinite(min) && Number.isFinite(max)) {
+        data = data.map(([x, y]) => {
+          if (!Number.isFinite(y)) return [x, y];
+          if (y < min) return [x, min];
+          if (y > max) return [x, max];
+          return [x, y];
+        });
+      }
+    }
     state.sessionChart.setOption(
-      { series: [{ data: getSessionSeriesData() }] },
+      { series: [{ data }] },
       false,
       true,
     );
@@ -715,9 +755,22 @@ export function plotStageSliceByIndex(index, overrideSmoothing = null) {
       ? state.viewingModeSmoothingEnabled
       : (overrideSmoothing !== null ? overrideSmoothing : trendSmoothingEnabled);
   if (state.chart) {
-    const data = smoothing
+    let data = smoothing
       ? toSmoothedXY(state.series, trendSmoothingAlpha)
       : toXY(state.series);
+    
+    // Clamp smoothed data to stage bounds for visual saturation
+    if (Number.isFinite(lo) && Number.isFinite(hi)) {
+      const clampMin = lo - 2;
+      const clampMax = hi + 2;
+      data = data.map(([x, y]) => {
+        if (!Number.isFinite(y)) return [x, y];
+        if (y < clampMin) return [x, clampMin];
+        if (y > clampMax) return [x, clampMax];
+        return [x, y];
+      });
+    }
+    
     state.chart.setOption({ series: [{ data }] }, false, true);
     const last = data[data.length - 1];
     if (

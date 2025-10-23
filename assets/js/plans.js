@@ -3,6 +3,7 @@ import { parseTimeToSeconds, fmtMMSS, pad2, clamp } from "./utils.js";
 import { state, DEV_BYPASS_CONNECT } from './state.js';
 import { loadPlanForEdit } from "./edit-plan.js";
 import { FIXED_PLAN_LIBRARY } from './mesocycles.js';
+import { SETTINGS_DEFAULTS } from './settings-defaults.js';
 
 // Re-export for backward compatibility
 export { FIXED_PLAN_LIBRARY };
@@ -34,20 +35,20 @@ export const FLOW_TRAINING_STEPS = [
     suffix: " • Série 1",
   },
   {
-    id: "R2",
-    arm: "direito",
-    label: "Braço Direito • Treino 2",
-    description: "Segunda série do braço direito.",
-    captureMax: false,
-    suffix: " • Série 2",
-  },
-  {
     id: "L1",
     arm: "esquerdo",
     label: "Braço Esquerdo • Treino 1",
     description: "Inclui medição de força máxima.",
     captureMax: true,
     suffix: " • Série 1",
+  },
+  {
+    id: "R2",
+    arm: "direito",
+    label: "Braço Direito • Treino 2",
+    description: "Segunda série do braço direito.",
+    captureMax: false,
+    suffix: " • Série 2",
   },
   {
     id: "L2",
@@ -62,11 +63,34 @@ export const FLOW_TRAINING_STEPS = [
 export const FLOW_REST_SLOTS = [1, 2, 3];
 export const DEFAULT_FLOW_STEP_ORDER = FLOW_TRAINING_STEPS.map((step) => step.id);
 const FLOW_MEASUREMENT_SECONDS = 3;
-const DEFAULT_REST_POSITIONS = [1, 3];
 
 export function getFlowTrainingStepById(id) {
   if (!id) return null;
   return FLOW_TRAINING_STEPS.find((step) => step.id === id) || null;
+}
+
+/**
+ * Validates that series 2 comes after series 1 for each arm.
+ * @param {string[]} order - Array of step IDs
+ * @returns {boolean} True if order is valid
+ */
+export function validateFlowStepOrder(order) {
+  const r1Index = order.indexOf("R1");
+  const r2Index = order.indexOf("R2");
+  const l1Index = order.indexOf("L1");
+  const l2Index = order.indexOf("L2");
+  
+  // R2 must come after R1
+  if (r1Index !== -1 && r2Index !== -1 && r2Index < r1Index) {
+    return false;
+  }
+  
+  // L2 must come after L1
+  if (l1Index !== -1 && l2Index !== -1 && l2Index < l1Index) {
+    return false;
+  }
+  
+  return true;
 }
 
 export function sanitizeFlowStepOrder(input) {
@@ -84,6 +108,13 @@ export function sanitizeFlowStepOrder(input) {
   DEFAULT_FLOW_STEP_ORDER.forEach((id) => {
     if (!seen.has(id)) order.push(id);
   });
+  
+  // Validate that series 2 comes after series 1
+  if (!validateFlowStepOrder(order)) {
+    // If invalid, return default order
+    return DEFAULT_FLOW_STEP_ORDER.slice();
+  }
+  
   return order;
 }
 
@@ -2872,20 +2903,22 @@ function resetApplication() {
 
 function loadRestIntervalFromStorage() {
   try {
-    const raw = Number(localStorage.getItem(REST_INTERVAL_KEY));
+    const item = localStorage.getItem(REST_INTERVAL_KEY);
+    if (item === null) return SETTINGS_DEFAULTS.restIntervalSec;
+    const raw = Number(item);
     if (Number.isFinite(raw)) return clamp(Math.round(raw), 10, 600);
   } catch { }
-  return 120;
+  return SETTINGS_DEFAULTS.restIntervalSec;
 }
 
 function loadFlowStepOrderFromStorage() {
   try {
     const raw = localStorage.getItem(FLOW_STEP_ORDER_KEY);
-    if (!raw) return DEFAULT_FLOW_STEP_ORDER.slice();
+    if (!raw) return SETTINGS_DEFAULTS.flowStepOrder.slice();
     const arr = JSON.parse(raw);
     return sanitizeFlowStepOrder(arr);
   } catch { }
-  return DEFAULT_FLOW_STEP_ORDER.slice();
+  return SETTINGS_DEFAULTS.flowStepOrder.slice();
 }
 
 function mapLegacyRestSlot(value) {
@@ -2907,9 +2940,9 @@ function normalizeRestSlot(value) {
 function loadRestPositionsFromStorage() {
   try {
     const raw = localStorage.getItem(REST_POSITIONS_KEY);
-    if (raw === null) return DEFAULT_REST_POSITIONS.slice();
+    if (raw === null) return SETTINGS_DEFAULTS.restPositions.slice();
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return DEFAULT_REST_POSITIONS.slice();
+    if (!Array.isArray(arr)) return SETTINGS_DEFAULTS.restPositions.slice();
     const seen = new Set();
     const slots = [];
     for (const entry of arr) {
@@ -2922,14 +2955,16 @@ function loadRestPositionsFromStorage() {
     if (slots.length) return slots;
     if (arr.length === 0) return [];
   } catch { }
-  return DEFAULT_REST_POSITIONS.slice();
+  return SETTINGS_DEFAULTS.restPositions.slice();
 }
 
 function loadRestSkipFromStorage() {
   try {
-    return localStorage.getItem(REST_SKIP_KEY) === "1";
+    const value = localStorage.getItem(REST_SKIP_KEY);
+    if (value === null) return SETTINGS_DEFAULTS.restSkipEnabled;
+    return value === "1";
   } catch {
-    return false;
+    return SETTINGS_DEFAULTS.restSkipEnabled;
   }
 }
 
@@ -2943,10 +2978,11 @@ export function hydrateRestSettingsFromStorage() {
 function loadFixedPlanPreference() {
   try {
     const raw = localStorage.getItem(FIXED_PLAN_PREF_KEY);
+    if (raw === null) return SETTINGS_DEFAULTS.showFixedPlans;
     if (raw === "0") return false;
     if (raw === "1") return true;
   } catch { }
-  return true;
+  return SETTINGS_DEFAULTS.showFixedPlans;
 }
 
 function persistFixedPlanPreference(on) {
@@ -3025,6 +3061,31 @@ function renderRestPositionsSettings() {
   stepOrder.forEach((stepId, index) => {
     const step = getFlowTrainingStepById(stepId);
     if (!step) return;
+    
+    // Check if moving up or down would violate series order
+    let canMoveUp = index > 0;
+    let canMoveDown = index < stepOrder.length - 1;
+    
+    if (canMoveUp) {
+      const testOrder = stepOrder.slice();
+      const tmp = testOrder[index - 1];
+      testOrder[index - 1] = testOrder[index];
+      testOrder[index] = tmp;
+      if (!validateFlowStepOrder(testOrder)) {
+        canMoveUp = false;
+      }
+    }
+    
+    if (canMoveDown) {
+      const testOrder = stepOrder.slice();
+      const tmp = testOrder[index + 1];
+      testOrder[index + 1] = testOrder[index];
+      testOrder[index] = tmp;
+      if (!validateFlowStepOrder(testOrder)) {
+        canMoveDown = false;
+      }
+    }
+    
     const item = document.createElement("li");
     item.className =
       "rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm";
@@ -3039,10 +3100,10 @@ function renderRestPositionsSettings() {
           <div class="text-xs text-slate-400 mt-1">${subtitle}</div>
         </div>
         <div class="flex items-center gap-1">
-          <button type="button" data-act="stepUp" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60" ${index > 0 ? "" : "disabled"} aria-label="Mover passo para cima">
+          <button type="button" data-act="stepUp" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60 disabled:cursor-not-allowed" ${canMoveUp ? "" : "disabled"} aria-label="Mover passo para cima" ${canMoveUp ? "" : "title=\"Série 2 deve vir depois da Série 1\""}>
             &uarr;
           </button>
-          <button type="button" data-act="stepDown" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60" ${index < stepOrder.length - 1 ? "" : "disabled"} aria-label="Mover passo para baixo">
+          <button type="button" data-act="stepDown" data-step-id="${step.id}" class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900/60 disabled:cursor-not-allowed" ${canMoveDown ? "" : "disabled"} aria-label="Mover passo para baixo" ${canMoveDown ? "" : "title=\"Série 2 deve vir depois da Série 1\""}>
             &darr;
           </button>
         </div>
@@ -3131,6 +3192,23 @@ export function initRestSettingsUI() {
         const tmp = swapped[target];
         swapped[target] = swapped[idx];
         swapped[idx] = tmp;
+        
+        // Validate the swap - series 2 must come after series 1
+        if (!validateFlowStepOrder(swapped)) {
+          // Show error message to user
+          const status = document.getElementById('status');
+          const originalText = status?.textContent;
+          if (status) {
+            status.textContent = 'Não permitido: Série 2 deve vir depois da Série 1 do mesmo braço';
+            status.classList.add('text-amber-400');
+            setTimeout(() => {
+              status.textContent = originalText || '';
+              status.classList.remove('text-amber-400');
+            }, 3000);
+          }
+          return;
+        }
+        
         persistFlowStepOrder(swapped);
         renderRestPositionsSettings();
         renderHome(loadStoredPlans());
@@ -3431,10 +3509,10 @@ function setAsideMul(which, v) {
 function getTrendSmoothingEnabled() {
   try {
     const v = localStorage.getItem(PLOT_PREFIX + PLOT_SMOOTHING_KEY);
-    if (v == null) return true;
+    if (v == null) return SETTINGS_DEFAULTS.trendSmoothingEnabled;
     return v === "1";
   } catch {
-    return true;
+    return SETTINGS_DEFAULTS.trendSmoothingEnabled;
   }
 }
 
@@ -3468,12 +3546,12 @@ function applyTrendSmoothingSetting(force = false) {
 function getTrendSmoothingAlpha() {
   try {
     const raw = localStorage.getItem(PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY);
-    if (raw == null) return state.trendSmoothingAlpha || 0.25;
+    if (raw == null) return state.trendSmoothingAlpha || SETTINGS_DEFAULTS.trendSmoothingAlpha;
     const num = parseFloat(raw);
-    const alpha = Number.isFinite(num) ? num : 0.02;
+    const alpha = Number.isFinite(num) ? num : SETTINGS_DEFAULTS.trendSmoothingAlpha;
     return Math.min(0.95, Math.max(0.02, alpha));
   } catch {
-    return state.trendSmoothingAlpha || 0.02;
+    return state.trendSmoothingAlpha || SETTINGS_DEFAULTS.trendSmoothingAlpha;
   }
 }
 
@@ -3506,83 +3584,94 @@ function applyTrendSmoothingAlpha(force = false) {
   } catch { }
 }
 
-export function applyPlotSettingsToDom() {
-  // Visibility
-  for (const { key, sel } of PLOT_TOGGLES) {
-    const el = document.querySelector(sel);
-    if (!el) continue;
-    const on = getPlotToggle(key); // default off
-    el.classList.toggle("hidden", !on);
-  }
-  // Hide entire asides if all their elements are off
-  const leftOn =
-    getPlotToggle("left:forceValue") ||
-    getPlotToggle("left:forceUnit") ||
-    getPlotToggle("left:stageRange") ||
-    getPlotToggle("left:nextHint");
-  const rightOn =
-    getPlotToggle("right:stageElapsed") ||
-    getPlotToggle("right:totalRemaining") ||
-    getPlotToggle("right:inTarget");
-  const leftAside = document.querySelector(".aside-left");
-  const rightAside = document.querySelector(".aside-right");
-  if (leftAside) leftAside.classList.toggle("hidden", !leftOn);
-  if (rightAside) rightAside.classList.toggle("hidden", !rightOn);
+let applyingPlotSettings = false;
 
-  // Adjust grid columns to fill gaps on larger/landscape layouts
+export function applyPlotSettingsToDom() {
+  // Prevent infinite recursion
+  if (applyingPlotSettings) return;
+  applyingPlotSettings = true;
+  
   try {
-    const frame = document.getElementById("frameGrid");
-    const isWide =
-      window.matchMedia &&
-      (window.matchMedia("(min-width: 1024px)").matches ||
-        window.matchMedia("(orientation: landscape)").matches);
-    if (frame) {
-      if (!isWide) {
-        frame.style.gridTemplateColumns = "";
-      } else {
-        if (leftOn && rightOn)
-          frame.style.gridTemplateColumns = "auto 1fr auto";
-        else if (leftOn && !rightOn)
-          frame.style.gridTemplateColumns = "auto 1fr";
-        else if (!leftOn && rightOn)
-          frame.style.gridTemplateColumns = "1fr auto";
-        else frame.style.gridTemplateColumns = "1fr";
-      }
+    // Visibility
+    for (const { key, sel } of PLOT_TOGGLES) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      const on = getPlotToggle(key); // default off
+      el.classList.toggle("hidden", !on);
     }
-  } catch { }
-  // Aside scaling (font-size multiplier)
-  try {
-    const left = document.querySelector(".aside-left");
-    const right = document.querySelector(".aside-right");
-    const lm = Math.max(-0.9, getAsideMul("left"));
-    const rm = Math.max(-0.9, getAsideMul("right"));
-    if (left) {
-      if (!left.dataset.baseFontPx) {
-        left.dataset.baseFontPx = String(
-          parseFloat(getComputedStyle(left).fontSize) || 16,
-        );
+    // Hide entire asides if all their elements are off
+    const leftOn =
+      getPlotToggle("left:forceValue") ||
+      getPlotToggle("left:forceUnit") ||
+      getPlotToggle("left:stageRange") ||
+      getPlotToggle("left:nextHint");
+    const rightOn =
+      getPlotToggle("right:stageElapsed") ||
+      getPlotToggle("right:totalRemaining") ||
+      getPlotToggle("right:inTarget");
+    const leftAside = document.querySelector(".aside-left");
+    const rightAside = document.querySelector(".aside-right");
+    if (leftAside) leftAside.classList.toggle("hidden", !leftOn);
+    if (rightAside) rightAside.classList.toggle("hidden", !rightOn);
+
+    // Adjust grid columns to fill gaps on larger/landscape layouts
+    try {
+      const frame = document.getElementById("frameGrid");
+      const isWide =
+        window.matchMedia &&
+        (window.matchMedia("(min-width: 1024px)").matches ||
+          window.matchMedia("(orientation: landscape)").matches);
+      if (frame) {
+        if (!isWide) {
+          frame.style.gridTemplateColumns = "";
+        } else {
+          if (leftOn && rightOn)
+            frame.style.gridTemplateColumns = "auto 1fr auto";
+          else if (leftOn && !rightOn)
+            frame.style.gridTemplateColumns = "auto 1fr";
+          else if (!leftOn && rightOn)
+            frame.style.gridTemplateColumns = "1fr auto";
+          else frame.style.gridTemplateColumns = "1fr";
+        }
       }
-      const base = parseFloat(left.dataset.baseFontPx) || 16;
-      left.style.fontSize = (base * (1 + lm)).toFixed(2) + "px";
-    }
-    if (right) {
-      if (!right.dataset.baseFontPx) {
-        right.dataset.baseFontPx = String(
-          parseFloat(getComputedStyle(right).fontSize) || 16,
-        );
+    } catch { }
+    // Aside scaling (font-size multiplier)
+    try {
+      const left = document.querySelector(".aside-left");
+      const right = document.querySelector(".aside-right");
+      const lm = Math.max(-0.9, getAsideMul("left"));
+      const rm = Math.max(-0.9, getAsideMul("right"));
+      if (left) {
+        if (!left.dataset.baseFontPx) {
+          left.dataset.baseFontPx = String(
+            parseFloat(getComputedStyle(left).fontSize) || 16,
+          );
+        }
+        const base = parseFloat(left.dataset.baseFontPx) || 16;
+        left.style.fontSize = (base * (1 + lm)).toFixed(2) + "px";
       }
-      const base = parseFloat(right.dataset.baseFontPx) || 16;
-      right.style.fontSize = (base * (1 + rm)).toFixed(2) + "px";
-    }
-  } catch { }
-  applyTrendSmoothingSetting();
-  applyTrendSmoothingAlpha();
-  try {
-    window.dispatchEvent(new Event("resize"));
-  } catch { }
+      if (right) {
+        if (!right.dataset.baseFontPx) {
+          right.dataset.baseFontPx = String(
+            parseFloat(getComputedStyle(right).fontSize) || 16,
+          );
+        }
+        const base = parseFloat(right.dataset.baseFontPx) || 16;
+        right.style.fontSize = (base * (1 + rm)).toFixed(2) + "px";
+      }
+    } catch { }
+    applyTrendSmoothingSetting();
+    applyTrendSmoothingAlpha();
+    try {
+      window.dispatchEvent(new Event("resize"));
+    } catch { }
+  } finally {
+    applyingPlotSettings = false;
+  }
 }
 
 let plotResizeHooked = false;
+
 function ensurePlotResizeHook() {
   if (plotResizeHooked) return;
   plotResizeHooked = true;
@@ -3590,6 +3679,7 @@ function ensurePlotResizeHook() {
     window.addEventListener(
       "resize",
       () => {
+        if (applyingPlotSettings) return; // Prevent recursion
         try {
           applyPlotSettingsToDom();
         } catch { }
@@ -3599,6 +3689,7 @@ function ensurePlotResizeHook() {
     window.addEventListener(
       "orientationchange",
       () => {
+        if (applyingPlotSettings) return; // Prevent recursion
         try {
           applyPlotSettingsToDom();
         } catch { }
@@ -3671,6 +3762,8 @@ function initPlotSettingsUI() {
 }
 
 function resetAllSettingsToDefaults() {
+  // ===== Clear all localStorage settings =====
+  
   // Contrast OFF, Legacy Colors OFF
   try {
     localStorage.removeItem(CONTRAST_KEY);
@@ -3678,19 +3771,23 @@ function resetAllSettingsToDefaults() {
   try {
     localStorage.removeItem(LEGACY_COLORS_KEY);
   } catch { }
+  
   // Plot element toggles: remove keys so they default to ON
   try {
     for (const { key } of PLOT_TOGGLES) {
       localStorage.removeItem(PLOT_PREFIX + "toggle:" + key);
     }
   } catch { }
-  // Multipliers: set to 0
+  
+  // Multipliers: reset to 0
   try {
     localStorage.removeItem(PLOT_PREFIX + "left:mul");
   } catch { }
   try {
     localStorage.removeItem(PLOT_PREFIX + "right:mul");
   } catch { }
+  
+  // Flow and rest settings
   try {
     localStorage.removeItem(REST_INTERVAL_KEY);
   } catch { }
@@ -3703,16 +3800,31 @@ function resetAllSettingsToDefaults() {
   try {
     localStorage.removeItem(FLOW_STEP_ORDER_KEY);
   } catch { }
+  
+  // Fixed plan preference
   try {
     localStorage.removeItem(FIXED_PLAN_PREF_KEY);
   } catch { }
+  
+  // Plot smoothing settings
   try {
     localStorage.removeItem(PLOT_PREFIX + PLOT_SMOOTHING_KEY);
   } catch { }
   try {
     localStorage.removeItem(PLOT_PREFIX + PLOT_SMOOTHING_ALPHA_KEY);
   } catch { }
-  // Apply to document/UI
+  
+  // Auto-forward settings
+  try {
+    localStorage.removeItem("isotrainer:autoForwardMeasurement");
+  } catch { }
+  try {
+    localStorage.removeItem("isotrainer:autoForwardPrestart");
+  } catch { }
+  
+  // ===== Apply defaults to state and UI =====
+  
+  // UI settings
   try {
     applyContrastToDocument(false);
   } catch { }
@@ -3724,21 +3836,56 @@ function resetAllSettingsToDefaults() {
   try {
     applyPlotSettingsToDom();
   } catch { }
+  
+  // Flow and rest settings - reload from defaults and persist them
   try {
     hydrateRestSettingsFromStorage();
+    // Persist the loaded defaults back to localStorage
+    persistRestInterval(state.restIntervalSec);
+    persistRestPositions(state.restPositions);
+    persistRestSkip(state.restSkipEnabled);
+    persistFlowStepOrder(SETTINGS_DEFAULTS.flowStepOrder);
     initRestSettingsUI();
-    state.flowStepOrder = DEFAULT_FLOW_STEP_ORDER.slice();
   } catch { }
+  
+  // Fixed plan preference - reload from defaults and persist
   try {
     hydrateFixedPlanPreference();
+    persistFixedPlanPreference(state.showFixedPlans);
     initFixedPlanToggle();
   } catch { }
+  
+  // Trend smoothing - use centralized defaults and persist
+  lastTrendSmoothingApplied = null;
+  state.trendSmoothingEnabled = SETTINGS_DEFAULTS.trendSmoothingEnabled;
+  state.trendSmoothingAlpha = SETTINGS_DEFAULTS.trendSmoothingAlpha;
+  setTrendSmoothingStorage(SETTINGS_DEFAULTS.trendSmoothingEnabled);
+  setTrendSmoothingAlphaStorage(SETTINGS_DEFAULTS.trendSmoothingAlpha);
+  applyTrendSmoothingSetting(true);
+  applyTrendSmoothingAlpha(true);
+  
+  // Auto-forward settings - use centralized defaults and persist to localStorage
+  state.autoForwardMeasurement = SETTINGS_DEFAULTS.autoForwardMeasurement;
+  state.autoForwardPrestart = SETTINGS_DEFAULTS.autoForwardPrestart;
+  try {
+    localStorage.setItem("isotrainer:autoForwardMeasurement", SETTINGS_DEFAULTS.autoForwardMeasurement ? "true" : "false");
+  } catch { }
+  try {
+    localStorage.setItem("isotrainer:autoForwardPrestart", SETTINGS_DEFAULTS.autoForwardPrestart ? "true" : "false");
+  } catch { }
+  
+  // Update auto-forward toggle UI if present
+  try {
+    const measurementToggle = document.getElementById("autoForwardMeasurementToggle");
+    if (measurementToggle) measurementToggle.checked = SETTINGS_DEFAULTS.autoForwardMeasurement;
+  } catch { }
+  try {
+    const prestartToggle = document.getElementById("autoForwardPrestartToggle");
+    if (prestartToggle) prestartToggle.checked = SETTINGS_DEFAULTS.autoForwardPrestart;
+  } catch { }
+  
+  // Refresh home view
   try {
     renderHome(loadStoredPlans());
   } catch { }
-  lastTrendSmoothingApplied = null;
-  state.trendSmoothingEnabled = true;
-  state.trendSmoothingAlpha = 0.25;
-  applyTrendSmoothingSetting(true);
-  applyTrendSmoothingAlpha(true);
 }
