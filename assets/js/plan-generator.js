@@ -615,7 +615,7 @@ function loadDirectly() {
     planState.activeProfileId = profile.id;
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(planState));
-    localStorage.setItem('isotrainer:home:fixedPlans', 'false');
+    localStorage.setItem('isotrainer:home:fixedPlans', '0');
     
     showValidation('success', `
       <strong>Plano carregado com sucesso!</strong><br>
