@@ -3,8 +3,8 @@
 
 import { TeraForce } from './tera-force.js';
 import { BluetoothUtil } from './bluetooth.js';
-import { startForceStreaming } from './ble-integration.js';
-import { state } from './state.js';
+import { startForceStreaming, startDevSampleLoop } from './ble-integration.js';
+import { state, DEV_BYPASS_CONNECT } from './state.js';
 
 export async function checkBluetoothSupport() {
     try {
@@ -179,8 +179,20 @@ export function disconnectFromDevice() {
 }
 
 export function ensureDevMockConnection() {
-    // Dev mode not implemented in clean version
-    // Can be added separately if needed
+    if (!DEV_BYPASS_CONNECT) return;
+    
+    // Create a mock device for development
+    state.device = {
+        __mock: true,
+        gatt: {
+            connected: true
+        }
+    };
+    
+    console.log('[DEV] Mock connection enabled');
+    
+    // Start generating mock force data
+    startDevSampleLoop();
 }
 
 function updateDeviceInfoDisplay(show = false) {

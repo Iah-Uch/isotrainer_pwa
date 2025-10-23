@@ -21,7 +21,7 @@ import {
 
 const N_PER_KGF = 9.80665;
 const FLOW_MEASUREMENT_MS = 3000;
-const MEASUREMENT_START_THRESHOLD_KGF = 0.5;
+const MEASUREMENT_START_THRESHOLD_KGF = 3;
 
 function ensureSessionUsesKgf(session) {
   if (!session || session.forceUnit === 'kgf') return;

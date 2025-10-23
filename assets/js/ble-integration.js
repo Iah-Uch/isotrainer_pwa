@@ -8,7 +8,12 @@ import {
   updateLiveStageInTargetPct,
   processMeasurementSample,
 } from './session.js';
-import { state } from './state.js';
+import { state, DEV_BYPASS_CONNECT } from './state.js';
+
+// Dev mode mock data generation
+const DEV_SAMPLE_INTERVAL_MS = 300;
+let devSampleTimer = null;
+let devSamplePhase = 0;
 
 /**
  * Start force streaming for isotrainer sessions
@@ -82,12 +87,7 @@ function handleForceValue(force) {
     
     if (state.paused) return;
 
-    // Update UI elements
-    const currentForceValue = document.getElementById('currentForceValue');
-    if (currentForceValue) {
-        currentForceValue.textContent = formatForce(force);
-    }
-
+    // Update pulse animation period on marker (visual feedback)
     const marker = document.getElementById('forceMarker');
     if (marker) {
         const normalized = Math.max(1, Math.abs(force));
@@ -95,7 +95,7 @@ function handleForceValue(force) {
         marker.style.setProperty('--pulse-period', `${period.toFixed(2)}s`);
     }
 
-    // Update charts
+    // Update charts (charts.js will also update currentForceValue with smoothed data)
     const currentTime = now();
     updateStageChart(force, currentTime);
     updateSessionChart(force, currentTime);
@@ -111,5 +111,85 @@ function formatForce(value, { withUnit = false } = {}) {
     if (!Number.isFinite(value)) return '—';
     const rounded = value.toFixed(1);
     return withUnit ? `${rounded} kgf` : String(rounded);
+}
+
+/**
+ * Start mock data generation loop for dev mode
+ */
+export function startDevSampleLoop() {
+    if (!DEV_BYPASS_CONNECT) return;
+    if (devSampleTimer) return;
+    
+    console.log('[DEV] Starting mock force data generation');
+    emitDevSample();
+    devSampleTimer = setInterval(() => emitDevSample(), DEV_SAMPLE_INTERVAL_MS);
+}
+
+/**
+ * Stop mock data generation loop
+ */
+export function stopDevSampleLoop() {
+    if (devSampleTimer) {
+        clearInterval(devSampleTimer);
+        devSampleTimer = null;
+        console.log('[DEV] Stopped mock force data generation');
+    }
+}
+
+/**
+ * Emit a single mock force sample
+ */
+function emitDevSample() {
+    if (!state.device?.__mock) return;
+    
+    devSamplePhase += 0.4;
+    const kgf = computeMockForceKgf();
+    
+    // Directly call handleForceValue with kgf value
+    handleForceValue(kgf);
+}
+
+/**
+ * Compute realistic mock force values based on current context
+ */
+function computeMockForceKgf() {
+    const measurement = state.measurement;
+    
+    // During measurement phase: generate values around expected max force
+    if (measurement?.active) {
+        const armMax =
+            measurement.arm === 'direito'
+                ? state.maxDireitoKgf
+                : measurement.arm === 'esquerdo'
+                    ? state.maxEsquerdoKgf
+                    : null;
+        const target = Number.isFinite(armMax) && armMax > 20 ? armMax : 104;
+        const spread = Math.max(6, target * 0.08);
+        const wobble = Math.sin(devSamplePhase) * spread;
+        const noise = (Math.random() - 0.5) * spread * 0.6;
+        return Math.max(0, target + wobble + noise);
+    }
+
+    // During training session: generate values within stage bounds
+    const session = state.trainingSession;
+    if (session?.stages?.length) {
+        let idx = Number(state.stageIdx);
+        if (!Number.isFinite(idx) || idx < 0 || idx >= session.stages.length) idx = 0;
+        const stage = session.stages[idx];
+        const lower = Number(stage?.lower);
+        const upper = Number(stage?.upper);
+        if (Number.isFinite(lower) && Number.isFinite(upper) && upper > lower) {
+            const center = (lower + upper) / 2;
+            const span = Math.max(0.5, (upper - lower) / 2);
+            const wobble = Math.sin(devSamplePhase) * span * Math.random();
+            const noise = (Math.random() - Math.random()) * span * Math.random();
+            return Math.max(0, center + wobble + noise);
+        }
+    }
+
+    // Idle/default: gentle fluctuation around baseline
+    const idleBase = 25 + Math.sin(devSamplePhase) * 8;
+    const idleNoise = (Math.random() - 0.5) * 5;
+    return Math.max(0, idleBase + idleNoise);
 }
 
