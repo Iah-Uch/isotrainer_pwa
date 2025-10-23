@@ -44,6 +44,13 @@ function showPreStartModal(stage) {
 
   preStartText.textContent = 'Aguardando leitura de força...';
   preStartModal.classList.remove('hidden');
+  
+  // Update button text color based on auto-forward setting
+  const goText = document.getElementById('preStartGoText');
+  if (goText) {
+    goText.style.color = state.autoForwardPrestart ? 'rgb(71 85 105)' : ''; // darker when auto-forward
+  }
+  
   // Delay updatePreStartBar until after modal is visible and has dimensions
   setTimeout(() => updatePreStartBar(0), 10);
   if (state.autoForwardPrestart) {

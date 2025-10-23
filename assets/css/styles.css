@@ -42,6 +42,41 @@ body {
   }
 }
 
+/* Success checkmark animation */
+@keyframes fadeOutContent {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes popInSuccess {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fade-out-content {
+  animation: fadeOutContent 0.3s ease-out forwards;
+}
+
+.pop-in-success {
+  animation: popInSuccess 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 .heart-pulse,
 .force-pulse {
   animation: beat var(--pulse-period, 1s) ease-in-out infinite;

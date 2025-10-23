@@ -85,5 +85,16 @@ export const SETTINGS_DEFAULTS = {
    * Default: false
    */
   viewingModeSmoothingEnabled: false,
+  
+  /**
+   * Enable visual range guidance in force chart during sessions.
+   * Shows a gradient that guides users to stay centered between range lines:
+   * - Green when in perfect middle
+   * - Grayer when moving toward center
+   * - Redder when approaching range boundaries
+   * - Flashing red with glow when out of range
+   * Default: true
+   */
+  rangeGuidanceEnabled: true,
 };
 

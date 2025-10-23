@@ -2701,6 +2701,13 @@ export function bindHomeNav() {
     hydrateRestSettingsFromStorage();
   } catch { }
   try {
+    // Load range guidance setting
+    state.rangeGuidanceEnabled = getRangeGuidanceEnabled();
+    if (typeof window !== 'undefined') {
+      window.__rangeGuidanceEnabled = state.rangeGuidanceEnabled;
+    }
+  } catch { }
+  try {
     initFixedPlanToggle();
   } catch { }
   try {
@@ -3400,6 +3407,7 @@ export function openSettings() {
 
 // ============= Plot Screen: Element Toggles & Multipliers ============= //
 const PLOT_PREFIX = "isotrainer:plot:";
+const RANGE_GUIDANCE_KEY = "isotrainer:rangeGuidance";
 const PLOT_TOGGLES = [
   // Header elements
   {
@@ -3753,12 +3761,40 @@ function initPlotSettingsUI() {
       applyTrendSmoothingAlpha(true);
     };
   }
+  const rangeGuidanceInput = document.getElementById("toggleRangeGuidance");
+  if (rangeGuidanceInput) {
+    rangeGuidanceInput.checked = getRangeGuidanceEnabled();
+    rangeGuidanceInput.onchange = () => {
+      setRangeGuidanceStorage(!!rangeGuidanceInput.checked);
+    };
+  }
   // Apply immediately to reflect the current values
   try {
     applyPlotSettingsToDom();
   } catch { }
   applyTrendSmoothingSetting(true);
   applyTrendSmoothingAlpha(true);
+}
+
+function getRangeGuidanceEnabled() {
+  try {
+    const v = localStorage.getItem(RANGE_GUIDANCE_KEY);
+    if (v === null) return SETTINGS_DEFAULTS.rangeGuidanceEnabled;
+    return v === "1";
+  } catch {
+    return SETTINGS_DEFAULTS.rangeGuidanceEnabled;
+  }
+}
+
+function setRangeGuidanceStorage(on) {
+  try {
+    localStorage.setItem(RANGE_GUIDANCE_KEY, on ? "1" : "0");
+  } catch { }
+  state.rangeGuidanceEnabled = !!on;
+  // Export for charts module
+  if (typeof window !== 'undefined') {
+    window.__rangeGuidanceEnabled = !!on;
+  }
 }
 
 function resetAllSettingsToDefaults() {
@@ -3822,6 +3858,11 @@ function resetAllSettingsToDefaults() {
     localStorage.removeItem("isotrainer:autoForwardPrestart");
   } catch { }
   
+  // Range guidance
+  try {
+    localStorage.removeItem(RANGE_GUIDANCE_KEY);
+  } catch { }
+  
   // ===== Apply defaults to state and UI =====
   
   // UI settings
@@ -3882,6 +3923,14 @@ function resetAllSettingsToDefaults() {
   try {
     const prestartToggle = document.getElementById("autoForwardPrestartToggle");
     if (prestartToggle) prestartToggle.checked = SETTINGS_DEFAULTS.autoForwardPrestart;
+  } catch { }
+  
+  // Range guidance - use centralized defaults and persist
+  state.rangeGuidanceEnabled = SETTINGS_DEFAULTS.rangeGuidanceEnabled;
+  setRangeGuidanceStorage(SETTINGS_DEFAULTS.rangeGuidanceEnabled);
+  try {
+    const rangeGuidanceToggle = document.getElementById("toggleRangeGuidance");
+    if (rangeGuidanceToggle) rangeGuidanceToggle.checked = SETTINGS_DEFAULTS.rangeGuidanceEnabled;
   } catch { }
   
   // Refresh home view

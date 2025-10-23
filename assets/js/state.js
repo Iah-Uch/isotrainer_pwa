@@ -99,4 +99,8 @@ export const state = {
   // Auto-forward settings for modals
   autoForwardMeasurement: SETTINGS_DEFAULTS.autoForwardMeasurement,
   autoForwardPrestart: SETTINGS_DEFAULTS.autoForwardPrestart,
+  // Visual range guidance
+  rangeGuidanceEnabled: SETTINGS_DEFAULTS.rangeGuidanceEnabled,
+  // Current force position for gradient calculation
+  currentForce: null,
 };

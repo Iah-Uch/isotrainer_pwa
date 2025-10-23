@@ -153,10 +153,20 @@ function buildBoundsMarkLine(bounds, active) {
   const { lo, hi } = bounds;
   const above = active?.above || false;
   const below = active?.below || false;
+  
   // Default inactiveAlpha 0.38 -> 0.46 (~+20%); contrast is very bright.
-  const inactiveAlpha = isContrast() ? 0.95 : 0.46; // super bright in contrast mode
+  const inactiveAlpha = isContrast() ? 0.95 : 0.46;
   const activeHiAlpha = above ? 0.98 : inactiveAlpha;
   const activeLoAlpha = below ? 0.98 : inactiveAlpha;
+  
+  // Enhanced dramatic effect when out of range
+  const hiShadowBlur = above ? 24 : 0;  // More dramatic than before (was 14)
+  const loShadowBlur = below ? 24 : 0;
+  const hiShadowColor = above ? "rgba(239,68,68,0.9)" : "transparent"; // Brighter (was 0.6)
+  const loShadowColor = below ? "rgba(239,68,68,0.9)" : "transparent";
+  const hiLineColor = above ? "rgba(239,68,68,0.95)" : `rgba(255,255,255,${activeHiAlpha})`;
+  const loLineColor = below ? "rgba(239,68,68,0.95)" : `rgba(255,255,255,${activeLoAlpha})`;
+  
   return [
     {
       yAxis: lo,
@@ -165,16 +175,16 @@ function buildBoundsMarkLine(bounds, active) {
         position: "end",
         distance: 6,
         formatter: `${lo}`,
-        color: `rgba(255,255,255,${activeLoAlpha})`,
+        color: below ? `rgba(255,255,255,1.0)` : `rgba(255,255,255,${activeLoAlpha})`,
         fontSize: 17,
         fontWeight: 600,
       },
       lineStyle: {
-        color: `rgba(255,255,255,${activeLoAlpha})`,
+        color: loLineColor,
         width: 2,
         type: "solid",
-        shadowBlur: below ? 14 : 0,
-        shadowColor: below ? "rgba(239,68,68,0.6)" : "transparent",
+        shadowBlur: loShadowBlur,
+        shadowColor: loShadowColor,
       },
     },
     {
@@ -184,19 +194,157 @@ function buildBoundsMarkLine(bounds, active) {
         position: "end",
         distance: 6,
         formatter: `${hi}`,
-        color: `rgba(255,255,255,${activeHiAlpha})`,
+        color: above ? `rgba(255,255,255,1.0)` : `rgba(255,255,255,${activeHiAlpha})`,
         fontSize: 17,
         fontWeight: 600,
       },
       lineStyle: {
-        color: `rgba(255,255,255,${activeHiAlpha})`,
+        color: hiLineColor,
         width: 2,
         type: "solid",
-        shadowBlur: above ? 14 : 0,
-        shadowColor: above ? "rgba(239,68,68,0.6)" : "transparent",
+        shadowBlur: hiShadowBlur,
+        shadowColor: hiShadowColor,
       },
     },
   ];
+}
+
+function buildRangeGuidanceArea(bounds, active) {
+  if (!bounds) return [];
+  const { lo, hi } = bounds;
+  const currentForce = active?.currentForce;
+  const above = active?.above || false;
+  const below = active?.below || false;
+  
+  // Check if range guidance is enabled
+  const guidanceEnabled = typeof window !== 'undefined' && window.__rangeGuidanceEnabled === true;
+  
+  if (!guidanceEnabled || typeof currentForce !== 'number' || !Number.isFinite(currentForce)) {
+    return [];
+  }
+  
+  const center = (lo + hi) / 2;
+  const range = hi - lo;
+  const tolerance = range * 0.15; // 15% of range is "perfect center" (more tolerant)
+  const transitionZone = range * 0.08; // 8% transition zone for smooth gradient switching
+  
+  // Calculate position relative to center (0 = center, 1 = at boundary)
+  const distanceFromCenter = Math.abs(currentForce - center);
+  const normalizedDistance = Math.min(1, distanceFromCenter / (range / 2));
+  
+  let edgeColor;
+  let gradientBlend = 0; // 0 = from lines, 1 = from center
+  
+  if (above || below) {
+    // OUT OF RANGE - Dramatic pulsing red background
+    edgeColor = "rgba(239,68,68,0.25)";
+    gradientBlend = 1;
+  } else if (distanceFromCenter <= tolerance) {
+    // PERFECT CENTER - Green glow from lines
+    const greenIntensity = Math.max(0.3, 1 - (distanceFromCenter / tolerance));
+    edgeColor = `rgba(34,197,94,${greenIntensity * 0.15})`;  // Green with softer opacity (was 0.2)
+    gradientBlend = 0;
+  } else {
+    // GRADIENT: Closer to boundary = redder, closer to center = more transparent
+    const redIntensity = normalizedDistance; // 0 = center, 1 = boundary
+    
+    // Interpolate between transparent (center) and red (boundary)
+    const red = Math.round(239 * redIntensity); // 0-239 (red component only when approaching boundary)
+    const green = Math.round(68 * redIntensity); // 0-68
+    const blue = Math.round(68 * redIntensity);  // 0-68
+    const alpha = 0.03 + (redIntensity * 0.15); // Softer: 0.03 to 0.18 (reduced max)
+    
+    edgeColor = `rgba(${red},${green},${blue},${alpha})`;
+    
+    // Calculate smooth transition: starts after tolerance, completes within transitionZone
+    const distanceFromTolerance = Math.max(0, distanceFromCenter - tolerance);
+    gradientBlend = Math.min(1, distanceFromTolerance / transitionZone);
+  }
+  
+  // Create blended gradients for smooth transition
+  // gradientBlend: 0 = from lines to center, 1 = from center to lines
+  
+  // Interpolate gradient direction smoothly
+  const transparentColor = 'rgba(0,0,0,0)';
+  
+  // Calculate color stops that blend between two gradient directions
+  const bottomStops = [
+    {
+      offset: 0,
+      color: gradientBlend === 0 ? edgeColor : (gradientBlend === 1 ? transparentColor : interpolateColor(edgeColor, transparentColor, gradientBlend))
+    },
+    {
+      offset: 1,
+      color: gradientBlend === 0 ? transparentColor : (gradientBlend === 1 ? edgeColor : interpolateColor(transparentColor, edgeColor, gradientBlend))
+    }
+  ];
+  
+  const topStops = [
+    {
+      offset: 0,
+      color: gradientBlend === 0 ? transparentColor : (gradientBlend === 1 ? edgeColor : interpolateColor(transparentColor, edgeColor, gradientBlend))
+    },
+    {
+      offset: 1,
+      color: gradientBlend === 0 ? edgeColor : (gradientBlend === 1 ? transparentColor : interpolateColor(edgeColor, transparentColor, gradientBlend))
+    }
+  ];
+  
+  return [
+    // Bottom gradient
+    [
+      {
+        yAxis: lo,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: bottomStops
+          }
+        }
+      },
+      { yAxis: center }
+    ],
+    // Top gradient
+    [
+      {
+        yAxis: center,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: topStops
+          }
+        }
+      },
+      { yAxis: hi }
+    ]
+  ];
+}
+
+// Helper function to interpolate between two rgba colors
+function interpolateColor(color1, color2, blend) {
+  // Parse rgba values
+  const parseRgba = (str) => {
+    const match = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d.]+)?\)/);
+    if (!match) return [0, 0, 0, 0];
+    return [
+      parseInt(match[1]),
+      parseInt(match[2]),
+      parseInt(match[3]),
+      parseFloat(match[4] || 1)
+    ];
+  };
+  
+  const [r1, g1, b1, a1] = parseRgba(color1);
+  const [r2, g2, b2, a2] = parseRgba(color2);
+  
+  const r = Math.round(r1 + (r2 - r1) * blend);
+  const g = Math.round(g1 + (g2 - g1) * blend);
+  const b = Math.round(b1 + (b2 - b1) * blend);
+  const a = (a1 + (a2 - a1) * blend).toFixed(3);
+  
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 function buildStageBands(groupStart = null, groupEnd = null, xOffset = 0) {
@@ -343,6 +491,10 @@ export function setupCharts() {
         markLine: {
           symbol: "none",
           data: buildBoundsMarkLine(state.currentStageBoundsOriginal),
+        },
+        markArea: {
+          silent: true,
+          data: buildRangeGuidanceArea(state.currentStageBoundsOriginal, {}),
         },
       },
     ],
@@ -567,6 +719,10 @@ export function setYAxis(lo, hi) {
               symbol: "none",
               data: buildBoundsMarkLine(state.currentStageBoundsOriginal),
             },
+            markArea: {
+              silent: true,
+              data: buildRangeGuidanceArea(state.currentStageBoundsOriginal, {}),
+            },
           },
         ],
       },
@@ -672,6 +828,10 @@ export function updateStageChart(force, tMs) {
             markLine: {
               symbol: "none",
               data: buildBoundsMarkLine(b, { above, below }),
+            },
+            markArea: {
+              silent: true,
+              data: buildRangeGuidanceArea(b, { above, below, currentForce: force }),
             },
           },
         ],

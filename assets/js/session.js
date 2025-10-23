@@ -434,6 +434,61 @@ export function stopTraining() {
   state.accumulatedPauseOffset = state.stageAccumulatedPauseOffset = 0;
   state.waitingForFirstSample = false;
   state.isImportedSession = false;
+  
+  // Clear chart data to prevent showing old session data
+  state.series = [];
+  state.sessionSeries = [];
+  state.currentForce = null;
+  state.currentStageBoundsOriginal = null;
+  
+  // Clear charts if they exist
+  if (state.chart) {
+    try {
+      state.chart.setOption({
+        series: [{
+          data: [],
+          markLine: { data: [] },
+          markArea: { data: [] }
+        }]
+      });
+    } catch { }
+  }
+  if (state.sessionChart) {
+    try {
+      state.sessionChart.setOption({
+        series: [{ data: [] }]
+      });
+    } catch { }
+  }
+  
+  // Clear force marker position and hide it
+  const marker = document.getElementById("forceMarker");
+  if (marker) {
+    marker.style.opacity = "0";
+    marker.style.left = "0px";
+    marker.style.top = "0px";
+  }
+  
+  // Clear all UI text elements on plot screen
+  try {
+    const uiElements = {
+      sessionMeta: "—",
+      sessionAthlete: "—",
+      stageLabel: "Estágio —",
+      currentForceValue: "--",
+      stageRange: "—",
+      nextStageRange: "—",
+      stageElapsed: "00:00",
+      totalRemaining: "00:00",
+      stageInTargetPct: "—",
+      stageInTargetPctMobile: "—"
+    };
+    
+    Object.entries(uiElements).forEach(([id, defaultText]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = defaultText;
+    });
+  } catch { }
 }
 
 export function setPlayPauseVisual() {
@@ -1872,14 +1927,37 @@ function beginMeasurement(step) {
   const progressEl = document.getElementById('armMaxProgress');
   const countdownEl = document.getElementById('armMaxCountdown');
   const proceedBtn = document.getElementById('armMaxProceedBtn');
+  const proceedText = document.getElementById('armMaxProceedText');
+  const content = document.getElementById('armMaxContent');
+  const success = document.getElementById('armMaxSuccess');
+  
+  // Reset modal state
+  if (content) {
+    content.classList.remove('fade-out-content');
+    content.style.display = '';
+  }
+  if (success) {
+    success.classList.remove('pop-in-success');
+    success.classList.add('hidden');
+  }
+  if (progressEl) {
+    progressEl.style.width = '0%';
+    progressEl.style.background = ''; // Reset to amber
+  }
+  
   if (title) title.textContent = `Medição de força máxima (${getArmShortLabel(arm)})`;
   if (subtitle)
     subtitle.textContent = 'Mantenha o braço estável e aplique força máxima por 3 segundos.';
   if (currentEl) currentEl.textContent = '0,0 kgf';
   if (peakEl) peakEl.textContent = '0,0 kgf';
-  if (progressEl) progressEl.style.width = '0%';
   if (countdownEl) countdownEl.textContent = 'Aguardando força acima de 0,5 kgf...';
-  if (proceedBtn) proceedBtn.disabled = true;
+  if (proceedBtn) {
+    proceedBtn.disabled = true;
+    // Update text color based on auto-forward setting
+    if (proceedText) {
+      proceedText.style.color = state.autoForwardMeasurement ? 'rgb(71 85 105)' : ''; // slate-600 when auto
+    }
+  }
   modal.classList.remove('hidden');
 }
 
@@ -1925,14 +2003,33 @@ function finalizeMeasurement() {
   measurement.complete = true;
   const countdownEl = document.getElementById('armMaxCountdown');
   const proceedBtn = document.getElementById('armMaxProceedBtn');
+  const proceedText = document.getElementById('armMaxProceedText');
   const sideCountdown = getOrCreateArmMaxCountdownSide();
+  const content = document.getElementById('armMaxContent');
+  const success = document.getElementById('armMaxSuccess');
+  
   // Make the progress bar green
   const progressEl = document.getElementById('armMaxProgress');
   if (progressEl) {
     progressEl.style.background = 'rgb(0 171 76)'; // olive green
   }
+  
+  // Trigger success animation
+  setTimeout(() => {
+    if (content) content.classList.add('fade-out-content');
+    setTimeout(() => {
+      if (content) content.style.display = 'none';
+      if (success) {
+        success.classList.remove('hidden');
+        success.classList.add('pop-in-success');
+      }
+    }, 300);
+  }, 400); // Small delay to see the green bar first
+  
   if (state.autoForwardMeasurement) {
     if (proceedBtn) proceedBtn.disabled = true;
+    if (proceedText) proceedText.style.color = 'rgb(71 85 105)'; // darker slate when auto-forward
+    
     let ms = 3000;
     if (countdownEl) {
       countdownEl.textContent = 'Avançando em 3,0s...';
@@ -1964,7 +2061,10 @@ function finalizeMeasurement() {
     }, 100);
   } else {
     if (countdownEl) countdownEl.textContent = 'Pronto para prosseguir';
-    if (proceedBtn) proceedBtn.disabled = false;
+    if (proceedBtn) {
+      proceedBtn.disabled = false;
+      if (proceedText) proceedText.style.color = ''; // Reset to default
+    }
     if (sideCountdown) sideCountdown.textContent = '';
   }
 }
