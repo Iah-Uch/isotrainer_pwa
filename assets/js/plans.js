@@ -422,6 +422,12 @@ export function getActiveProfileId() {
   return st.activeProfileId || null;
 }
 
+export function getActiveProfileName() {
+  const st = readPlanState();
+  const active = st.profiles.find((p) => p.id === st.activeProfileId);
+  return active?.name || "";
+}
+
 export function setActiveProfileId(profileId) {
   const st = readPlanState();
   if (!profileId || !st.profiles.some((p) => p.id === profileId)) {

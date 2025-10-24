@@ -15,6 +15,7 @@ import {
   applyPlotSettingsToDom,
   saveCompletedSession,
   getFixedPlanById,
+  getActiveProfileName,
   FLOW_TRAINING_STEPS,
   sanitizeFlowStepOrder,
 } from './plans.js';
@@ -135,8 +136,21 @@ export function startTraining(session) {
 
   // Prime UI (normal mode).
   document.getElementById("sessionAthlete").textContent =
-    session.athlete || "—";
+    getActiveProfileName() || "—";
   document.getElementById("sessionMeta").textContent = `${session.date}`;
+  // Display mesocycle/plan type if available (for live sessions)
+  const sessionTypeEl = document.getElementById("sessionType");
+  if (sessionTypeEl) {
+    if (session.fixedPlanId) {
+      const plan = getFixedPlanById(session.fixedPlanId);
+      sessionTypeEl.textContent = plan?.name || "—";
+    } else if (state.flowPlan) {
+      // For active flow sessions
+      sessionTypeEl.textContent = state.flowPlan.name || "—";
+    } else {
+      sessionTypeEl.textContent = "—";
+    }
+  }
   document.getElementById("stageLabel").textContent = "Aguardando força...";
   document.getElementById("stageRange").textContent = "—";
   document.getElementById("stageElapsed").textContent = "00:00";
@@ -898,7 +912,7 @@ function finalizeFlowSession() {
 
   const session = {
     date: steps[0]?.date || new Date().toLocaleDateString("pt-BR"),
-    athlete: plan?.name || steps[0]?.athlete || "",
+    athlete: getActiveProfileName() || steps[0]?.athlete || plan?.name || "",
     stages: sessionStages,
     totalDurationSec: totalDurationSec,
   };
@@ -921,7 +935,7 @@ function finalizeFlowSession() {
   const sourceSession = state.flowSourceSession;
   const aggregatedRecord = {
     date: sourceSession?.date || session.date,
-    athlete: sourceSession?.athlete || session.athlete,
+    athlete: getActiveProfileName() || session.athlete,
     totalDurationSec: session.totalDurationSec,
     stagesCount: sessionStages.length,
     stats,
@@ -1556,7 +1570,7 @@ export function loadCompletedSessionFromExportCsv(text, stepsMeta = null) {
 
   // UI priming
   document.getElementById("sessionAthlete").textContent =
-    session.athlete || "—";
+    getActiveProfileName() || "—";
   document.getElementById("sessionMeta").textContent = `${session.date || "—"}`;
 
   // Series + chart scales
@@ -1580,6 +1594,29 @@ export function loadCompletedSessionFromExportCsv(text, stepsMeta = null) {
   } catch { }
 
   hydrateViewSeriesGroups(session, stepsMeta);
+  
+  // Display mesocycle/plan type if available (for viewing completed sessions)
+  // Must be after hydrateViewSeriesGroups so groups are populated
+  const sessionTypeEl = document.getElementById("sessionType");
+  if (sessionTypeEl) {
+    if (session.fixedPlanId) {
+      const plan = getFixedPlanById(session.fixedPlanId);
+      sessionTypeEl.textContent = plan?.name || "—";
+    } else {
+      // Fallback: extract from viewSeriesGroups label (for older sessions)
+      // The label format is "Plano fixo • MesocycleName • Série X"
+      const groups = Array.isArray(state.viewSeriesGroups) ? state.viewSeriesGroups : [];
+      const firstLabel = groups[0]?.label || "";
+      if (firstLabel.includes("•")) {
+        const parts = firstLabel.split("•").map(p => p.trim());
+        // Get the mesocycle name (index 1), not the série (last part)
+        sessionTypeEl.textContent = parts[1] || "—";
+      } else {
+        sessionTypeEl.textContent = firstLabel || "—";
+      }
+    }
+  }
+  
   const groups = Array.isArray(state.viewSeriesGroups)
     ? state.viewSeriesGroups
     : [];
@@ -2146,10 +2183,10 @@ function buildFlowSession(step) {
   const maxForceKgf = step.arm === 'direito' ? state.maxDireitoKgf : state.maxEsquerdoKgf;
   if (!Number.isFinite(maxForceKgf) || maxForceKgf <= 0) return null;
   const mappedStages = stages.map((stage, index) => {
-    const lower = Math.round(
+    const lower = Math.floor(
       Math.max(0, maxForceKgf * (Number(stage.lowerPct) || 0)),
     );
-    const upper = Math.round(
+    const upper = Math.ceil(
       Math.max(lower + 1, maxForceKgf * (Number(stage.upperPct) || 0)),
     );
     return {
@@ -2161,7 +2198,8 @@ function buildFlowSession(step) {
   });
   const totalDurationSec = mappedStages.reduce((acc, st) => acc + st.durationSec, 0);
   const sessionDate = new Date().toLocaleDateString('pt-BR');
-  const athleteLabel = `${plan.name || 'Plano fixo'}${step.suffix || ''}`;
+  // Use the active profile name as the athlete/client name
+  const athleteLabel = getActiveProfileName() || `${plan.name || 'Plano fixo'}${step.suffix || ''}`;
   return {
     id: `flow_${plan.id || 'plan'}_${step.id}_${Date.now()}`,
     date: sessionDate,
@@ -2170,6 +2208,7 @@ function buildFlowSession(step) {
     totalDurationSec,
     planId: plan.id || null,
     planIdx: step.id || null,
+    fixedPlanId: plan.id || null,
     flowStepId: step.id || null,
     flowArm: step.arm,
     forceUnit: 'kgf',
