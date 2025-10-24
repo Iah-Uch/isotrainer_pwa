@@ -795,6 +795,10 @@ function formatForceForDisplay(v) {
 
 export function updateStageChart(force, tMs) {
   if (!state.stageStartMs) return;
+  // Clamp negative values to 0 - samples below 0 should be treated as 0
+  if (force < 0) {
+    force = 0;
+  }
   const x =
     (tMs - state.stageStartMs - state.stageAccumulatedPauseOffset) / 1000;
   const pt = { x: Math.max(0, x), y: force };
@@ -853,6 +857,10 @@ export function updateStageChart(force, tMs) {
 
 export function updateSessionChart(force, tMs) {
   if (!state.sessionStartMs || state.paused) return;
+  // Clamp negative values to 0 - samples below 0 should be treated as 0
+  if (force < 0) {
+    force = 0;
+  }
   const totalElapsedSec = Math.max(
     0,
     (tMs - state.sessionStartMs - state.accumulatedPauseOffset) / 1000,

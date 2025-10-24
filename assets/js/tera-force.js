@@ -432,6 +432,11 @@ export class TeraForce {
                 let value = calibrated * conversionFactor;
                 value = round(value, 2);
                 
+                // Clamp negative values to 0 - samples below 0 should be treated as 0
+                if (value < 0) {
+                    value = 0;
+                }
+                
                 // Debug first few samples to verify data flow
                 if (sampleCount < 3) {
                     console.log(`[TeraForce] Sample #${sampleCount + 1}: Raw=${rawValue}, Zero=${this._zeroAdcValue}, Calibrated=${calibrated}, Force=${value} kgf`);

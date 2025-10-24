@@ -46,6 +46,11 @@ function handleForceValue(force) {
         return;
     }
     
+    // Clamp negative values to 0 - samples below 0 should be treated as 0
+    if (force < 0) {
+        force = 0;
+    }
+    
     // Log first few samples for debugging
     if (!handleForceValue._sampleCount) handleForceValue._sampleCount = 0;
     handleForceValue._sampleCount++;

@@ -2109,6 +2109,10 @@ function finalizeMeasurement() {
 export function processMeasurementSample(force) {
   const measurement = state.measurement;
   if (!measurement?.active) return;
+  // Clamp negative values to 0 - samples below 0 should be treated as 0
+  if (force < 0) {
+    force = 0;
+  }
   const absolute = Math.abs(force);
   if (!measurement.started && absolute >= MEASUREMENT_START_THRESHOLD_KGF) {
     measurement.started = true;
