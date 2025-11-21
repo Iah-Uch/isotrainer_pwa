@@ -17,8 +17,8 @@ services:
       - "traefik.http.routers.isotrainer.tls=true"
       - "traefik.http.routers.isotrainer.tls.certresolver=cloudflare"
       - "traefik.http.services.isotrainer.loadbalancer.server.port=80"
-      - "traefik.http.middlewares.isotrainer.basicauth.users=''"
-      - "traefik.http.routers.isotrainer.middlewares=traefik-auth"
+      - "traefik.http.middlewares.isotrainer-auth.basicauth.users=usuario:$$2y$$05$$g6qPfLxiRzCy7HQIxuNdYe7tdbljjwEpDSqecbgqyH6rfTOkgcKAe"
+      - "traefik.http.routers.isotrainer.middlewares=isotrainer-auth"
       - "traefik.docker.network=proxy"
 
 networks:
