@@ -210,14 +210,34 @@ function updateDeviceInfoDisplay(show = false) {
                 : 'Bateria —';
         }
         if (firmwareEl) {
-            firmwareEl.textContent = state.deviceInfo.firmwareVersion 
-                ? `FW ${state.deviceInfo.firmwareVersion}` 
-                : 'FW —';
+            const fwVersion = state.deviceInfo.firmwareVersion || '—';
+            firmwareEl.textContent = fwVersion !== '—' ? `FW ${fwVersion}` : 'FW —';
+            // Add debug info on long press
+            firmwareEl.title = window.state?.firmwareDebug 
+                ? `Debug: ${JSON.stringify(window.state.firmwareDebug)}` 
+                : '';
+            firmwareEl.style.cursor = window.state?.firmwareDebug ? 'help' : 'default';
+            firmwareEl.ontouchstart = firmwareEl.onclick = (e) => {
+                if (window.state?.firmwareDebug) {
+                    e.preventDefault();
+                    alert(`Firmware Debug Info:\n\nRaw Bytes: ${window.state.firmwareDebug.rawBytes}\nDecoded: ${window.state.firmwareDebug.decodedString}\nLength: ${window.state.firmwareDebug.byteLength}`);
+                }
+            };
         }
         if (hardwareEl) {
-            hardwareEl.textContent = state.deviceInfo.hardwareVersion 
-                ? `HW ${state.deviceInfo.hardwareVersion}` 
-                : 'HW —';
+            const hwVersion = state.deviceInfo.hardwareVersion || '—';
+            hardwareEl.textContent = hwVersion !== '—' ? `HW ${hwVersion}` : 'HW —';
+            // Add debug info on long press
+            hardwareEl.title = window.state?.hardwareDebug 
+                ? `Debug: ${JSON.stringify(window.state.hardwareDebug)}` 
+                : '';
+            hardwareEl.style.cursor = window.state?.hardwareDebug ? 'help' : 'default';
+            hardwareEl.ontouchstart = hardwareEl.onclick = (e) => {
+                if (window.state?.hardwareDebug) {
+                    e.preventDefault();
+                    alert(`Hardware Debug Info:\n\nRaw Bytes: ${window.state.hardwareDebug.rawBytes}\nDecoded: ${window.state.hardwareDebug.decodedString}\nLength: ${window.state.hardwareDebug.byteLength}`);
+                }
+            };
         }
         
         deviceInfo.classList.remove('hidden');

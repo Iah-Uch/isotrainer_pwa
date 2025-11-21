@@ -380,58 +380,204 @@ export class BluetoothUtil {
    * Get firmware version from device
    */
   static async getFirmwareVersion(server) {
-    try {
-      const deviceInformationService = await BluetoothUtil.getService(
-        server,
-        DEVICE_INFORMATION_SERVICE_UUID
-      );
-      const firmwareRevisionStringCharacteristic = await BluetoothUtil.getCharacteristic(
-        deviceInformationService,
-        DEVICE_INFORMATION_CHARACTERISTIC_FIRMWARE_REVISION_STRING_UUID
-      );
-      const firmwareRevisionStringValue = await BluetoothUtil.readValue(
-        firmwareRevisionStringCharacteristic
-      );
-      let result = new TextDecoder().decode(firmwareRevisionStringValue).replace(/\0/g, '');
-      
-      if (isNaN(Number(result))) {
-        result = '1';
+    const maxRetries = 3;
+    const retryDelay = 200; // ms
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`Tentativa ${attempt + 1} de ${maxRetries} para obter versão do firmware...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        }
+        
+        const deviceInformationService = await BluetoothUtil.getService(
+          server,
+          DEVICE_INFORMATION_SERVICE_UUID
+        );
+        const firmwareRevisionStringCharacteristic = await BluetoothUtil.getCharacteristic(
+          deviceInformationService,
+          DEVICE_INFORMATION_CHARACTERISTIC_FIRMWARE_REVISION_STRING_UUID
+        );
+        
+        // Small delay before reading to ensure characteristic is ready
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        const firmwareRevisionStringValue = await BluetoothUtil.readValue(
+          firmwareRevisionStringCharacteristic
+        );
+        
+        // Handle DataView properly - extract bytes accounting for byteOffset and byteLength
+        let bytes;
+        if (firmwareRevisionStringValue instanceof DataView) {
+          bytes = new Uint8Array(
+            firmwareRevisionStringValue.buffer,
+            firmwareRevisionStringValue.byteOffset,
+            firmwareRevisionStringValue.byteLength
+          );
+        } else if (firmwareRevisionStringValue.buffer) {
+          bytes = new Uint8Array(firmwareRevisionStringValue.buffer);
+        } else {
+          bytes = new Uint8Array(firmwareRevisionStringValue);
+        }
+        
+        // Convert bytes to string, removing null bytes and control characters
+        let result = '';
+        for (let i = 0; i < bytes.length; i++) {
+          const byte = bytes[i];
+          // Skip null bytes and control characters (except space and printable chars)
+          if (byte === 0 || (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13)) {
+            continue;
+          }
+          // Only include printable ASCII or valid UTF-8 continuation
+          if (byte >= 32 && byte <= 126) {
+            result += String.fromCharCode(byte);
+          }
+        }
+        
+        result = result.trim();
+        
+        // Extract only numeric characters (version number)
+        const numericMatch = result.match(/\d+/);
+        if (numericMatch) {
+          result = numericMatch[0];
+        } else if (result === '' || isNaN(Number(result))) {
+          console.warn('Firmware version parsing failed, raw bytes:', Array.from(bytes).map(b => b.toString(16)).join(' '), 'decoded:', JSON.stringify(result));
+          result = '1';
+        }
+        
+        const debugInfo = {
+          rawBytes: Array.from(bytes).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+          decodedString: result,
+          byteLength: bytes.length
+        };
+        console.log('Firmware version parsed:', result, 'from bytes:', debugInfo.rawBytes);
+        
+        // Store debug info for mobile debugging
+        if (typeof window !== 'undefined' && window.state) {
+          window.state.firmwareDebug = debugInfo;
+        }
+        
+        return result;
+      } catch (err) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        if (isLastAttempt) {
+          console.warn('Não foi possível obter versão do firmware após', maxRetries, 'tentativas:', err?.message || err);
+          // Store error for debugging
+          if (typeof window !== 'undefined' && window.state) {
+            window.state.firmwareDebug = {
+              error: err?.message || String(err),
+              attempts: maxRetries
+            };
+          }
+          return '1'; // Default to version 1
+        }
+        // Retry on next iteration
+        console.warn(`Tentativa ${attempt + 1} falhou, tentando novamente...`, err?.message || err);
       }
-      
-      return result;
-    } catch (err) {
-      console.warn('Não foi possível obter versão do firmware:', err?.message || err);
-      return '1'; // Default to version 1
     }
+    return '1'; // Fallback (should not reach here)
   }
 
   /**
    * Get hardware version from device
    */
   static async getHardwareVersion(server) {
-    try {
-      const deviceInformationService = await BluetoothUtil.getService(
-        server,
-        DEVICE_INFORMATION_SERVICE_UUID
-      );
-      const hardwareRevisionStringCharacteristic = await BluetoothUtil.getCharacteristic(
-        deviceInformationService,
-        DEVICE_INFORMATION_CHARACTERISTIC_HARDWARE_REVISION_STRING_UUID
-      );
-      const hardwareRevisionStringValue = await BluetoothUtil.readValue(
-        hardwareRevisionStringCharacteristic
-      );
-      let result = new TextDecoder().decode(hardwareRevisionStringValue).replace(/\0/g, '');
-      
-      if (isNaN(Number(result))) {
-        result = '1';
+    const maxRetries = 3;
+    const retryDelay = 200; // ms
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`Tentativa ${attempt + 1} de ${maxRetries} para obter versão do hardware...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        }
+        
+        const deviceInformationService = await BluetoothUtil.getService(
+          server,
+          DEVICE_INFORMATION_SERVICE_UUID
+        );
+        const hardwareRevisionStringCharacteristic = await BluetoothUtil.getCharacteristic(
+          deviceInformationService,
+          DEVICE_INFORMATION_CHARACTERISTIC_HARDWARE_REVISION_STRING_UUID
+        );
+        
+        // Small delay before reading to ensure characteristic is ready
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        const hardwareRevisionStringValue = await BluetoothUtil.readValue(
+          hardwareRevisionStringCharacteristic
+        );
+        
+        // Handle DataView properly - extract bytes accounting for byteOffset and byteLength
+        let bytes;
+        if (hardwareRevisionStringValue instanceof DataView) {
+          bytes = new Uint8Array(
+            hardwareRevisionStringValue.buffer,
+            hardwareRevisionStringValue.byteOffset,
+            hardwareRevisionStringValue.byteLength
+          );
+        } else if (hardwareRevisionStringValue.buffer) {
+          bytes = new Uint8Array(hardwareRevisionStringValue.buffer);
+        } else {
+          bytes = new Uint8Array(hardwareRevisionStringValue);
+        }
+        
+        // Convert bytes to string, removing null bytes and control characters
+        let result = '';
+        for (let i = 0; i < bytes.length; i++) {
+          const byte = bytes[i];
+          // Skip null bytes and control characters (except space and printable chars)
+          if (byte === 0 || (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13)) {
+            continue;
+          }
+          // Only include printable ASCII or valid UTF-8 continuation
+          if (byte >= 32 && byte <= 126) {
+            result += String.fromCharCode(byte);
+          }
+        }
+        
+        result = result.trim();
+        
+        // Extract only numeric characters (version number)
+        const numericMatch = result.match(/\d+/);
+        if (numericMatch) {
+          result = numericMatch[0];
+        } else if (result === '' || isNaN(Number(result))) {
+          console.warn('Hardware version parsing failed, raw bytes:', Array.from(bytes).map(b => b.toString(16)).join(' '), 'decoded:', JSON.stringify(result));
+          result = '1';
+        }
+        
+        const debugInfo = {
+          rawBytes: Array.from(bytes).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+          decodedString: result,
+          byteLength: bytes.length
+        };
+        console.log('Hardware version parsed:', result, 'from bytes:', debugInfo.rawBytes);
+        
+        // Store debug info for mobile debugging
+        if (typeof window !== 'undefined' && window.state) {
+          window.state.hardwareDebug = debugInfo;
+        }
+        
+        return result;
+      } catch (err) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        if (isLastAttempt) {
+          console.warn('Não foi possível obter versão do hardware após', maxRetries, 'tentativas:', err?.message || err);
+          // Store error for debugging
+          if (typeof window !== 'undefined' && window.state) {
+            window.state.hardwareDebug = {
+              error: err?.message || String(err),
+              attempts: maxRetries
+            };
+          }
+          return '1'; // Default to version 1
+        }
+        // Retry on next iteration
+        console.warn(`Tentativa ${attempt + 1} falhou, tentando novamente...`, err?.message || err);
       }
-      
-      return result;
-    } catch (err) {
-      console.warn('Não foi possível obter versão do hardware:', err?.message || err);
-      return '1'; // Default to version 1
     }
+    return '1'; // Fallback (should not reach here)
   }
 }
 
