@@ -787,10 +787,10 @@ function updateForceMarker(x, y) {
   marker.style.opacity = "1";
 }
 
-// FIX: local formatter to mirror the numeric box style (integer, unitless)
+// FIX: local formatter to mirror the numeric box style (one decimal, truncated, no rounding)
 function formatForceForDisplay(v) {
   if (!Number.isFinite(v)) return "—";
-  return String(Math.round(v));
+  return (Math.trunc(v * 10) / 10).toFixed(1);
 }
 
 export function updateStageChart(force, tMs) {
