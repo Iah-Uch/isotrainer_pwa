@@ -59,7 +59,12 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// Allow future 'skipWaiting' triggers if needed.
+// Handle skipWaiting messages from clients
 self.addEventListener("message", (event) => {
-  if (event.data === "skipWaiting") self.skipWaiting();
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  } else if (event.data === "skipWaiting") {
+    // Legacy support
+    self.skipWaiting();
+  }
 });

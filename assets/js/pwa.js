@@ -3,6 +3,7 @@ let deferredPrompt = null;
 
 const installBtn = document.getElementById("installBtn");
 const openAppBtn = document.getElementById("openAppBtn");
+const installedMessage = document.getElementById("installedMessage");
 
 function isStandalone() {
   return (
@@ -23,6 +24,12 @@ function hideOpen() {
 function showOpen() {
   if (openAppBtn) openAppBtn.classList.remove("hidden");
 }
+function hideInstalledMessage() {
+  if (installedMessage) installedMessage.classList.add("hidden");
+}
+function showInstalledMessage() {
+  if (installedMessage) installedMessage.classList.remove("hidden");
+}
 
 function isLikelyInstalled() {
   // Heuristic: remember install event; some platforms don’t expose a direct API.
@@ -33,8 +40,38 @@ function isLikelyInstalled() {
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (!isStandalone() && !isLikelyInstalled()) showInstall();
+  console.log('beforeinstallprompt event fired - install is available');
+  if (!isStandalone() && !isLikelyInstalled()) {
+    showInstall();
+    hideInstalledMessage();
+    // Enable the button if it was disabled
+    if (installBtn) {
+      installBtn.disabled = false;
+      installBtn.textContent = 'Instalar';
+    }
+  }
 });
+
+// Log if beforeinstallprompt never fires (for debugging)
+// Also ensure button is enabled when it does fire
+setTimeout(() => {
+  if (!deferredPrompt && !isStandalone() && !isLikelyInstalled()) {
+    console.log('beforeinstallprompt event did not fire after 2 seconds - install may not be available yet');
+    console.log('This can happen with ngrok or if PWA criteria are not fully met');
+    console.log('Checking service worker status...');
+    // Check service worker status
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg) {
+          console.log('Service worker registered:', reg.active ? 'active' : reg.installing ? 'installing' : reg.waiting ? 'waiting' : 'unknown');
+        } else {
+          console.log('Service worker not registered yet');
+        }
+      }).catch(err => console.error('Error checking service worker:', err));
+    }
+    // Button is already visible, user can try clicking it
+  }
+}, 2000);
 
 window.addEventListener("appinstalled", () => {
   deferredPrompt = null;
@@ -42,26 +79,84 @@ window.addEventListener("appinstalled", () => {
   try {
     localStorage.setItem("pwaInstalled", "1");
   } catch { }
-  showOpen();
+  hideOpen();
+  showInstalledMessage();
+  // Automatically redirect to app after installation
+  // Only redirect if we're on the landing page (index.html)
+  if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
+    setTimeout(() => {
+      window.location.href = '/app.html';
+    }, 500); // Small delay to show the message briefly
+  }
 });
 
 installBtn?.addEventListener("click", async () => {
-  if (!deferredPrompt) return;
-  hideInstall();
-  deferredPrompt.prompt();
+  const isLandingPage = window.location.pathname === '/' || window.location.pathname.endsWith('index.html');
+  
+  if (!deferredPrompt) {
+    console.warn('Install prompt not available yet. Waiting for beforeinstallprompt event...');
+    // Show a message to the user
+    const originalText = installBtn?.textContent || 'Instalar';
+    if (installBtn) {
+      installBtn.textContent = 'Aguardando...';
+      installBtn.disabled = true;
+    }
+    // Wait a bit and check again
+    setTimeout(() => {
+      if (!deferredPrompt) {
+        if (installBtn) {
+          installBtn.textContent = originalText;
+          installBtn.disabled = false;
+        }
+        alert('A instalação pode não estar disponível ainda. Tente recarregar a página ou use o menu do navegador para instalar.');
+      }
+    }, 2000);
+    return;
+  }
+  
   try {
-    await deferredPrompt.userChoice;
-  } catch { }
-  deferredPrompt = null;
+    hideInstall();
+    await deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    console.log('User choice:', choiceResult.outcome);
+    
+    // If user accepted installation, redirect to app
+    // The appinstalled event will also fire, but this handles the redirect immediately
+    if (choiceResult.outcome === 'accepted') {
+      if (isLandingPage) {
+        setTimeout(() => {
+          window.location.href = '/app.html';
+        }, 500);
+      }
+    } else {
+      // User dismissed, show install button again
+      showInstall();
+    }
+  } catch (error) {
+    console.error('Error showing install prompt:', error);
+    // Show button again on error
+    showInstall();
+  } finally {
+    deferredPrompt = null;
+  }
 });
 
 // Initial UI state
-if (isStandalone()) hideInstall();
-if (isLikelyInstalled()) {
+// Show install button by default if not installed, hide it if installed
+if (isStandalone()) {
   hideInstall();
-  showOpen();
-} else {
   hideOpen();
+  showInstalledMessage();
+} else if (isLikelyInstalled()) {
+  hideInstall();
+  hideOpen();
+  showInstalledMessage();
+} else {
+  // Not installed - show install button by default
+  // It will be enabled when beforeinstallprompt fires
+  showInstall();
+  hideOpen();
+  hideInstalledMessage();
 }
 
 // Auto-reload once when the new SW takes control.

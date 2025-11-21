@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#010308" />
   <title>IsoTrainer</title>
   <link rel="manifest" href="/manifest.webmanifest" />
-  <!-- <link rel="icon" href="/icons/logo_isotrainer.svg" sizes="192x192" type="image/png" />
-    <link rel="apple-touch-icon" href="/logo_isotrainer.svg" /> -->
+  <link rel="icon" href="/icons/logo_isotrainer.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="/logo_isotrainer.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/assets/css/styles.css" />
 </head>
@@ -27,17 +27,51 @@
       <button id="installBtn" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700">
         Instalar
       </button>
+      <div id="installedMessage" class="hidden max-w-md mx-auto mt-6">
+        <div class="bg-emerald-600/20 border border-emerald-500/30 rounded-xl p-5 shadow-lg shadow-emerald-600/10">
+          <div class="flex items-start gap-3">
+            <svg class="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div class="text-left">
+              <h3 class="text-emerald-300 font-semibold mb-1">Aplicativo Instalado</h3>
+              <p class="text-emerald-100/90 text-sm leading-relaxed">
+                O aplicativo já está instalado. Vá para a tela inicial do seu dispositivo e abra o IsoTrainer a partir de lá.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
-  <script type="module" src="/assets/js/pwa.js"></script>
   <script>
+    // Register service worker early - critical for PWA installability
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/sw.js").catch(() => {
-          /* noop */
-        });
+      window.addEventListener("load", async () => {
+        try {
+          const registration = await navigator.serviceWorker.register("/sw.js", {
+            scope: "/"
+          });
+          console.log('[SW] Registered with scope:', registration.scope);
+          
+          // Wait for service worker to be ready
+          await navigator.serviceWorker.ready;
+          console.log('[SW] Service worker ready');
+        } catch (error) {
+          console.error('[SW] Registration failed:', error);
+        }
       });
+    }
+  </script>
+  <script type="module" src="/assets/js/pwa-install.js"></script>
+  <script type="module" src="/assets/js/pwa-update.js"></script>
+  <script>
+    // Redirect to app.html when PWA opens in standalone mode
+    // This only happens when the installed app is opened, not in browser
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+      // PWA is installed and opened - redirect to app
+      window.location.href = '/app.html';
     }
   </script>
 </body>
