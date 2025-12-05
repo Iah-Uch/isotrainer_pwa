@@ -563,7 +563,7 @@ function loadDirectly() {
             activeProfileId: profileId,
             profiles: [{
               id: profileId,
-              name: plan.clientName || 'Atleta',
+              name: plan.clientName || 'Cliente',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               plans: planState
@@ -582,7 +582,7 @@ function loadDirectly() {
         activeProfileId: profileId,
         profiles: [{
           id: profileId,
-          name: plan.clientName || 'Atleta',
+          name: plan.clientName || 'Cliente',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           plans: []
@@ -636,7 +636,7 @@ function parseMesocycleReferenceCsv(lines) {
   
   const header = lines[0].toLowerCase().split(';').map(s => s.trim());
   const dateIdx = header.findIndex(h => h.includes('date') || h.includes('data'));
-  const clientIdx = header.findIndex(h => h.includes('client') || h.includes('athlete') || h.includes('atleta'));
+  const clientIdx = header.findIndex(h => h.includes('client') || h.includes('athlete') || h.includes('cliente'));
   const planIdIdx = header.findIndex(h => h.includes('planid') || h.includes('mesociclo'));
   
   if (dateIdx === -1 || clientIdx === -1 || planIdIdx === -1) {

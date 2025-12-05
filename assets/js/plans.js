@@ -185,7 +185,7 @@ function defaultPlanState() {
   };
 }
 
-function inferProfileName(plans, fallback = "Atleta") {
+function inferProfileName(plans, fallback = "Cliente") {
   for (const plan of plans || []) {
     const candidate = String(plan?.athlete || "").trim();
     if (candidate) return candidate;
@@ -285,7 +285,7 @@ function sanitizeProfile(rawProfile, index = 0) {
   if (plansMutated) mutated = true;
   let name = String(rawProfile.name || "").trim();
   if (!name) {
-    name = inferProfileName(plans, `Atleta ${index + 1}`);
+    name = inferProfileName(plans, `Cliente ${index + 1}`);
     mutated = true;
   }
   const createdAt =
@@ -319,7 +319,7 @@ function convertArrayToState(plansArray) {
     profiles: [
       {
         id: profileId,
-        name: inferProfileName(list, "Atleta"),
+        name: inferProfileName(list, "Cliente"),
         createdAt: now,
         updatedAt: now,
         plans: list,
@@ -494,7 +494,7 @@ export function savePlans(plans, opts = {}) {
     profile = {
       id: targetId,
       name:
-        providedName || inferProfileName(arr, `Atleta ${st.profiles.length + 1}`),
+        providedName || inferProfileName(arr, `Cliente ${st.profiles.length + 1}`),
       createdAt: now,
       updatedAt: now,
       plans: [],
@@ -662,7 +662,7 @@ function parseMetaLine(line) {
   if (!Number.isFinite(numSessions))
     throw new Error("Número de sessões inválido na linha de metadados.");
   const athlete = parts.slice(3).join(";").trim();
-  if (!athlete) throw new Error("Nome/atleta ausente na linha de metadados.");
+  if (!athlete) throw new Error("Nome/cliente ausente na linha de metadados.");
   return { numSessions, athlete };
 }
 
@@ -737,7 +737,7 @@ function parseMesocycleReferenceCsv(lines) {
   
   // Find column indices
   const dateIdx = header.findIndex(h => h.includes('date') || h.includes('data'));
-  const clientIdx = header.findIndex(h => h.includes('client') || h.includes('athlete') || h.includes('atleta'));
+  const clientIdx = header.findIndex(h => h.includes('client') || h.includes('athlete') || h.includes('cliente'));
   const planIdIdx = header.findIndex(h => h.includes('planid') || h.includes('mesociclo'));
   
   console.log('Column indices:', { dateIdx, clientIdx, planIdIdx, versionIdx });
@@ -1000,8 +1000,8 @@ function applyProfileSearchUiState({ focus = false } = {}) {
       btn.setAttribute("title", "Fechar busca");
     } else {
       btn.innerHTML = searchIcon;
-      btn.setAttribute("aria-label", "Buscar atleta");
-      btn.setAttribute("title", "Buscar atleta");
+      btn.setAttribute("aria-label", "Buscar cliente");
+      btn.setAttribute("title", "Buscar cliente");
     }
   }
   if (input && input.value !== profileSearchTermRaw) input.value = profileSearchTermRaw;
@@ -1209,7 +1209,7 @@ function renderProfileSelection() {
     deleteBtn.type = "button";
     deleteBtn.className =
       "absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 grid place-items-center rounded-full bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 hover:text-rose-300 transition";
-    deleteBtn.title = "Excluir atleta";
+    deleteBtn.title = "Excluir cliente";
     deleteBtn.setAttribute("aria-label", `Excluir ${profile.name}`);
     deleteBtn.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -1330,7 +1330,7 @@ function deleteProfile(profileId) {
   
   const count = Array.isArray(profile.plans) ? profile.plans.length : 0;
   const message = count > 0
-    ? `Tem certeza que deseja excluir "${profile.name}"?\n\nIsso removerá ${count} ${count === 1 ? 'sessão' : 'sessões'} agendadas e todas as sessões concluídas deste atleta.`
+    ? `Tem certeza que deseja excluir "${profile.name}"?\n\nIsso removerá ${count} ${count === 1 ? 'sessão' : 'sessões'} agendadas e todas as sessões concluídas deste cliente.`
     : `Tem certeza que deseja excluir "${profile.name}"?`;
   
   const ok = confirm(message);

@@ -81,11 +81,11 @@
             <div class="space-y-2 text-center sm:text-left">
               <h2 class="text-2xl font-bold tracking-tight">Quem vai treinar?</h2>
               <p class="text-slate-300">
-                Selecione o atleta para carregar as sessões disponíveis.
+                Selecione o cliente para carregar as sessões disponíveis.
               </p>
             </div>
             <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
-              <button id="profileSelectSearchBtn" title="Buscar atleta" aria-label="Buscar atleta"
+              <button id="profileSelectSearchBtn" title="Buscar cliente" aria-label="Buscar cliente"
                 class="h-10 w-10 grid place-items-center rounded-full bg-[#0b0b0c] hover:bg-[#0b0b0c] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"
@@ -94,14 +94,14 @@
                 </svg>
               </button>
               <div id="profileSelectSearchInputWrap" class="hidden w-full sm:w-64">
-                <input id="profileSelectSearchInput" type="text" autocomplete="off" placeholder="Buscar atleta"
+                <input id="profileSelectSearchInput" type="text" autocomplete="off" placeholder="Buscar cliente"
                   class="w-full rounded-xl border border-[#2a2a2a] bg-[#101011] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
               </div>
             </div>
             <div id="profileSelectList" class="grid gap-3"></div>
             <div id="profileSelectNoResults"
               class="hidden rounded-xl border border-[#2a2a2a] bg-[#101011] p-4 text-sm text-slate-300 text-center">
-              Nenhum atleta encontrado para esta busca.
+              Nenhum cliente encontrado para esta busca.
             </div>
             <div id="profileSelectEmpty"
               class="hidden rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-200 text-center">
@@ -111,7 +111,7 @@
           <div
             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[#2a2a2a] bg-[#0b0b0c] px-6 py-4">
             <div class="text-sm text-slate-300">
-              Gerencie periodizações separadas por atleta.
+              Gerencie periodizações separadas por cliente.
             </div>
             <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
               <button id="profileSelectImport"
@@ -140,7 +140,7 @@
                 </p>
                 <div id="homeActiveProfileWrap"
                   class="hidden mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
-                  <span class="uppercase tracking-wide text-xs text-slate-500">Atleta</span>
+                  <span class="uppercase tracking-wide text-xs text-slate-500">Cliente</span>
                   <span id="homeActiveProfileName"
                     class="px-2 py-0.5 rounded-lg bg-[#2a2a2a] text-slate-100 font-semibold">
                     —
@@ -745,20 +745,20 @@
     </button>
   </div>
 
-  <!-- Modal: Confirmar nome do atleta durante importação -->
+  <!-- Modal: Confirmar nome do cliente durante importação -->
   <div id="profileNameModal" class="hidden fixed inset-0 z-[70] overflow-y-auto bg-black/55 p-4" border
     border-[#2a2a2a] hover:border-[#ffae00]/30 transition-all duration-200 role="dialog" aria-modal="true">
     <div
       class="mx-auto mt-12 w-full max-w-md rounded-2xl border border-[#2a2a2a] bg-[#0b0b0c] shadow-2xl p-5 space-y-4">
       <div class="space-y-1">
-        <h3 class="text-lg font-semibold">Confirmar nome do atleta</h3>
+        <h3 class="text-lg font-semibold">Confirmar nome do cliente</h3>
         <p class="text-sm text-slate-300" id="profileNameModalHint">
-          Ajuste ou confirme o nome do atleta identificado no arquivo importado.
+          Ajuste ou confirme o nome do cliente identificado no arquivo importado.
         </p>
         <p id="profileNameModalFile" class="hidden text-xs text-slate-500 break-words"></p>
       </div>
       <div class="space-y-2">
-        <label for="profileNameInput" class="text-sm font-medium text-slate-200">Nome do atleta</label>
+        <label for="profileNameInput" class="text-sm font-medium text-slate-200">Nome do cliente</label>
         <input id="profileNameInput" type="text" maxlength="120"
           class="w-full rounded-xl border border-[#2a2a2a] bg-[#101011] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/40" />
         <div id="profileNameError" class="hidden text-sm text-rose-400"></div>
@@ -984,7 +984,7 @@
                   class="slider"></span></label>
             </label>
             <label class="flex items-center justify-between gap-3 p-2 rounded-lg bg-[#0e0e0f]">
-              <span>Topo: Atleta</span>
+              <span>Topo: Cliente</span>
               <label class="switch"><input id="togglePlotHeaderAthlete" type="checkbox" /><span
                   class="slider"></span></label>
             </label>

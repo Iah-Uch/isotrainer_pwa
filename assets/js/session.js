@@ -88,7 +88,7 @@ export function parseTrainingCsv(text) {
     );
   const header = lines[0].split(";").map((s) => s.trim());
   if (header.length < 4)
-    throw new Error("Cabeçalho deve ser: ignorado;ignorado;data;atleta");
+    throw new Error("Cabeçalho deve ser: ignorado;ignorado;data;cliente");
   const date = header[2],
     athlete = header.slice(3).join(";");
   const stages = [];

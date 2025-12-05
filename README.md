@@ -148,7 +148,7 @@ flowchart LR
 
 Example
 ```csv
-Sessao;X;2024-09-30;Atleta X
+Sessao;X;2024-09-30;Cliente X
 1;00:05:00;120;140
 2;00:06:00;130;150
 3;00:04:30;140;160
