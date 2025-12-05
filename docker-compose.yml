@@ -12,13 +12,20 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
+      # Main router with basic auth
       - "traefik.http.routers.isotrainer.rule=Host(`isotrainer.cstera.alphaomegahealth.com.br`)"
       - "traefik.http.routers.isotrainer.entrypoints=https"
       - "traefik.http.routers.isotrainer.tls=true"
       - "traefik.http.routers.isotrainer.tls.certresolver=cloudflare"
+      - "traefik.http.routers.isotrainer.middlewares=isotrainer-auth"
       - "traefik.http.services.isotrainer.loadbalancer.server.port=80"
       - "traefik.http.middlewares.isotrainer-auth.basicauth.users=usuario:$$2y$$05$$g6qPfLxiRzCy7HQIxuNdYe7tdbljjwEpDSqecbgqyH6rfTOkgcKAe"
-      - "traefik.http.routers.isotrainer.middlewares=isotrainer-auth"
+      # Public router for manifest and service worker (no auth)
+      - "traefik.http.routers.isotrainer-public.rule=Host(`isotrainer.cstera.alphaomegahealth.com.br`) && (Path(`/manifest.webmanifest`) || Path(`/sw.js`))"
+      - "traefik.http.routers.isotrainer-public.entrypoints=https"
+      - "traefik.http.routers.isotrainer-public.tls=true"
+      - "traefik.http.routers.isotrainer-public.tls.certresolver=cloudflare"
+      - "traefik.http.routers.isotrainer-public.priority=100"
       - "traefik.docker.network=proxy"
 
 networks:
