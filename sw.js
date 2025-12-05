@@ -31,6 +31,11 @@ self.addEventListener("fetch", (event) => {
     new URL(request.url).origin !== self.location.origin
   )
     return;
+  // Skip manifest files - don't modify their URLs
+  const url = new URL(request.url);
+  if (url.pathname.endsWith(".webmanifest") || url.pathname.endsWith("manifest.json")) {
+    return;
+  }
   event.respondWith(
     (async () => {
       try {
